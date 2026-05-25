@@ -13,4 +13,5 @@ local.properties
 *.apk
 *.aab
 *.jks
-*.keystore
+# Keep app/debug.keystore for consistent signing
+!app/debug.keystore

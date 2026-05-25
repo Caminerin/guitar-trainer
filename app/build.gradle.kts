@@ -7,6 +7,15 @@ android {
     namespace = "com.caminerin.guitartrainer"
     compileSdk = 34
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("debug.keystore")
+            storePassword = "guitartrainer"
+            keyAlias = "guitartrainer"
+            keyPassword = "guitartrainer"
+        }
+    }
+
     defaultConfig {
         applicationId = "com.caminerin.guitartrainer"
         minSdk = 26
@@ -16,8 +25,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
