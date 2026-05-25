@@ -19,8 +19,11 @@ class AudioProcessor(private val context: Context) {
         const val SAMPLE_RATE = 44100
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
-        private const val BUFFER_SIZE_SAMPLES = 16384
+        private const val BUFFER_SIZE_SAMPLES = 8192
         private const val HOLD_DURATION_MS = 2000L
+        private const val LOW_FREQ_THRESHOLD = 150f
+        private const val LOW_FREQ_BUFFER = 8192
+        private const val HIGH_FREQ_BUFFER = 4096
     }
 
     private val pitchDetector = PitchDetector(SAMPLE_RATE)
@@ -75,7 +78,7 @@ class AudioProcessor(private val context: Context) {
                         AudioRecord.READ_BLOCKING
                     )
                     if (read > 0 && hasSignal(buffer, read)) {
-                        val detected = pitchDetector.detect(buffer)
+                        val detected = detectAdaptive(buffer, read)
                         if (detected != null) {
                             _currentPitch.value = detected
                             lastDetectionTimeMs = System.currentTimeMillis()
@@ -93,6 +96,24 @@ class AudioProcessor(private val context: Context) {
         } finally {
             releaseAudioRecord()
         }
+    }
+
+    private fun detectAdaptive(buffer: FloatArray, samplesRead: Int): PitchDetector.PitchResult? {
+        val highWindow = buffer.copyOfRange(0, HIGH_FREQ_BUFFER.coerceAtMost(samplesRead))
+        val quickResult = pitchDetector.detect(highWindow)
+
+        if (quickResult == null) {
+            val fullWindow = buffer.copyOfRange(0, LOW_FREQ_BUFFER.coerceAtMost(samplesRead))
+            return pitchDetector.detect(fullWindow)
+        }
+
+        if (quickResult.frequency < LOW_FREQ_THRESHOLD) {
+            val fullWindow = buffer.copyOfRange(0, LOW_FREQ_BUFFER.coerceAtMost(samplesRead))
+            val refinedResult = pitchDetector.detect(fullWindow)
+            return refinedResult ?: quickResult
+        }
+
+        return quickResult
     }
 
     fun stopListening() {
