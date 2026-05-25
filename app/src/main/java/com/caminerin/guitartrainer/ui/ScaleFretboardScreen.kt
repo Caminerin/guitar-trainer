@@ -5,8 +5,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,9 +39,11 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -51,13 +53,16 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.PI
+import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -70,25 +75,25 @@ private val COLOR_FIFTH = Color(0xFF43A047)       // green - 5th
 private val COLOR_OTHER = Color(0xFF26A69A)       // teal - other degrees
 private val COLOR_DIM = Color(0xFF78909C)         // muted for out-of-position
 
-// Chromatic circle colors (12 notes, rainbow-like from reference screenshots)
+// Chromatic circle colors
 private val CHROMATIC_COLORS = listOf(
-    Color(0xFFC8B400), // Do (C) - yellow-olive
-    Color(0xFFB8A020), // Do# (C#) - darker olive
-    Color(0xFFD4842A), // Re (D) - orange
-    Color(0xFFCC6644), // Re# (D#/Eb) - red-orange
-    Color(0xFFBB4444), // Mi (E) - red
-    Color(0xFFCC3388), // Fa (F) - magenta-pink
-    Color(0xFFAA33AA), // Fa# (F#) - purple
-    Color(0xFF8844BB), // Sol (G) - violet
-    Color(0xFF6655CC), // Sol# (G#/Ab) - blue-violet
-    Color(0xFF4477AA), // La (A) - blue
-    Color(0xFF338888), // La# (A#/Bb) - teal
-    Color(0xFF559944), // Si (B) - green
+    Color(0xFFC8B400), // Do (C)
+    Color(0xFFB8A020), // Do# (C#)
+    Color(0xFFD4842A), // Re (D)
+    Color(0xFFCC6644), // Re# (D#)
+    Color(0xFFBB4444), // Mi (E)
+    Color(0xFFCC3388), // Fa (F)
+    Color(0xFFAA33AA), // Fa# (F#)
+    Color(0xFF8844BB), // Sol (G)
+    Color(0xFF6655CC), // Sol# (G#)
+    Color(0xFF4477AA), // La (A)
+    Color(0xFF338888), // La# (A#)
+    Color(0xFF559944), // Si (B)
 )
 
 // Fretboard aesthetic
 private val COLOR_BG = Color(0xFF1A1A1A)
-private val COLOR_TOOLBAR = Color(0xFF111111)
+private val COLOR_TOOLBAR = Color(0xFF1E1E1E)
 private val COLOR_WOOD = Color(0xFF3E2415)
 private val COLOR_NUT = Color(0xFFF0EAD6)
 private val COLOR_FRET_WIRE = Color(0xFFBBBBBB)
@@ -101,38 +106,26 @@ private val STRING_COLORS = listOf(
 private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 
 private val SPANISH_CHROMATIC_NAMES = listOf(
-    "Do", "Do#", "Re", "Mib", "Mi", "Fa", "Fa#", "Sol", "Lab", "La", "Sib", "Si"
-)
-
-data class NoteHitTarget(
-    val cx: Float,
-    val cy: Float,
-    val radius: Float,
-    val noteIndex: Int,
-    val stringIndex: Int,
-    val fret: Int
+    "Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"
 )
 
 @Composable
 fun ScaleFretboardScreen(onBack: () -> Unit) {
-    var selectedKey by remember { mutableIntStateOf(0) }
-    var selectedScaleIndex by remember { mutableIntStateOf(0) }
-    var noteDisplay by remember { mutableStateOf(NoteDisplay.BOTH) }
-    var positionsEnabled by remember { mutableStateOf(false) }
-    var currentPosition by remember { mutableIntStateOf(0) }
+    var selectedKey by rememberSaveable { mutableIntStateOf(0) }
+    var selectedScaleIndex by rememberSaveable { mutableIntStateOf(0) }
+    var noteDisplay by rememberSaveable { mutableStateOf(NoteDisplay.BOTH) }
+    var positionsEnabled by rememberSaveable { mutableStateOf(false) }
+    var currentPosition by rememberSaveable { mutableIntStateOf(0) }
     var zoom by remember { mutableFloatStateOf(1.5f) }
 
-    var keyMenuExpanded by remember { mutableStateOf(false) }
     var scaleMenuExpanded by remember { mutableStateOf(false) }
     var displayMenuExpanded by remember { mutableStateOf(false) }
 
-    // State for selected note (shows chromatic circle)
-    var selectedNoteIndex by remember { mutableStateOf<Int?>(null) }
-    var circleCenter by remember { mutableStateOf(Offset.Zero) }
-    var showCircle by remember { mutableStateOf(false) }
+    // State for chromatic circle overlay on key selection
+    var showChromaticCircle by remember { mutableStateOf(false) }
 
     val circleAlpha by animateFloatAsState(
-        targetValue = if (showCircle) 1f else 0f,
+        targetValue = if (showChromaticCircle) 1f else 0f,
         animationSpec = tween(durationMillis = 250),
         label = "circleAlpha"
     )
@@ -141,203 +134,221 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
     val density = LocalDensity.current
     val fretWidthDp = (60f * zoom).dp
 
-    // Store note hit targets for tap detection
-    val noteTargets = remember { mutableListOf<NoteHitTarget>() }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(COLOR_BG)
     ) {
-        // Compact toolbar
+        // ===== REDESIGNED TOOLBAR =====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(COLOR_TOOLBAR)
-                .padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
+            // Back button
+            IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(22.dp))
             }
 
-            Spacer(modifier = Modifier.width(4.dp))
-
-            // Key selector
-            Box {
-                Box(
-                    modifier = Modifier
-                        .background(COLOR_TONIC.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-                        .clickable { keyMenuExpanded = true }
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Text(SCALE_NOTE_NAMES[selectedKey], color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-                DropdownMenu(expanded = keyMenuExpanded, onDismissRequest = { keyMenuExpanded = false }) {
-                    SCALE_NOTE_NAMES.forEachIndexed { i, n ->
-                        DropdownMenuItem(text = { Text(n, fontSize = 16.sp) }, onClick = { selectedKey = i; keyMenuExpanded = false })
-                    }
-                }
+            // Key selector - opens chromatic circle
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
+                    .clickable { showChromaticCircle = true }
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    SCALE_NOTE_NAMES[selectedKey],
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-
-            Spacer(modifier = Modifier.width(6.dp))
 
             // Scale selector
             Box {
                 Box(
                     modifier = Modifier
-                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
                         .clickable { scaleMenuExpanded = true }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
                 ) {
-                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
                 DropdownMenu(expanded = scaleMenuExpanded, onDismissRequest = { scaleMenuExpanded = false }) {
                     ALL_SCALES.forEachIndexed { i, s ->
-                        DropdownMenuItem(text = { Text(s.name, fontSize = 14.sp) }, onClick = { selectedScaleIndex = i; scaleMenuExpanded = false; currentPosition = 0 })
+                        DropdownMenuItem(
+                            text = { Text(s.name, fontSize = 14.sp) },
+                            onClick = { selectedScaleIndex = i; scaleMenuExpanded = false; currentPosition = 0 }
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
-
             // Display mode
             Box {
                 val label = when (noteDisplay) {
-                    NoteDisplay.NOTE -> "N"
-                    NoteDisplay.DEGREE -> "G"
+                    NoteDisplay.NOTE -> "Nota"
+                    NoteDisplay.DEGREE -> "Grado"
                     NoteDisplay.BOTH -> "N+G"
                     NoteDisplay.NONE -> "\u2205"
                 }
                 Box(
                     modifier = Modifier
-                        .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
                         .clickable { displayMenuExpanded = true }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
                     Text(label, color = Color(0xFF90A4AE), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
                 DropdownMenu(expanded = displayMenuExpanded, onDismissRequest = { displayMenuExpanded = false }) {
-                    listOf(NoteDisplay.NOTE to "Nota", NoteDisplay.DEGREE to "Grado", NoteDisplay.BOTH to "Grado + Nota", NoteDisplay.NONE to "Nada").forEach { (d, l) ->
-                        DropdownMenuItem(text = { Text(l, fontSize = 14.sp) }, onClick = { noteDisplay = d; displayMenuExpanded = false })
+                    listOf(
+                        NoteDisplay.NOTE to "Nota",
+                        NoteDisplay.DEGREE to "Grado",
+                        NoteDisplay.BOTH to "Grado + Nota",
+                        NoteDisplay.NONE to "Nada"
+                    ).forEach { (d, l) ->
+                        DropdownMenuItem(
+                            text = { Text(l, fontSize = 14.sp) },
+                            onClick = { noteDisplay = d; displayMenuExpanded = false }
+                        )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
-
             // Position controls
-            Text("Pos", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-            Switch(
-                checked = positionsEnabled,
-                onCheckedChange = { positionsEnabled = it },
-                modifier = Modifier.height(28.dp).padding(horizontal = 2.dp),
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = COLOR_TONIC,
-                    checkedTrackColor = COLOR_TONIC.copy(alpha = 0.3f)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Pos", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                Switch(
+                    checked = positionsEnabled,
+                    onCheckedChange = { positionsEnabled = it },
+                    modifier = Modifier
+                        .height(28.dp)
+                        .padding(horizontal = 4.dp),
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = COLOR_TONIC,
+                        checkedTrackColor = COLOR_TONIC.copy(alpha = 0.3f)
+                    )
                 )
-            )
+            }
+
             if (positionsEnabled && scale.positions.isNotEmpty()) {
                 IconButton(
                     onClick = { currentPosition = (currentPosition - 1 + scale.positions.size) % scale.positions.size },
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(28.dp)
                 ) {
-                    Icon(Icons.Default.KeyboardArrowLeft, "Ant", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.KeyboardArrowLeft, "Ant", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
-                Text(scale.positions[currentPosition].name, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    scale.positions[currentPosition].name,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
                 IconButton(
                     onClick = { currentPosition = (currentPosition + 1) % scale.positions.size },
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(28.dp)
                 ) {
-                    Icon(Icons.Default.KeyboardArrowRight, "Sig", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Default.KeyboardArrowRight, "Sig", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // Zoom
-            IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(0.8f) }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.ZoomOut, "Alejar", tint = Color.White, modifier = Modifier.size(18.dp))
+            // Zoom controls
+            IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(0.8f) }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.ZoomOut, "Alejar", tint = Color.White, modifier = Modifier.size(20.dp))
             }
-            IconButton(onClick = { zoom = (zoom + 0.3f).coerceAtMost(3f) }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White, modifier = Modifier.size(18.dp))
+            IconButton(onClick = { zoom = (zoom + 0.3f).coerceAtMost(3f) }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White, modifier = Modifier.size(20.dp))
             }
         }
 
-        // Fretboard area with tap detection
+        // ===== FRETBOARD =====
         val openStringWidth = 48.dp
         val totalWidthDp = openStringWidth + (TOTAL_FRETS * 60 * zoom + 30).dp
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
         ) {
-            Canvas(
+            Box(
                 modifier = Modifier
-                    .width(totalWidthDp)
-                    .fillMaxHeight()
-                    .pointerInput(selectedKey, selectedScaleIndex, positionsEnabled, currentPosition, zoom) {
-                        detectTapGestures { tapOffset ->
-                            // Check if tapping on the circle overlay to dismiss
-                            if (showCircle) {
-                                val dist = sqrt(
-                                    (tapOffset.x - circleCenter.x) * (tapOffset.x - circleCenter.x) +
-                                    (tapOffset.y - circleCenter.y) * (tapOffset.y - circleCenter.y)
-                                )
-                                // If tap is outside the circle, dismiss it
-                                if (dist > 300f) {
-                                    showCircle = false
-                                    selectedNoteIndex = null
-                                    return@detectTapGestures
-                                }
-                                // Tapping inside the circle also dismisses
-                                showCircle = false
-                                selectedNoteIndex = null
-                                return@detectTapGestures
-                            }
-
-                            // Find closest note to tap
-                            var closestDist = Float.MAX_VALUE
-                            var closestTarget: NoteHitTarget? = null
-                            for (target in noteTargets) {
-                                val dx = tapOffset.x - target.cx
-                                val dy = tapOffset.y - target.cy
-                                val d = sqrt(dx * dx + dy * dy)
-                                if (d < target.radius * 1.3f && d < closestDist) {
-                                    closestDist = d
-                                    closestTarget = target
-                                }
-                            }
-                            if (closestTarget != null) {
-                                selectedNoteIndex = closestTarget.noteIndex
-                                circleCenter = Offset(closestTarget.cx, closestTarget.cy)
-                                showCircle = true
-                            }
-                        }
-                    }
+                    .fillMaxSize()
+                    .horizontalScroll(rememberScrollState())
             ) {
-                noteTargets.clear()
-                drawGuitarFretboard(
-                    rootNote = selectedKey,
-                    scale = scale,
-                    noteDisplay = noteDisplay,
-                    positionsEnabled = positionsEnabled,
-                    currentPosition = currentPosition,
-                    fretWidthPx = with(density) { fretWidthDp.toPx() },
-                    openStringWidthPx = with(density) { openStringWidth.toPx() },
-                    noteTargets = noteTargets
-                )
-
-                // Draw chromatic circle overlay
-                if (circleAlpha > 0.01f && selectedNoteIndex != null) {
-                    drawChromaticCircle(
-                        center = circleCenter,
-                        selectedNote = selectedNoteIndex!!,
-                        alpha = circleAlpha,
+                Canvas(
+                    modifier = Modifier
+                        .width(totalWidthDp)
+                        .fillMaxHeight()
+                ) {
+                    drawGuitarFretboard(
                         rootNote = selectedKey,
-                        scaleIntervals = scale.intervals
+                        scale = scale,
+                        noteDisplay = noteDisplay,
+                        positionsEnabled = positionsEnabled,
+                        currentPosition = currentPosition,
+                        fretWidthPx = with(density) { fretWidthDp.toPx() },
+                        openStringWidthPx = with(density) { openStringWidth.toPx() }
                     )
+                }
+            }
+
+            // Chromatic circle overlay - interactive: tap a segment to select key
+            if (circleAlpha > 0.01f) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.6f * circleAlpha))
+                        .clickable { showChromaticCircle = false },
+                    contentAlignment = Alignment.Center
+                ) {
+                    val circleSize = 320.dp
+                    Canvas(
+                        modifier = Modifier
+                            .size(circleSize)
+                            .pointerInput(Unit) {
+                                detectTapGestures { tapOffset ->
+                                    val cx = size.width / 2f
+                                    val cy = size.height / 2f
+                                    val dx = tapOffset.x - cx
+                                    val dy = tapOffset.y - cy
+                                    val dist = sqrt(dx * dx + dy * dy)
+                                    val outerR = min(size.width, size.height) / 2f * 0.95f
+                                    val innerR = min(size.width, size.height) / 2f * 0.35f
+
+                                    if (dist in innerR..outerR) {
+                                        // Determine which segment was tapped
+                                        var angle = atan2(dy, dx).toDouble()
+                                        // Adjust for starting offset (top center, shifted by half segment)
+                                        val segAngle = 2.0 * PI / 12.0
+                                        angle += PI / 2.0 + segAngle / 2.0
+                                        if (angle < 0) angle += 2.0 * PI
+                                        if (angle >= 2.0 * PI) angle -= 2.0 * PI
+                                        val segmentIndex = (angle / segAngle).toInt() % 12
+                                        selectedKey = segmentIndex
+                                        showChromaticCircle = false
+                                    } else if (dist < innerR) {
+                                        showChromaticCircle = false
+                                    }
+                                }
+                            }
+                    ) {
+                        drawChromaticCircle(
+                            center = Offset(size.width / 2f, size.height / 2f),
+                            maxRadius = min(size.width, size.height) / 2f,
+                            selectedNote = selectedKey,
+                            alpha = circleAlpha,
+                            rootNote = selectedKey,
+                            scaleIntervals = scale.intervals
+                        )
+                    }
                 }
             }
         }
@@ -351,8 +362,7 @@ private fun DrawScope.drawGuitarFretboard(
     positionsEnabled: Boolean,
     currentPosition: Int,
     fretWidthPx: Float,
-    openStringWidthPx: Float,
-    noteTargets: MutableList<NoteHitTarget>
+    openStringWidthPx: Float
 ) {
     val h = size.height
     val topPad = h * 0.08f
@@ -512,7 +522,6 @@ private fun DrawScope.drawGuitarFretboard(
                     notePaintSmall.color = android.graphics.Color.WHITE
                     notePaintSmall.textSize = 36f
                 }
-                noteTargets.add(NoteHitTarget(cx, y, dimR, noteIdx, s, fret))
                 continue
             }
 
@@ -539,31 +548,22 @@ private fun DrawScope.drawGuitarFretboard(
                 val paint = if (label.length > 4) notePaintSmall else notePaintBig
                 drawContext.canvas.nativeCanvas.drawText(label, cx, y + paint.textSize * 0.35f, paint)
             }
-
-            noteTargets.add(NoteHitTarget(cx, y, r, noteIdx, s, fret))
         }
     }
 }
 
 private fun DrawScope.drawChromaticCircle(
     center: Offset,
+    maxRadius: Float,
     selectedNote: Int,
     alpha: Float,
     rootNote: Int,
     scaleIntervals: List<Int>
 ) {
-    val outerRadius = 260f
-    val innerRadius = 80f
+    val outerRadius = maxRadius * 0.95f
+    val innerRadius = maxRadius * 0.35f
     val midRadius = (outerRadius + innerRadius) / 2f
 
-    // Semi-transparent background overlay
-    drawCircle(
-        color = Color(0xFF000000).copy(alpha = 0.5f * alpha),
-        radius = outerRadius + 20f,
-        center = center
-    )
-
-    // Draw 12 segments
     val segmentAngle = (2 * PI / 12).toFloat()
     val startAngleOffset = (-PI / 2 - segmentAngle / 2).toFloat()
 
@@ -578,13 +578,12 @@ private fun DrawScope.drawChromaticCircle(
         } else if (isInScale) {
             CHROMATIC_COLORS[i].copy(alpha = 0.7f * alpha)
         } else {
-            CHROMATIC_COLORS[i].copy(alpha = 0.3f * alpha)
+            CHROMATIC_COLORS[i].copy(alpha = 0.25f * alpha)
         }
 
-        val segOuter = if (isSelected) outerRadius + 8f else outerRadius
+        val segOuter = if (isSelected) outerRadius + 6f else outerRadius
         val segInner = if (isSelected) innerRadius - 4f else innerRadius
 
-        // Draw segment as a path
         val path = Path().apply {
             moveTo(
                 center.x + segInner * cos(angleStart),
@@ -594,7 +593,6 @@ private fun DrawScope.drawChromaticCircle(
                 center.x + segOuter * cos(angleStart),
                 center.y + segOuter * sin(angleStart)
             )
-            // Arc outer
             val steps = 16
             for (step in 1..steps) {
                 val a = angleStart + (angleEnd - angleStart) * step / steps
@@ -607,7 +605,6 @@ private fun DrawScope.drawChromaticCircle(
                 center.x + segInner * cos(angleEnd),
                 center.y + segInner * sin(angleEnd)
             )
-            // Arc inner (reverse)
             for (step in (steps - 1) downTo 0) {
                 val a = angleStart + (angleEnd - angleStart) * step / steps
                 lineTo(
@@ -619,21 +616,18 @@ private fun DrawScope.drawChromaticCircle(
         }
 
         drawPath(path, segColor, style = Fill)
-
-        // Segment border
         drawPath(path, Color(0x33000000).copy(alpha = alpha * 0.3f), style = Stroke(1.5f))
 
-        // Note name label
+        // Note name
         val labelAngle = angleStart + segmentAngle / 2f
         val labelRadius = midRadius
         val labelX = center.x + labelRadius * cos(labelAngle)
         val labelY = center.y + labelRadius * sin(labelAngle)
 
-        val textSize = if (isSelected) 36f else 26f
+        val textSize = if (isSelected) 42f else 30f
         val labelPaint = android.graphics.Paint().apply {
             color = android.graphics.Color.argb(
-                (255 * alpha).toInt(),
-                255, 255, 255
+                (255 * alpha).toInt(), 255, 255, 255
             )
             this.textSize = textSize
             textAlign = android.graphics.Paint.Align.CENTER
@@ -665,7 +659,7 @@ private fun DrawScope.drawChromaticCircle(
     // Selected note name in center
     val centerPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb((255 * alpha).toInt(), 255, 255, 255)
-        textSize = 50f
+        textSize = 56f
         textAlign = android.graphics.Paint.Align.CENTER
         isFakeBoldText = true
         isAntiAlias = true
@@ -673,7 +667,7 @@ private fun DrawScope.drawChromaticCircle(
     drawContext.canvas.nativeCanvas.drawText(
         SPANISH_CHROMATIC_NAMES[selectedNote],
         center.x,
-        center.y + 18f,
+        center.y + 20f,
         centerPaint
     )
 }

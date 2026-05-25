@@ -16,7 +16,7 @@ enum class NoteDisplay {
     NOTE, DEGREE, BOTH, NONE
 }
 
-val SCALE_NOTE_NAMES = listOf("C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
+val SCALE_NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 val STANDARD_TUNING_MIDI = listOf(
     40, // E2 (6th string) - MIDI note
@@ -249,7 +249,7 @@ fun getDegreeLabel(degree: Int): String {
     }
 }
 
-private val SPANISH_NOTE_NAMES = listOf("Do", "Do#", "Re", "Mib", "Mi", "Fa", "Fa#", "Sol", "Lab", "La", "Sib", "Si")
+private val SPANISH_NOTE_NAMES = listOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
 
 fun getSpanishNoteName(midiNote: Int): String {
     return SPANISH_NOTE_NAMES[midiNote % 12]

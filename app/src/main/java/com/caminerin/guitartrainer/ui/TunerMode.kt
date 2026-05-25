@@ -1,5 +1,6 @@
 package com.caminerin.guitartrainer.ui
 
+import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,6 +40,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -79,6 +82,57 @@ fun TunerMode(
         0f
     }
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    if (isLandscape) {
+        TunerLandscapeLayout(
+            currentTuning = currentTuning,
+            tuningMenuExpanded = tuningMenuExpanded,
+            onTuningMenuToggle = { tuningMenuExpanded = it },
+            onTuningSelected = { selectedTuningIndex = it; selectedStringIndex = null; tuningMenuExpanded = false },
+            isAutoMode = isAutoMode,
+            onAutoModeChanged = { isAutoMode = it },
+            activeString = activeString,
+            selectedStringIndex = selectedStringIndex,
+            onStringSelected = { selectedStringIndex = it },
+            pitchResult = pitchResult,
+            centsFromTarget = centsFromTarget,
+            modifier = modifier
+        )
+    } else {
+        TunerPortraitLayout(
+            currentTuning = currentTuning,
+            tuningMenuExpanded = tuningMenuExpanded,
+            onTuningMenuToggle = { tuningMenuExpanded = it },
+            onTuningSelected = { selectedTuningIndex = it; selectedStringIndex = null; tuningMenuExpanded = false },
+            isAutoMode = isAutoMode,
+            onAutoModeChanged = { isAutoMode = it },
+            activeString = activeString,
+            selectedStringIndex = selectedStringIndex,
+            onStringSelected = { selectedStringIndex = it },
+            pitchResult = pitchResult,
+            centsFromTarget = centsFromTarget,
+            modifier = modifier
+        )
+    }
+}
+
+@Composable
+private fun TunerPortraitLayout(
+    currentTuning: GuitarTuning,
+    tuningMenuExpanded: Boolean,
+    onTuningMenuToggle: (Boolean) -> Unit,
+    onTuningSelected: (Int) -> Unit,
+    isAutoMode: Boolean,
+    onAutoModeChanged: (Boolean) -> Unit,
+    activeString: GuitarString?,
+    selectedStringIndex: Int?,
+    onStringSelected: (Int) -> Unit,
+    pitchResult: PitchDetector.PitchResult?,
+    centsFromTarget: Float,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -86,134 +140,190 @@ fun TunerMode(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Tuning selector dropdown
-        Box {
-            OutlinedButton(onClick = { tuningMenuExpanded = true }) {
-                Text(text = currentTuning.name)
-            }
-            DropdownMenu(
-                expanded = tuningMenuExpanded,
-                onDismissRequest = { tuningMenuExpanded = false }
-            ) {
-                ALL_TUNINGS.forEachIndexed { index, tuning ->
-                    DropdownMenuItem(
-                        text = { Text(tuning.name) },
-                        onClick = {
-                            selectedTuningIndex = index
-                            selectedStringIndex = null
-                            tuningMenuExpanded = false
-                        }
-                    )
-                }
-            }
-        }
-
+        TuningSelector(currentTuning, tuningMenuExpanded, onTuningMenuToggle, onTuningSelected)
         Spacer(modifier = Modifier.height(12.dp))
-
-        // Auto / Manual toggle
-        Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            ToggleButton(
-                text = "Auto",
-                isSelected = isAutoMode,
-                onClick = { isAutoMode = true }
-            )
-            ToggleButton(
-                text = "Manual",
-                isSelected = !isAutoMode,
-                onClick = { isAutoMode = false }
-            )
-        }
-
+        AutoManualToggle(isAutoMode, onAutoModeChanged)
         Spacer(modifier = Modifier.height(12.dp))
-
-        // String selection (only in manual mode, but always show which string is active)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            currentTuning.strings.forEachIndexed { index, string ->
-                val isActive = activeString == string
-                StringChip(
-                    guitarString = string,
-                    isActive = isActive,
-                    isManual = !isAutoMode,
-                    onClick = {
-                        if (!isAutoMode) {
-                            selectedStringIndex = index
-                        }
-                    }
-                )
-                if (index < currentTuning.strings.size - 1) {
-                    Spacer(modifier = Modifier.width(6.dp))
-                }
-            }
-        }
-
+        StringRow(currentTuning, activeString, !isAutoMode, onStringSelected)
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Semicircular gauge
         TunerGauge(
             cents = if (pitchResult != null && activeString != null) centsFromTarget else 0f,
             isActive = pitchResult != null && activeString != null
         )
-
         Spacer(modifier = Modifier.height(8.dp))
+        TunerInfo(activeString, pitchResult, centsFromTarget, isAutoMode)
+    }
+}
 
-        // Note name and frequency display
-        if (activeString != null && pitchResult != null) {
-            Text(
-                text = "${activeString.noteName}${activeString.octave}",
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                color = statusColor(centsFromTarget)
-            )
-            Text(
-                text = "${activeString.spanishName} · Cuerda ${activeString.number}",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
-            )
-
+@Composable
+private fun TunerLandscapeLayout(
+    currentTuning: GuitarTuning,
+    tuningMenuExpanded: Boolean,
+    onTuningMenuToggle: (Boolean) -> Unit,
+    onTuningSelected: (Int) -> Unit,
+    isAutoMode: Boolean,
+    onAutoModeChanged: (Boolean) -> Unit,
+    activeString: GuitarString?,
+    selectedStringIndex: Int?,
+    onStringSelected: (Int) -> Unit,
+    pitchResult: PitchDetector.PitchResult?,
+    centsFromTarget: Float,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left: strings + controls
+        Column(
+            modifier = Modifier
+                .weight(0.35f)
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            TuningSelector(currentTuning, tuningMenuExpanded, onTuningMenuToggle, onTuningSelected)
             Spacer(modifier = Modifier.height(8.dp))
+            AutoManualToggle(isAutoMode, onAutoModeChanged)
+            Spacer(modifier = Modifier.height(8.dp))
+            StringRow(currentTuning, activeString, !isAutoMode, onStringSelected)
+        }
 
-            Text(
-                text = "${"%.1f".format(pitchResult.frequency)} Hz",
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+        Spacer(modifier = Modifier.width(16.dp))
+
+        // Right: gauge + info
+        Column(
+            modifier = Modifier
+                .weight(0.65f)
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            TunerGauge(
+                cents = if (pitchResult != null && activeString != null) centsFromTarget else 0f,
+                isActive = pitchResult != null && activeString != null,
+                modifier = Modifier.fillMaxWidth()
             )
-            Text(
-                text = "${"%+.0f".format(centsFromTarget)} cents",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
+            Spacer(modifier = Modifier.height(8.dp))
+            TunerInfo(activeString, pitchResult, centsFromTarget, isAutoMode)
+        }
+    }
+}
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Status badge
-            val status = tuningStatus(centsFromTarget)
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(status.color.copy(alpha = 0.15f))
-                    .padding(horizontal = 24.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = status.text,
-                    color = status.color,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+@Composable
+private fun TuningSelector(
+    currentTuning: GuitarTuning,
+    expanded: Boolean,
+    onToggle: (Boolean) -> Unit,
+    onSelected: (Int) -> Unit
+) {
+    Box {
+        OutlinedButton(onClick = { onToggle(true) }) {
+            Text(text = currentTuning.name)
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { onToggle(false) }) {
+            ALL_TUNINGS.forEachIndexed { index, tuning ->
+                DropdownMenuItem(
+                    text = { Text(tuning.name) },
+                    onClick = { onSelected(index) }
                 )
             }
-        } else {
+        }
+    }
+}
+
+@Composable
+private fun AutoManualToggle(isAutoMode: Boolean, onChanged: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        ToggleButton("Auto", isAutoMode) { onChanged(true) }
+        ToggleButton("Manual", !isAutoMode) { onChanged(false) }
+    }
+}
+
+@Composable
+private fun StringRow(
+    currentTuning: GuitarTuning,
+    activeString: GuitarString?,
+    isManual: Boolean,
+    onStringSelected: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        currentTuning.strings.forEachIndexed { index, string ->
+            StringChip(
+                guitarString = string,
+                isActive = activeString == string,
+                isManual = isManual,
+                onClick = { if (isManual) onStringSelected(index) }
+            )
+            if (index < currentTuning.strings.size - 1) {
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TunerInfo(
+    activeString: GuitarString?,
+    pitchResult: PitchDetector.PitchResult?,
+    centsFromTarget: Float,
+    isAutoMode: Boolean
+) {
+    if (activeString != null && pitchResult != null) {
+        Text(
+            text = "${activeString.noteName}${activeString.octave}",
+            fontSize = 48.sp,
+            fontWeight = FontWeight.Bold,
+            color = statusColor(centsFromTarget)
+        )
+        Text(
+            text = "${activeString.spanishName} \u00b7 Cuerda ${activeString.number}",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "${"%.1f".format(pitchResult.frequency)} Hz",
+            fontSize = 18.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+        )
+        Text(
+            text = "${"%+.0f".format(centsFromTarget)} cents",
+            fontSize = 14.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        val status = tuningStatus(centsFromTarget)
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(16.dp))
+                .background(status.color.copy(alpha = 0.15f))
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+        ) {
             Text(
-                text = if (isAutoMode) "Toca una cuerda..." else "Selecciona y toca una cuerda...",
-                fontSize = 18.sp,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+                text = status.text,
+                color = status.color,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
             )
         }
+    } else {
+        Text(
+            text = if (isAutoMode) "Toca una cuerda..." else "Selecciona y toca una cuerda...",
+            fontSize = 18.sp,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
+        )
     }
 }
 
@@ -259,16 +369,14 @@ private fun TunerGauge(
             style = Stroke(width = 12f, cap = StrokeCap.Round)
         )
 
-        // Colored zones on the arc
-        val zoneRadius = radius
-        // Green zone (center ±10 cents = ±36°)
+        // Green zone
         drawArc(
             color = COLOR_TUNED.copy(alpha = 0.3f),
             startAngle = 180f + 90f - 18f,
             sweepAngle = 36f,
             useCenter = false,
-            topLeft = Offset(centerX - zoneRadius, bottomY - zoneRadius),
-            size = androidx.compose.ui.geometry.Size(zoneRadius * 2, zoneRadius * 2),
+            topLeft = Offset(centerX - radius, bottomY - radius),
+            size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
             style = Stroke(width = 12f, cap = StrokeCap.Round)
         )
 
@@ -311,7 +419,7 @@ private fun TunerGauge(
             cap = StrokeCap.Round
         )
 
-        // Needle pivot circle
+        // Needle pivot
         drawCircle(
             color = needleColor,
             radius = 8f,
@@ -410,14 +518,14 @@ private data class TuningStatus(val text: String, val color: Color)
 private fun tuningStatus(cents: Float): TuningStatus {
     val absCents = abs(cents)
     return when {
-        absCents <= TUNED_TOLERANCE -> TuningStatus("✓ Afinado", COLOR_TUNED)
+        absCents <= TUNED_TOLERANCE -> TuningStatus("\u2713 Afinado", COLOR_TUNED)
         absCents <= CLOSE_TOLERANCE -> {
-            if (cents > 0) TuningStatus("↓ Baja un poco", COLOR_CLOSE)
-            else TuningStatus("↑ Sube un poco", COLOR_CLOSE)
+            if (cents > 0) TuningStatus("\u2193 Baja un poco", COLOR_CLOSE)
+            else TuningStatus("\u2191 Sube un poco", COLOR_CLOSE)
         }
         else -> {
-            if (cents > 0) TuningStatus("↓ Baja bastante", COLOR_FAR)
-            else TuningStatus("↑ Sube bastante", COLOR_FAR)
+            if (cents > 0) TuningStatus("\u2193 Baja bastante", COLOR_FAR)
+            else TuningStatus("\u2191 Sube bastante", COLOR_FAR)
         }
     }
 }
@@ -431,6 +539,7 @@ private fun statusColor(cents: Float): Color {
     }
 }
 
-private fun centsFromTarget(detected: Float, target: Float): Float {
-    return (1200f * kotlin.math.log2(detected / target))
+private fun centsFromTarget(freq: Float, target: Float): Float {
+    if (freq <= 0f || target <= 0f) return 0f
+    return (1200f * kotlin.math.log2(freq / target))
 }

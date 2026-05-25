@@ -1,5 +1,6 @@
 package com.caminerin.guitartrainer.ui
 
+import android.content.res.Configuration
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -51,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -114,6 +117,124 @@ fun MetronomeMode(
         }
     }
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
+    if (isLandscape) {
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Left: Play + BPM + beats
+            Column(
+                modifier = Modifier
+                    .weight(0.4f)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                BeatVisualizer(
+                    beatsPerMeasure = beatsPerMeasure,
+                    currentBeat = if (isPlaying) currentBeat else -1
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    FilledIconButton(
+                        onClick = { if (isPlaying) engine.stop() else playTrigger++ },
+                        modifier = Modifier.size(56.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = if (isPlaying) Color(0xFFF44336) else Color(0xFF4CAF50)
+                        )
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp),
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "$bpm", fontSize = 42.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground)
+                        Text("BPM", fontSize = 11.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.Center) {
+                    PillButton("-5") { bpm = (bpm - 5).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    PillButton("-1") { bpm = (bpm - 1).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    PillButton("+1") { bpm = (bpm + 1).coerceAtMost(300); bpmSlider = bpm.toFloat() }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    PillButton("+5") { bpm = (bpm + 5).coerceAtMost(300); bpmSlider = bpm.toFloat() }
+                }
+                Slider(
+                    value = bpmSlider,
+                    onValueChange = { bpmSlider = it; bpm = it.toInt() },
+                    valueRange = 20f..300f,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Right: settings + cards
+            Column(
+                modifier = Modifier
+                    .weight(0.6f)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+                    .padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                MetronomeSettings(
+                    beatsPerMeasure = beatsPerMeasure,
+                    beatsMenuExpanded = beatsMenuExpanded,
+                    onBeatsMenuToggle = { beatsMenuExpanded = it },
+                    onBeatsSelected = { beatsPerMeasure = it; beatsMenuExpanded = false },
+                    subdivision = subdivision,
+                    subdivisionMenuExpanded = subdivisionMenuExpanded,
+                    onSubdivisionMenuToggle = { subdivisionMenuExpanded = it },
+                    onSubdivisionSelected = { subdivision = it; subdivisionMenuExpanded = false },
+                    sound = sound,
+                    soundMenuExpanded = soundMenuExpanded,
+                    onSoundMenuToggle = { soundMenuExpanded = it },
+                    onSoundSelected = { sound = it; soundMenuExpanded = false }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                MetronomeCards(
+                    isPlaying = isPlaying,
+                    currentBpm = currentBpm,
+                    bpm = bpm,
+                    currentMeasure = currentMeasure,
+                    elapsedSeconds = elapsedSeconds,
+                    trainingEnabled = trainingEnabled,
+                    onTrainingToggle = { trainingEnabled = !trainingEnabled },
+                    trainingInterval = trainingInterval,
+                    onTrainingIntervalChange = { trainingInterval = it },
+                    trainingBpmChange = trainingBpmChange,
+                    onTrainingBpmChangeChange = { trainingBpmChange = it },
+                    trainingMaxBpm = trainingMaxBpm,
+                    onTrainingMaxBpmChange = { trainingMaxBpm = it },
+                    timerEnabled = timerEnabled,
+                    onTimerToggle = { timerEnabled = !timerEnabled },
+                    timerMode = timerMode,
+                    onTimerModeChange = { timerMode = it },
+                    timerMeasures = timerMeasures,
+                    onTimerMeasuresChange = { timerMeasures = it },
+                    timerSeconds = timerSeconds,
+                    onTimerSecondsChange = { timerSeconds = it }
+                )
+            }
+        }
+    } else {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -121,7 +242,6 @@ fun MetronomeMode(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Beat visualization (fixed size, only color changes)
         BeatVisualizer(
             beatsPerMeasure = beatsPerMeasure,
             currentBeat = if (isPlaying) currentBeat else -1
@@ -129,7 +249,6 @@ fun MetronomeMode(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Play button + BPM
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
@@ -162,7 +281,6 @@ fun MetronomeMode(
             }
         }
 
-        // BPM buttons
         Spacer(modifier = Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.Center) {
             PillButton("-5") { bpm = (bpm - 5).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
@@ -369,6 +487,166 @@ fun MetronomeMode(
         }
 
         Spacer(modifier = Modifier.height(20.dp))
+    }
+    } // else (portrait)
+}
+
+@Composable
+private fun MetronomeSettings(
+    beatsPerMeasure: Int,
+    beatsMenuExpanded: Boolean,
+    onBeatsMenuToggle: (Boolean) -> Unit,
+    onBeatsSelected: (Int) -> Unit,
+    subdivision: Int,
+    subdivisionMenuExpanded: Boolean,
+    onSubdivisionMenuToggle: (Boolean) -> Unit,
+    onSubdivisionSelected: (Int) -> Unit,
+    sound: MetronomeSound,
+    soundMenuExpanded: Boolean,
+    onSoundMenuToggle: (Boolean) -> Unit,
+    onSoundSelected: (MetronomeSound) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        Box {
+            OutlinedButton(onClick = { onBeatsMenuToggle(true) }) {
+                Text("$beatsPerMeasure/4", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+            DropdownMenu(expanded = beatsMenuExpanded, onDismissRequest = { onBeatsMenuToggle(false) }) {
+                (2..12).forEach { n ->
+                    DropdownMenuItem(text = { Text("$n/4") }, onClick = { onBeatsSelected(n) })
+                }
+            }
+        }
+        Box {
+            OutlinedButton(onClick = { onSubdivisionMenuToggle(true) }) {
+                val subLabel = when (subdivision) {
+                    1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
+                }
+                Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+            DropdownMenu(expanded = subdivisionMenuExpanded, onDismissRequest = { onSubdivisionMenuToggle(false) }) {
+                listOf(1 to "\u2669 Negras", 2 to "\u266a\u266a Corcheas", 3 to "\u266a\u266a\u266a Tresillos", 4 to "\u266c Semicorcheas").forEach { (sub, label) ->
+                    DropdownMenuItem(text = { Text(label) }, onClick = { onSubdivisionSelected(sub) })
+                }
+            }
+        }
+        Box {
+            OutlinedButton(onClick = { onSoundMenuToggle(true) }) {
+                Text("\u266a ${sound.displayName}", fontSize = 12.sp)
+            }
+            DropdownMenu(expanded = soundMenuExpanded, onDismissRequest = { onSoundMenuToggle(false) }) {
+                MetronomeSound.entries.forEach { s ->
+                    DropdownMenuItem(text = { Text(s.displayName) }, onClick = { onSoundSelected(s) })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetronomeCards(
+    isPlaying: Boolean,
+    currentBpm: Int,
+    bpm: Int,
+    currentMeasure: Int,
+    elapsedSeconds: Int,
+    trainingEnabled: Boolean,
+    onTrainingToggle: () -> Unit,
+    trainingInterval: Int,
+    onTrainingIntervalChange: (Int) -> Unit,
+    trainingBpmChange: Int,
+    onTrainingBpmChangeChange: (Int) -> Unit,
+    trainingMaxBpm: Int,
+    onTrainingMaxBpmChange: (Int) -> Unit,
+    timerEnabled: Boolean,
+    onTimerToggle: () -> Unit,
+    timerMode: String,
+    onTimerModeChange: (String) -> Unit,
+    timerMeasures: Int,
+    onTimerMeasuresChange: (Int) -> Unit,
+    timerSeconds: Int,
+    onTimerSecondsChange: (Int) -> Unit
+) {
+    FeatureCard(
+        icon = Icons.Default.FitnessCenter,
+        title = "Entrenamiento",
+        enabled = trainingEnabled,
+        onToggle = onTrainingToggle,
+        activeColor = Color(0xFF2196F3)
+    ) {
+        if (isPlaying && trainingEnabled) {
+            val progress = ((currentBpm - bpm).toFloat() / (trainingMaxBpm - bpm).toFloat()).coerceIn(0f, 1f)
+            LinearProgressIndicator(
+                progress = progress,
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                color = Color(0xFF2196F3),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("$currentBpm \u2192 $trainingMaxBpm BPM", fontSize = 12.sp, color = Color(0xFF2196F3), fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            ValueSelector("Cada", "$trainingInterval", "comp.",
+                onMinus = { onTrainingIntervalChange((trainingInterval - 1).coerceAtLeast(1)) },
+                onPlus = { onTrainingIntervalChange((trainingInterval + 1).coerceAtMost(32)) })
+            ValueSelector("Subir", "+$trainingBpmChange", "BPM",
+                onMinus = { onTrainingBpmChangeChange((trainingBpmChange - 1).coerceAtLeast(1)) },
+                onPlus = { onTrainingBpmChangeChange((trainingBpmChange + 1).coerceAtMost(20)) })
+            ValueSelector("Hasta", "$trainingMaxBpm", "BPM",
+                onMinus = { onTrainingMaxBpmChange((trainingMaxBpm - 5).coerceAtLeast(bpm + 10)) },
+                onPlus = { onTrainingMaxBpmChange((trainingMaxBpm + 5).coerceAtMost(300)) })
+        }
+    }
+
+    Spacer(modifier = Modifier.height(10.dp))
+
+    FeatureCard(
+        icon = Icons.Default.Timer,
+        title = "Temporizador",
+        enabled = timerEnabled,
+        onToggle = onTimerToggle,
+        activeColor = Color(0xFFFF9800)
+    ) {
+        if (isPlaying && timerEnabled) {
+            val remaining = if (timerMode == "measures") {
+                "${(timerMeasures - currentMeasure).coerceAtLeast(0)} compases restantes"
+            } else {
+                "${formatTime((timerSeconds - elapsedSeconds).coerceAtLeast(0))} restantes"
+            }
+            val progress = if (timerMode == "measures") {
+                (currentMeasure.toFloat() / timerMeasures).coerceIn(0f, 1f)
+            } else {
+                (elapsedSeconds.toFloat() / timerSeconds).coerceIn(0f, 1f)
+            }
+            LinearProgressIndicator(
+                progress = progress,
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                color = Color(0xFFFF9800),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(remaining, fontSize = 12.sp, color = Color(0xFFFF9800), fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            Pill("Compases", timerMode == "measures") { onTimerModeChange("measures") }
+            Spacer(modifier = Modifier.width(8.dp))
+            Pill("Tiempo", timerMode == "time") { onTimerModeChange("time") }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        if (timerMode == "measures") {
+            BigValueSelector("$timerMeasures", "compases",
+                onMinus = { onTimerMeasuresChange((timerMeasures - 4).coerceAtLeast(4)) },
+                onPlus = { onTimerMeasuresChange((timerMeasures + 4).coerceAtMost(128)) })
+        } else {
+            BigValueSelector(formatTime(timerSeconds), "",
+                onMinus = { onTimerSecondsChange((timerSeconds - 10).coerceAtLeast(10)) },
+                onPlus = { onTimerSecondsChange((timerSeconds + 10).coerceAtMost(600)) })
+        }
     }
 }
 
