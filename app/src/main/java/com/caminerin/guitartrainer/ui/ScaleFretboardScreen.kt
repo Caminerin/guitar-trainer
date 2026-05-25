@@ -59,9 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.PI
 import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.min
-import kotlin.math.sin
 import kotlin.math.sqrt
 
 private const val TOTAL_FRETS = 22
@@ -242,7 +240,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.weight(1f))
 
             // Zoom controls
-            IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(0.8f) }, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(0.5f) }, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Default.ZoomOut, "Alejar", tint = Color.White, modifier = Modifier.size(20.dp))
             }
             IconButton(onClick = { zoom = (zoom + 0.3f).coerceAtMost(3f) }, modifier = Modifier.size(36.dp)) {
@@ -441,14 +439,14 @@ private fun DrawScope.drawGuitarFretboard(
     // Open string labels
     val openPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb(220, 240, 240, 240)
-        textSize = 36f
+        textSize = 72f
         textAlign = android.graphics.Paint.Align.CENTER
         isFakeBoldText = true
         isAntiAlias = true
     }
     for (s in 0 until 6) {
         val y = fbTop + stringSpacing * (6 - s)
-        drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 12f, openPaint)
+        drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 24f, openPaint)
     }
 
     // Position range

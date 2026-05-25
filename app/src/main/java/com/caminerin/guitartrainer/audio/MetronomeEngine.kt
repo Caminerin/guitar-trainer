@@ -60,6 +60,12 @@ class MetronomeEngine {
     private val _elapsedSeconds = MutableStateFlow(0)
     val elapsedSeconds: StateFlow<Int> = _elapsedSeconds
 
+    // Live-updatable fields: UI writes these, audio loop reads them each beat
+    @Volatile var liveBpm: Int = 120
+    @Volatile var liveSubdivision: Int = 1
+    @Volatile var liveBeatsPerMeasure: Int = 4
+    @Volatile var liveSound: MetronomeSound = MetronomeSound.CLICK
+
     private fun generateClick(frequency: Float, durationSamples: Int, volume: Float): ShortArray {
         val samples = ShortArray(durationSamples)
         for (i in 0 until durationSamples) {
@@ -165,22 +171,32 @@ class MetronomeEngine {
         _currentBpm.value = config.bpm
         _elapsedSeconds.value = 0
 
+        // Initialize live fields from config
+        liveBpm = config.bpm
+        liveSubdivision = config.subdivision
+        liveBeatsPerMeasure = config.beatsPerMeasure
+        liveSound = config.sound
+
         var activeBpm = config.bpm
         var beatInMeasure = 0
         var measuresCompleted = 0
         val startTimeMs = System.currentTimeMillis()
 
         while (isActive && _isPlaying.value) {
+            // Read live config each beat
+            val useBpm = if (config.trainingEnabled) activeBpm else liveBpm
+            val useSub = liveSubdivision
+            val useBeats = liveBeatsPerMeasure
+            val useSound = liveSound
+
             val isAccent = (beatInMeasure == 0)
-
-            // Update UI state right before writing audio
-            // With minimal buffer, write blocks until hardware is ready = sync
             _currentBeat.value = beatInMeasure
+            _currentBpm.value = useBpm
 
-            val beatAudio = buildBeatAudio(activeBpm, config.subdivision, config.sound, isAccent)
+            val beatAudio = buildBeatAudio(useBpm, useSub, useSound, isAccent)
             track.write(beatAudio, 0, beatAudio.size)
 
-            beatInMeasure = (beatInMeasure + 1) % config.beatsPerMeasure
+            beatInMeasure = (beatInMeasure + 1) % useBeats
 
             if (beatInMeasure == 0) {
                 measuresCompleted++

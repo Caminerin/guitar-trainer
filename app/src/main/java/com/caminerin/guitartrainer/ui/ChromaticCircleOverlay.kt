@@ -47,7 +47,7 @@ fun ChromaticCircleOverlay(
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
     ) {
-        val circleSize = 320.dp
+        val circleSize = 500.dp
         Canvas(
             modifier = Modifier
                 .size(circleSize)
@@ -142,7 +142,7 @@ fun DrawScope.drawChromaticCircleShared(
         val labelX = center.x + midRadius * cos(labelAngle)
         val labelY = center.y + midRadius * sin(labelAngle)
 
-        val textSize = if (isSelected) 42f else 30f
+        val textSize = if (isSelected) 126f else 90f
         val labelPaint = android.graphics.Paint().apply {
             color = android.graphics.Color.argb((255 * alpha).toInt(), 255, 255, 255)
             this.textSize = textSize
@@ -159,10 +159,10 @@ fun DrawScope.drawChromaticCircleShared(
 
     val centerPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb((255 * alpha).toInt(), 255, 255, 255)
-        textSize = 56f
+        textSize = 168f
         textAlign = android.graphics.Paint.Align.CENTER
         isFakeBoldText = true
         isAntiAlias = true
     }
-    drawContext.canvas.nativeCanvas.drawText(SPANISH_CHROMATIC_NAMES[selectedNote], center.x, center.y + 20f, centerPaint)
+    drawContext.canvas.nativeCanvas.drawText(SPANISH_CHROMATIC_NAMES[selectedNote], center.x, center.y + 60f, centerPaint)
 }

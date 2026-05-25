@@ -117,6 +117,12 @@ fun MetronomeMode(
         }
     }
 
+    // Real-time config updates: write to engine's live fields whenever settings change
+    LaunchedEffect(bpm) { engine.liveBpm = bpm }
+    LaunchedEffect(subdivision) { engine.liveSubdivision = subdivision }
+    LaunchedEffect(beatsPerMeasure) { engine.liveBeatsPerMeasure = beatsPerMeasure }
+    LaunchedEffect(sound) { engine.liveSound = sound }
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 

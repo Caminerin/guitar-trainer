@@ -25,6 +25,10 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -101,6 +105,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
     var showKeyCircle by remember { mutableStateOf(false) }
     var showScaleSelector by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
+    var showSubdivisionMenu by remember { mutableStateOf(false) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
     val positions = scale.positions
@@ -211,26 +216,24 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                     ) { Text("+", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
                 }
 
-                // Subdivision selector
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    listOf(1, 2, 3, 4).forEach { sub ->
-                        val isSelected = subdivision == sub
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(if (isSelected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.06f))
-                                .clickable { subdivision = sub },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "$sub",
-                                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.5f),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                // Subdivision selector (button + dropdown like external metronome)
+                Box {
+                    val subLabel = when (subdivision) {
+                        1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF7C4DFF).copy(alpha = 0.3f))
+                            .clickable { showSubdivisionMenu = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(subLabel, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                    DropdownMenu(expanded = showSubdivisionMenu, onDismissRequest = { showSubdivisionMenu = false }) {
+                        listOf(1 to "\u2669 Negras", 2 to "\u266a\u266a Corcheas", 3 to "\u266a\u266a\u266a Tresillos", 4 to "\u266c Semicorcheas").forEach { (sub, label) ->
+                            DropdownMenuItem(text = { Text(label) }, onClick = { subdivision = sub; showSubdivisionMenu = false })
                         }
-                        if (sub < 4) Spacer(modifier = Modifier.width(2.dp))
                     }
                 }
 
@@ -266,6 +269,14 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                 // Info button
                 IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(20.dp))
+                }
+
+                // Zoom controls
+                IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(0.5f) }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.ZoomOut, "Alejar", tint = Color.White, modifier = Modifier.size(20.dp))
+                }
+                IconButton(onClick = { zoom = (zoom + 0.3f).coerceAtMost(3f) }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -448,14 +459,14 @@ private fun DrawScope.drawCagedFretboard(
 
     val openPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb(220, 240, 240, 240)
-        textSize = 36f
+        textSize = 72f
         textAlign = android.graphics.Paint.Align.CENTER
         isFakeBoldText = true
         isAntiAlias = true
     }
     for (s in 0 until 6) {
         val y = fbTop + stringSpacing * (6 - s)
-        drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 12f, openPaint)
+        drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 24f, openPaint)
     }
 
     val noteRadius = (stringSpacing * 0.44f).coerceIn(36f, 80f)
