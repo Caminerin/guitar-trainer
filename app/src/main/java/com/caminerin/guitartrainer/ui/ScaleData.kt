@@ -258,6 +258,67 @@ fun getSpanishNoteName(midiNote: Int): String {
 
 val OPEN_STRING_NAMES = listOf("E", "A", "D", "G", "B", "E")
 
+val SPANISH_CHROMATIC_NAMES = listOf(
+    "Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"
+)
+
+data class ScaleChordInfo(
+    val degree: Int,
+    val noteName: String,
+    val chordType: String,
+    val intervalName: String
+)
+
+fun getScaleChords(rootNote: Int, scaleIntervals: List<Int>): List<ScaleChordInfo> {
+    val result = mutableListOf<ScaleChordInfo>()
+    for ((degIdx, interval) in scaleIntervals.withIndex()) {
+        val noteIdx = (rootNote + interval) % 12
+        val noteName = SPANISH_CHROMATIC_NAMES[noteIdx]
+        val degree = degIdx + 1
+
+        // Determine chord quality by stacking thirds
+        val thirdInterval = findIntervalSteps(scaleIntervals, degIdx, 2)
+        val fifthInterval = findIntervalSteps(scaleIntervals, degIdx, 4)
+
+        val chordType = when {
+            thirdInterval == 4 && fifthInterval == 7 -> "Mayor"
+            thirdInterval == 3 && fifthInterval == 7 -> "menor"
+            thirdInterval == 3 && fifthInterval == 6 -> "dim"
+            thirdInterval == 4 && fifthInterval == 8 -> "aug"
+            thirdInterval == 4 && fifthInterval == null -> "Mayor"
+            thirdInterval == 3 && fifthInterval == null -> "menor"
+            else -> ""
+        }
+
+        val intervalName = when (interval) {
+            0 -> "Tónica"
+            1 -> "2ª menor"
+            2 -> "2ª Mayor"
+            3 -> "3ª menor"
+            4 -> "3ª Mayor"
+            5 -> "4ª Justa"
+            6 -> "Tritono"
+            7 -> "5ª Justa"
+            8 -> "6ª menor"
+            9 -> "6ª Mayor"
+            10 -> "7ª menor"
+            11 -> "7ª Mayor"
+            else -> ""
+        }
+
+        result.add(ScaleChordInfo(degree, noteName, chordType, intervalName))
+    }
+    return result
+}
+
+private fun findIntervalSteps(scaleIntervals: List<Int>, startDeg: Int, steps: Int): Int? {
+    if (startDeg + steps >= scaleIntervals.size) {
+        val wrappedIdx = (startDeg + steps) % scaleIntervals.size
+        return ((scaleIntervals[wrappedIdx] - scaleIntervals[startDeg] + 12) % 12)
+    }
+    return (scaleIntervals[startDeg + steps] - scaleIntervals[startDeg] + 12) % 12
+}
+
 data class FretboardNote(
     val string: Int,  // 0=6th(E2), 5=1st(E4)
     val fret: Int,

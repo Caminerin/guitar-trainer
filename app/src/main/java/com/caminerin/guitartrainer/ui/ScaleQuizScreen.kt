@@ -21,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -28,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -95,12 +97,13 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
     var maxFret by rememberSaveable { mutableIntStateOf(12) }
     var zoom by remember { mutableFloatStateOf(1.5f) }
 
-    var keyMenuExpanded by remember { mutableStateOf(false) }
-    var scaleMenuExpanded by remember { mutableStateOf(false) }
     var fretMenuExpanded by remember { mutableStateOf(false) }
+    var showKeyCircle by remember { mutableStateOf(false) }
+    var showScaleSelector by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
 
-    val revealedNotes = remember { mutableStateListOf<Pair<Int, Int>>() } // (string, fret) correctly found
-    val errorFlash = remember { mutableStateOf<Pair<Float, Float>?>(null) } // (cx, cy) of error
+    val revealedNotes = remember { mutableStateListOf<Pair<Int, Int>>() }
+    val errorFlash = remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var correctCount by remember { mutableIntStateOf(0) }
     var errorCount by remember { mutableIntStateOf(0) }
 
@@ -110,7 +113,6 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
     val openStringWidth = 48.dp
     val totalWidthDp = openStringWidth + (TOTAL_FRETS * 60 * zoom + 30).dp
 
-    // Count total notes in scale within fret range
     val totalScaleNotes = remember(selectedKey, selectedScaleIndex, maxFret) {
         var count = 0
         for (s in 0 until 6) {
@@ -122,176 +124,188 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
         count
     }
 
-    // Clear error flash after delay
     val currentError = errorFlash.value
     if (currentError != null) {
-        androidx.compose.runtime.LaunchedEffect(currentError) {
+        LaunchedEffect(currentError) {
             delay(400)
             errorFlash.value = null
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(COLOR_BG)
-    ) {
-        // Toolbar
-        Row(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(COLOR_TOOLBAR)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                .fillMaxSize()
+                .background(COLOR_BG)
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(22.dp))
-            }
+            // Toolbar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(COLOR_TOOLBAR)
+                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
+                }
 
-            // Key selector
-            Box {
+                // Key selector -> chromatic circle
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(COLOR_TONIC_Q.copy(alpha = 0.3f))
-                        .clickable { keyMenuExpanded = true }
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                        .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
+                        .clickable { showKeyCircle = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(SCALE_NOTE_NAMES[selectedKey], color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(SCALE_NOTE_NAMES[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
-                DropdownMenu(expanded = keyMenuExpanded, onDismissRequest = { keyMenuExpanded = false }) {
-                    SCALE_NOTE_NAMES.forEachIndexed { i, n ->
-                        DropdownMenuItem(text = { Text(n) }, onClick = {
-                            selectedKey = i; keyMenuExpanded = false
-                            revealedNotes.clear(); correctCount = 0; errorCount = 0
-                        })
-                    }
-                }
-            }
 
-            // Scale selector
-            Box {
+                // Scale selector -> overlay
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
-                        .clickable { scaleMenuExpanded = true }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .clickable { showScaleSelector = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
-                DropdownMenu(expanded = scaleMenuExpanded, onDismissRequest = { scaleMenuExpanded = false }) {
-                    ALL_SCALES.forEachIndexed { i, s ->
-                        DropdownMenuItem(text = { Text(s.name) }, onClick = {
-                            selectedScaleIndex = i; scaleMenuExpanded = false
-                            revealedNotes.clear(); correctCount = 0; errorCount = 0
-                        })
+
+                // Max fret selector
+                Box {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .clickable { fretMenuExpanded = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text("Traste $maxFret", color = Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                    DropdownMenu(expanded = fretMenuExpanded, onDismissRequest = { fretMenuExpanded = false }) {
+                        listOf(5, 7, 9, 12, 15, 17, 22).forEach { f ->
+                            DropdownMenuItem(text = { Text("Hasta traste $f") }, onClick = {
+                                maxFret = f; fretMenuExpanded = false
+                                revealedNotes.clear(); correctCount = 0; errorCount = 0
+                            })
+                        }
                     }
                 }
-            }
 
-            // Max fret selector
-            Box {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .clickable { fretMenuExpanded = true }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                // Reset button
+                IconButton(
+                    onClick = { revealedNotes.clear(); correctCount = 0; errorCount = 0 },
+                    modifier = Modifier.size(36.dp)
                 ) {
-                    Text("Traste $maxFret", color = Color(0xFF90A4AE), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Icon(Icons.Default.Refresh, "Reset", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
-                DropdownMenu(expanded = fretMenuExpanded, onDismissRequest = { fretMenuExpanded = false }) {
-                    listOf(5, 7, 9, 12, 15, 17, 22).forEach { f ->
-                        DropdownMenuItem(text = { Text("Hasta traste $f") }, onClick = {
-                            maxFret = f; fretMenuExpanded = false
-                            revealedNotes.clear(); correctCount = 0; errorCount = 0
-                        })
-                    }
+
+                // Info button
+                IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(20.dp))
                 }
-            }
 
-            // Reset button
-            IconButton(
-                onClick = { revealedNotes.clear(); correctCount = 0; errorCount = 0 },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(Icons.Default.Refresh, "Reset", tint = Color.White, modifier = Modifier.size(20.dp))
-            }
+                Spacer(modifier = Modifier.weight(1f))
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Score
-            Text(
-                "${revealedNotes.size}/$totalScaleNotes",
-                color = COLOR_CORRECT,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            if (errorCount > 0) {
+                // Score
                 Text(
-                    "${errorCount} err",
-                    color = COLOR_ERROR,
-                    fontSize = 14.sp
+                    "${revealedNotes.size}/$totalScaleNotes",
+                    color = COLOR_CORRECT,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
                 )
+                if (errorCount > 0) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("${errorCount} err", color = COLOR_ERROR, fontSize = 13.sp)
+                }
             }
-        }
 
-        // Fretboard with tap detection
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-        ) {
-            val hitTargets = remember { mutableStateListOf<QuizHitTarget>() }
-
-            Canvas(
+            // Fretboard with tap detection
+            Box(
                 modifier = Modifier
-                    .width(totalWidthDp)
-                    .fillMaxHeight()
-                    .pointerInput(selectedKey, selectedScaleIndex, maxFret) {
-                        detectTapGestures { tapOffset ->
-                            // Find closest fret position to tap
-                            var closestDist = Float.MAX_VALUE
-                            var closestTarget: QuizHitTarget? = null
-                            for (target in hitTargets) {
-                                val dx = tapOffset.x - target.cx
-                                val dy = tapOffset.y - target.cy
-                                val d = sqrt(dx * dx + dy * dy)
-                                if (d < target.radius * 1.5f && d < closestDist) {
-                                    closestDist = d
-                                    closestTarget = target
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                val hitTargets = remember { mutableStateListOf<QuizHitTarget>() }
+
+                Canvas(
+                    modifier = Modifier
+                        .width(totalWidthDp)
+                        .fillMaxHeight()
+                        .pointerInput(selectedKey, selectedScaleIndex, maxFret) {
+                            detectTapGestures { tapOffset ->
+                                var closestDist = Float.MAX_VALUE
+                                var closestTarget: QuizHitTarget? = null
+                                for (target in hitTargets) {
+                                    val dx = tapOffset.x - target.cx
+                                    val dy = tapOffset.y - target.cy
+                                    val d = sqrt(dx * dx + dy * dy)
+                                    if (d < target.radius * 1.5f && d < closestDist) {
+                                        closestDist = d
+                                        closestTarget = target
+                                    }
                                 }
-                            }
-                            if (closestTarget != null) {
-                                val key = closestTarget.string to closestTarget.fret
-                                if (revealedNotes.contains(key)) return@detectTapGestures
-                                if (closestTarget.isInScale) {
-                                    revealedNotes.add(key)
-                                    correctCount++
-                                } else {
-                                    errorCount++
-                                    errorFlash.value = closestTarget.cx to closestTarget.cy
+                                if (closestTarget != null) {
+                                    val key = closestTarget.string to closestTarget.fret
+                                    if (revealedNotes.contains(key)) return@detectTapGestures
+                                    if (closestTarget.isInScale) {
+                                        revealedNotes.add(key)
+                                        correctCount++
+                                    } else {
+                                        errorCount++
+                                        errorFlash.value = closestTarget.cx to closestTarget.cy
+                                    }
                                 }
                             }
                         }
-                    }
-            ) {
-                hitTargets.clear()
-                drawQuizFretboard(
-                    rootNote = selectedKey,
-                    scale = scale,
-                    maxFret = maxFret,
-                    revealedNotes = revealedNotes.toSet(),
-                    errorFlashPos = errorFlash.value,
-                    fretWidthPx = with(density) { fretWidthDp.toPx() },
-                    openStringWidthPx = with(density) { openStringWidth.toPx() },
-                    hitTargets = hitTargets
-                )
+                ) {
+                    hitTargets.clear()
+                    drawQuizFretboard(
+                        rootNote = selectedKey,
+                        scale = scale,
+                        maxFret = maxFret,
+                        revealedNotes = revealedNotes.toSet(),
+                        errorFlashPos = errorFlash.value,
+                        fretWidthPx = with(density) { fretWidthDp.toPx() },
+                        openStringWidthPx = with(density) { openStringWidth.toPx() },
+                        hitTargets = hitTargets
+                    )
+                }
             }
+        }
+
+        // Overlays
+        if (showKeyCircle) {
+            ChromaticCircleOverlay(
+                selectedNote = selectedKey,
+                rootNote = selectedKey,
+                scaleIntervals = scale.intervals,
+                onNoteSelected = {
+                    selectedKey = it; showKeyCircle = false
+                    revealedNotes.clear(); correctCount = 0; errorCount = 0
+                },
+                onDismiss = { showKeyCircle = false }
+            )
+        }
+        if (showScaleSelector) {
+            ScaleSelectorOverlay(
+                currentIndex = selectedScaleIndex,
+                onSelected = {
+                    selectedScaleIndex = it; showScaleSelector = false
+                    revealedNotes.clear(); correctCount = 0; errorCount = 0
+                },
+                onDismiss = { showScaleSelector = false }
+            )
+        }
+        if (showInfo) {
+            ScaleInfoSheet(
+                rootNote = selectedKey,
+                scale = scale,
+                onDismiss = { showInfo = false }
+            )
         }
     }
 }
@@ -316,7 +330,6 @@ private fun DrawScope.drawQuizFretboard(
     val nutX = openStringWidthPx
     val nutWidth = 12f
 
-    // Wood background
     drawRoundRect(
         color = COLOR_WOOD,
         topLeft = Offset(nutX, fbTop - 4f),
@@ -324,7 +337,6 @@ private fun DrawScope.drawQuizFretboard(
         cornerRadius = CornerRadius(3f)
     )
 
-    // Playable area highlight
     val endX = nutX + nutWidth + maxFret * fretWidthPx
     drawRect(
         color = Color(0x11FFFFFF),
@@ -332,16 +344,13 @@ private fun DrawScope.drawQuizFretboard(
         size = Size(endX - nutX, fbHeight + 8f)
     )
 
-    // Nut
     drawRect(color = COLOR_NUT, topLeft = Offset(nutX, fbTop - 6f), size = Size(nutWidth, fbHeight + 12f))
 
-    // Fret wires
     for (fret in 1..TOTAL_FRETS) {
         val x = nutX + nutWidth + fret * fretWidthPx
         drawLine(COLOR_FRET_WIRE, Offset(x, fbTop - 2f), Offset(x, fbBottom + 2f), strokeWidth = 2.5f)
     }
 
-    // Inlay markers
     val singleDots = listOf(3, 5, 7, 9, 15, 17, 19, 21)
     val doubleDots = listOf(12)
     val dotRadius = (fretWidthPx * 0.08f).coerceIn(4f, 12f)
@@ -357,7 +366,6 @@ private fun DrawScope.drawQuizFretboard(
         drawCircle(COLOR_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.7f))
     }
 
-    // Fret numbers
     val fretNumPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb(200, 200, 200, 200)
         textSize = 66f
@@ -370,13 +378,11 @@ private fun DrawScope.drawQuizFretboard(
         drawContext.canvas.nativeCanvas.drawText("$fret", x, fbTop - 10f, fretNumPaint)
     }
 
-    // Strings
     for (s in 0 until 6) {
         val y = fbTop + stringSpacing * (6 - s)
         drawLine(STRING_COLORS_Q[s], Offset(nutX, y), Offset(size.width, y), strokeWidth = STRING_WIDTHS_Q[s])
     }
 
-    // Open string labels
     val openPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb(220, 240, 240, 240)
         textSize = 36f
@@ -398,7 +404,6 @@ private fun DrawScope.drawQuizFretboard(
         isAntiAlias = true
     }
 
-    // Hit targets and revealed notes
     for (s in 0 until 6) {
         val openNote = STANDARD_TUNING_MIDI[s]
         val y = fbTop + stringSpacing * (6 - s)
@@ -425,7 +430,6 @@ private fun DrawScope.drawQuizFretboard(
                 val label = getSpanishNoteName(noteIdx)
                 drawContext.canvas.nativeCanvas.drawText(label, cx, y + notePaint.textSize * 0.35f, notePaint)
             } else {
-                // Small dot to indicate tappable area
                 if (fret <= maxFret && fret > 0) {
                     drawCircle(Color.White.copy(alpha = 0.06f), noteRadius * 0.5f, Offset(cx, y))
                 }
@@ -433,11 +437,9 @@ private fun DrawScope.drawQuizFretboard(
         }
     }
 
-    // Error flash
     if (errorFlashPos != null) {
         drawCircle(COLOR_ERROR.copy(alpha = 0.6f), noteRadius * 1.3f, Offset(errorFlashPos.first, errorFlashPos.second))
         drawCircle(COLOR_ERROR, noteRadius * 1.3f, Offset(errorFlashPos.first, errorFlashPos.second), style = Stroke(4f))
-
         val xPaint = android.graphics.Paint().apply {
             color = android.graphics.Color.WHITE
             textSize = 48f

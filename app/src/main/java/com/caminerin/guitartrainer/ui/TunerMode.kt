@@ -357,7 +357,7 @@ private fun TunerGauge(
     ) {
         val centerX = size.width / 2f
         val bottomY = size.height - 10f
-        val radius = size.width * 0.42f
+        val radius = minOf(size.width * 0.42f, (size.height - 20f) * 0.9f)
 
         // Arc background
         drawArc(

@@ -48,9 +48,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -75,22 +73,6 @@ private val COLOR_FIFTH = Color(0xFF43A047)       // green - 5th
 private val COLOR_OTHER = Color(0xFF26A69A)       // teal - other degrees
 private val COLOR_DIM = Color(0xFF78909C)         // muted for out-of-position
 
-// Chromatic circle colors
-private val CHROMATIC_COLORS = listOf(
-    Color(0xFFC8B400), // Do (C)
-    Color(0xFFB8A020), // Do# (C#)
-    Color(0xFFD4842A), // Re (D)
-    Color(0xFFCC6644), // Re# (D#)
-    Color(0xFFBB4444), // Mi (E)
-    Color(0xFFCC3388), // Fa (F)
-    Color(0xFFAA33AA), // Fa# (F#)
-    Color(0xFF8844BB), // Sol (G)
-    Color(0xFF6655CC), // Sol# (G#)
-    Color(0xFF4477AA), // La (A)
-    Color(0xFF338888), // La# (A#)
-    Color(0xFF559944), // Si (B)
-)
-
 // Fretboard aesthetic
 private val COLOR_BG = Color(0xFF1A1A1A)
 private val COLOR_TOOLBAR = Color(0xFF1E1E1E)
@@ -105,9 +87,7 @@ private val STRING_COLORS = listOf(
 )
 private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 
-private val SPANISH_CHROMATIC_NAMES = listOf(
-    "Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"
-)
+
 
 @Composable
 fun ScaleFretboardScreen(onBack: () -> Unit) {
@@ -340,7 +320,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                                 }
                             }
                     ) {
-                        drawChromaticCircle(
+                        drawChromaticCircleShared(
                             center = Offset(size.width / 2f, size.height / 2f),
                             maxRadius = min(size.width, size.height) / 2f,
                             selectedNote = selectedKey,
@@ -550,126 +530,6 @@ private fun DrawScope.drawGuitarFretboard(
             }
         }
     }
-}
-
-private fun DrawScope.drawChromaticCircle(
-    center: Offset,
-    maxRadius: Float,
-    selectedNote: Int,
-    alpha: Float,
-    rootNote: Int,
-    scaleIntervals: List<Int>
-) {
-    val outerRadius = maxRadius * 0.95f
-    val innerRadius = maxRadius * 0.35f
-    val midRadius = (outerRadius + innerRadius) / 2f
-
-    val segmentAngle = (2 * PI / 12).toFloat()
-    val startAngleOffset = (-PI / 2 - segmentAngle / 2).toFloat()
-
-    for (i in 0 until 12) {
-        val angleStart = startAngleOffset + i * segmentAngle
-        val angleEnd = angleStart + segmentAngle
-        val isSelected = i == selectedNote
-        val isInScale = scaleIntervals.contains((i - rootNote + 12) % 12)
-
-        val segColor = if (isSelected) {
-            CHROMATIC_COLORS[i]
-        } else if (isInScale) {
-            CHROMATIC_COLORS[i].copy(alpha = 0.7f * alpha)
-        } else {
-            CHROMATIC_COLORS[i].copy(alpha = 0.25f * alpha)
-        }
-
-        val segOuter = if (isSelected) outerRadius + 6f else outerRadius
-        val segInner = if (isSelected) innerRadius - 4f else innerRadius
-
-        val path = Path().apply {
-            moveTo(
-                center.x + segInner * cos(angleStart),
-                center.y + segInner * sin(angleStart)
-            )
-            lineTo(
-                center.x + segOuter * cos(angleStart),
-                center.y + segOuter * sin(angleStart)
-            )
-            val steps = 16
-            for (step in 1..steps) {
-                val a = angleStart + (angleEnd - angleStart) * step / steps
-                lineTo(
-                    center.x + segOuter * cos(a),
-                    center.y + segOuter * sin(a)
-                )
-            }
-            lineTo(
-                center.x + segInner * cos(angleEnd),
-                center.y + segInner * sin(angleEnd)
-            )
-            for (step in (steps - 1) downTo 0) {
-                val a = angleStart + (angleEnd - angleStart) * step / steps
-                lineTo(
-                    center.x + segInner * cos(a),
-                    center.y + segInner * sin(a)
-                )
-            }
-            close()
-        }
-
-        drawPath(path, segColor, style = Fill)
-        drawPath(path, Color(0x33000000).copy(alpha = alpha * 0.3f), style = Stroke(1.5f))
-
-        // Note name
-        val labelAngle = angleStart + segmentAngle / 2f
-        val labelRadius = midRadius
-        val labelX = center.x + labelRadius * cos(labelAngle)
-        val labelY = center.y + labelRadius * sin(labelAngle)
-
-        val textSize = if (isSelected) 42f else 30f
-        val labelPaint = android.graphics.Paint().apply {
-            color = android.graphics.Color.argb(
-                (255 * alpha).toInt(), 255, 255, 255
-            )
-            this.textSize = textSize
-            textAlign = android.graphics.Paint.Align.CENTER
-            isFakeBoldText = isSelected
-            isAntiAlias = true
-            setShadowLayer(4f, 1f, 1f, android.graphics.Color.argb(180, 0, 0, 0))
-        }
-        drawContext.canvas.nativeCanvas.drawText(
-            SPANISH_CHROMATIC_NAMES[i],
-            labelX,
-            labelY + textSize * 0.35f,
-            labelPaint
-        )
-    }
-
-    // Center circle
-    drawCircle(
-        color = Color(0xFF111111).copy(alpha = alpha),
-        radius = innerRadius,
-        center = center
-    )
-    drawCircle(
-        color = Color(0x33FFFFFF).copy(alpha = alpha * 0.3f),
-        radius = innerRadius,
-        center = center,
-        style = Stroke(2f)
-    )
-
-    // Selected note name in center
-    val centerPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb((255 * alpha).toInt(), 255, 255, 255)
-        textSize = 56f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
-        isAntiAlias = true
-    }
-    drawContext.canvas.nativeCanvas.drawText(
-        SPANISH_CHROMATIC_NAMES[selectedNote],
-        center.x,
-        center.y + 20f,
-        centerPaint
-    )
 }
 
 private fun buildNoteLabel(noteIdx: Int, degree: Int, display: NoteDisplay): String {
