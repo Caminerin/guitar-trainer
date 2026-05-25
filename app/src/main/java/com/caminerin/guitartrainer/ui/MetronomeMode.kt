@@ -52,7 +52,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -260,11 +259,10 @@ fun MetronomeMode(
             if (isPlaying && trainingEnabled) {
                 val progress = ((currentBpm - bpm).toFloat() / (trainingMaxBpm - bpm).toFloat()).coerceIn(0f, 1f)
                 LinearProgressIndicator(
-                    progress = { progress },
+                    progress = progress,
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                     color = Color(0xFF2196F3),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    strokeCap = StrokeCap.Round
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
@@ -327,11 +325,10 @@ fun MetronomeMode(
                     (elapsedSeconds.toFloat() / timerSeconds).coerceIn(0f, 1f)
                 }
                 LinearProgressIndicator(
-                    progress = { progress },
+                    progress = progress,
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
                     color = Color(0xFFFF9800),
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                    strokeCap = StrokeCap.Round
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
