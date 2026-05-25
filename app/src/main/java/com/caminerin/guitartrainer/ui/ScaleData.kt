@@ -16,9 +16,9 @@ enum class NoteDisplay {
     NOTE, DEGREE, BOTH, NONE
 }
 
-val ALL_NOTES = listOf("C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
+val SCALE_NOTE_NAMES = listOf("C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
 
-val STANDARD_TUNING = listOf(
+val STANDARD_TUNING_MIDI = listOf(
     40, // E2 (6th string) - MIDI note
     45, // A2 (5th string)
     50, // D3 (4th string)
@@ -222,7 +222,7 @@ fun getNoteAtFret(stringMidi: Int, fret: Int): Int {
 }
 
 fun getNoteName(midiNote: Int): String {
-    return ALL_NOTES[midiNote % 12]
+    return SCALE_NOTE_NAMES[midiNote % 12]
 }
 
 fun getDegreeInScale(noteIndex: Int, rootIndex: Int, scaleIntervals: List<Int>): Int? {
