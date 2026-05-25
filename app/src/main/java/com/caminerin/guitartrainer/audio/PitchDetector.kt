@@ -72,13 +72,15 @@ class PitchDetector(
     }
 
     private fun absoluteThreshold(cmndf: DoubleArray, halfLen: Int): Int? {
-        for (tau in 2 until halfLen) {
+        var tau = 2
+        while (tau < halfLen) {
             if (cmndf[tau] < threshold) {
                 while (tau + 1 < halfLen && cmndf[tau + 1] < cmndf[tau]) {
-                    return tau + 1
+                    tau++
                 }
                 return tau
             }
+            tau++
         }
         return null
     }
@@ -94,7 +96,10 @@ class PitchDetector(
         val s1 = cmndf[tau]
         val s2 = cmndf[tau + 1]
 
-        val adjustment = (s2 - s0) / (2.0 * (2.0 * s1 - s2 - s0))
+        val denominator = 2.0 * s1 - s2 - s0
+        if (abs(denominator) < 1e-12) return tau.toFloat()
+
+        val adjustment = (s2 - s0) / (2.0 * denominator)
 
         return if (abs(adjustment) < 1.0) {
             tau + adjustment.toFloat()
