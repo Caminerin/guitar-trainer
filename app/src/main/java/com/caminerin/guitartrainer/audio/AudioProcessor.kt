@@ -19,7 +19,7 @@ class AudioProcessor(private val context: Context) {
         const val SAMPLE_RATE = 44100
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
-        private const val BUFFER_SIZE_SAMPLES = 4096
+        private const val BUFFER_SIZE_SAMPLES = 8192
         private const val HOLD_DURATION_MS = 2000L
     }
 
