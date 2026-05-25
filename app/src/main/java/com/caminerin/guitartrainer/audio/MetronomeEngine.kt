@@ -48,9 +48,6 @@ class MetronomeEngine {
     private val _currentBeat = MutableStateFlow(0)
     val currentBeat: StateFlow<Int> = _currentBeat
 
-    private val _currentSubBeat = MutableStateFlow(0)
-    val currentSubBeat: StateFlow<Int> = _currentSubBeat
-
     private val _currentMeasure = MutableStateFlow(0)
     val currentMeasure: StateFlow<Int> = _currentMeasure
 
@@ -137,7 +134,7 @@ class MetronomeEngine {
     suspend fun start(config: MetronomeConfig) = withContext(Dispatchers.IO) {
         if (_isPlaying.value) return@withContext
 
-        val bufferSize = AudioTrack.getMinBufferSize(
+        val minBufSize = AudioTrack.getMinBufferSize(
             SAMPLE_RATE,
             AudioFormat.CHANNEL_OUT_MONO,
             AudioFormat.ENCODING_PCM_16BIT
@@ -157,14 +154,13 @@ class MetronomeEngine {
                     .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                     .build()
             )
-            .setBufferSizeInBytes(maxOf(bufferSize * 4, SAMPLE_RATE * 2))
+            .setBufferSizeInBytes(minBufSize)
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
 
         track.play()
         _isPlaying.value = true
         _currentBeat.value = 0
-        _currentSubBeat.value = 0
         _currentMeasure.value = 0
         _currentBpm.value = config.bpm
         _elapsedSeconds.value = 0
@@ -177,6 +173,8 @@ class MetronomeEngine {
         while (isActive && _isPlaying.value) {
             val isAccent = (beatInMeasure == 0)
 
+            // Update UI state right before writing audio
+            // With minimal buffer, write blocks until hardware is ready = sync
             _currentBeat.value = beatInMeasure
 
             val beatAudio = buildBeatAudio(activeBpm, config.subdivision, config.sound, isAccent)

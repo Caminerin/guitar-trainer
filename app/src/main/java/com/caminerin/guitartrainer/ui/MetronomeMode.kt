@@ -1,12 +1,10 @@
 package com.caminerin.guitartrainer.ui
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,6 +74,9 @@ fun MetronomeMode(
     var beatsPerMeasure by remember { mutableIntStateOf(4) }
     var subdivision by remember { mutableIntStateOf(1) }
     var sound by remember { mutableStateOf(MetronomeSound.CLICK) }
+
+    var beatsMenuExpanded by remember { mutableStateOf(false) }
+    var subdivisionMenuExpanded by remember { mutableStateOf(false) }
     var soundMenuExpanded by remember { mutableStateOf(false) }
 
     // Training mode
@@ -120,10 +121,7 @@ fun MetronomeMode(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ═══════════════════════════════════════════
-        // TOP: Beat visualization + Play + BPM
-        // ═══════════════════════════════════════════
-
+        // Beat visualization (fixed size, only color changes)
         BeatVisualizer(
             beatsPerMeasure = beatsPerMeasure,
             currentBeat = if (isPlaying) currentBeat else -1
@@ -131,7 +129,7 @@ fun MetronomeMode(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Play button + BPM (always visible, hero section)
+        // Play button + BPM
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
@@ -164,7 +162,7 @@ fun MetronomeMode(
             }
         }
 
-        // BPM buttons row
+        // BPM buttons
         Spacer(modifier = Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.Center) {
             PillButton("-5") { bpm = (bpm - 5).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
@@ -183,67 +181,70 @@ fun MetronomeMode(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
         )
 
-        // ═══════════════════════════════════════════
-        // MIDDLE: Time signature + Subdivision + Sound
-        // ═══════════════════════════════════════════
-
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Compás (2-12)
-        LabeledRow("Compás") {
-            Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                (2..12).forEach { n ->
-                    Pill(
-                        text = "$n",
-                        isSelected = beatsPerMeasure == n,
-                        onClick = { beatsPerMeasure = n }
-                    )
-                    if (n < 12) Spacer(modifier = Modifier.width(4.dp))
+        // Compás + Subdivisión + Sonido in a row of dropdown buttons
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            // Compás dropdown
+            Box {
+                OutlinedButton(onClick = { beatsMenuExpanded = true }) {
+                    Text("$beatsPerMeasure/4", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                DropdownMenu(expanded = beatsMenuExpanded, onDismissRequest = { beatsMenuExpanded = false }) {
+                    (2..12).forEach { n ->
+                        DropdownMenuItem(
+                            text = { Text("$n/4") },
+                            onClick = { beatsPerMeasure = n; beatsMenuExpanded = false }
+                        )
+                    }
+                }
+            }
+
+            // Subdivisión dropdown
+            Box {
+                OutlinedButton(onClick = { subdivisionMenuExpanded = true }) {
+                    val subLabel = when (subdivision) {
+                        1 -> "♩"
+                        2 -> "♪♪"
+                        3 -> "♪♪♪"
+                        4 -> "♬"
+                        else -> "$subdivision"
+                    }
+                    Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                DropdownMenu(expanded = subdivisionMenuExpanded, onDismissRequest = { subdivisionMenuExpanded = false }) {
+                    listOf(
+                        1 to "♩ Negras",
+                        2 to "♪♪ Corcheas",
+                        3 to "♪♪♪ Tresillos",
+                        4 to "♬ Semicorcheas"
+                    ).forEach { (sub, label) ->
+                        DropdownMenuItem(
+                            text = { Text(label) },
+                            onClick = { subdivision = sub; subdivisionMenuExpanded = false }
+                        )
+                    }
+                }
+            }
+
+            // Sonido dropdown
+            Box {
+                OutlinedButton(onClick = { soundMenuExpanded = true }) {
+                    Text("♪ ${sound.displayName}", fontSize = 12.sp)
+                }
+                DropdownMenu(expanded = soundMenuExpanded, onDismissRequest = { soundMenuExpanded = false }) {
+                    MetronomeSound.entries.forEach { s ->
+                        DropdownMenuItem(
+                            text = { Text(s.displayName) },
+                            onClick = { sound = s; soundMenuExpanded = false }
+                        )
+                    }
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Subdivisión
-        LabeledRow("Subdivisión") {
-            Row {
-                listOf(
-                    1 to "♩",
-                    2 to "♪♪",
-                    3 to "♪³",
-                    4 to "♬♬"
-                ).forEach { (sub, label) ->
-                    Pill(
-                        text = label,
-                        isSelected = subdivision == sub,
-                        onClick = { subdivision = sub }
-                    )
-                    if (sub < 4) Spacer(modifier = Modifier.width(6.dp))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        // Sonido
-        Box {
-            OutlinedButton(onClick = { soundMenuExpanded = true }) {
-                Text("♪ ${sound.displayName}", fontSize = 13.sp)
-            }
-            DropdownMenu(expanded = soundMenuExpanded, onDismissRequest = { soundMenuExpanded = false }) {
-                MetronomeSound.entries.forEach { s ->
-                    DropdownMenuItem(
-                        text = { Text(s.displayName) },
-                        onClick = { sound = s; soundMenuExpanded = false }
-                    )
-                }
-            }
-        }
-
-        // ═══════════════════════════════════════════
-        // BOTTOM: Training + Timer cards
-        // ═══════════════════════════════════════════
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -255,7 +256,6 @@ fun MetronomeMode(
             onToggle = { trainingEnabled = !trainingEnabled },
             activeColor = Color(0xFF2196F3)
         ) {
-            // When playing, show progress
             if (isPlaying && trainingEnabled) {
                 val progress = ((currentBpm - bpm).toFloat() / (trainingMaxBpm - bpm).toFloat()).coerceIn(0f, 1f)
                 LinearProgressIndicator(
@@ -312,7 +312,6 @@ fun MetronomeMode(
             onToggle = { timerEnabled = !timerEnabled },
             activeColor = Color(0xFFFF9800)
         ) {
-            // When playing, show countdown
             if (isPlaying && timerEnabled) {
                 val remaining = if (timerMode == "measures") {
                     "${(timerMeasures - currentMeasure).coerceAtLeast(0)} compases restantes"
@@ -352,7 +351,6 @@ fun MetronomeMode(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Value
             if (timerMode == "measures") {
                 BigValueSelector(
                     value = "$timerMeasures",
@@ -375,7 +373,7 @@ fun MetronomeMode(
 }
 
 // ═══════════════════════════════════════════════════════════
-// UI Components
+// Components
 // ═══════════════════════════════════════════════════════════
 
 @Composable
@@ -386,17 +384,11 @@ private fun BeatVisualizer(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.Center
     ) {
         for (beat in 0 until beatsPerMeasure) {
             val isActive = beat == currentBeat
-            val scale by animateFloatAsState(
-                targetValue = if (isActive) 1.2f else 1f,
-                animationSpec = tween(100),
-                label = "scale"
-            )
             val color by animateColorAsState(
                 targetValue = when {
                     isActive && beat == 0 -> Color(0xFFF44336)
@@ -404,19 +396,20 @@ private fun BeatVisualizer(
                     beat == 0 -> Color(0xFFF44336).copy(alpha = 0.2f)
                     else -> MaterialTheme.colorScheme.surfaceVariant
                 },
+                animationSpec = tween(80),
                 label = "color"
             )
 
             Box(
                 modifier = Modifier
-                    .size((28 * scale).dp)
+                    .size(28.dp)
                     .clip(CircleShape)
                     .background(color),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "${beat + 1}",
-                    fontSize = (11 * scale).sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isActive) Color.White
                     else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -458,7 +451,6 @@ private fun FeatureCard(
         shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            // Header with toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -482,7 +474,6 @@ private fun FeatureCard(
                 TogglePill(enabled = enabled, activeColor = activeColor, onClick = onToggle)
             }
 
-            // Content (only when enabled)
             if (enabled) {
                 Spacer(modifier = Modifier.height(12.dp))
                 content()
@@ -613,22 +604,6 @@ private fun Pill(text: String, isSelected: Boolean, onClick: () -> Unit) {
             color = if (isSelected) MaterialTheme.colorScheme.onPrimary
             else MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-private fun LabeledRow(label: String, content: @Composable () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-            modifier = Modifier.width(70.dp)
-        )
-        content()
     }
 }
 
