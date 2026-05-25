@@ -20,10 +20,12 @@ class AudioProcessor(private val context: Context) {
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_FLOAT
         private const val BUFFER_SIZE_SAMPLES = 4096
+        private const val HOLD_DURATION_MS = 2000L
     }
 
     private val pitchDetector = PitchDetector(SAMPLE_RATE)
     private var audioRecord: AudioRecord? = null
+    private var lastDetectionTimeMs = 0L
 
     private val _currentPitch = MutableStateFlow<PitchDetector.PitchResult?>(null)
     val currentPitch: StateFlow<PitchDetector.PitchResult?> = _currentPitch
@@ -73,9 +75,16 @@ class AudioProcessor(private val context: Context) {
                         AudioRecord.READ_BLOCKING
                     )
                     if (read > 0 && hasSignal(buffer, read)) {
-                        _currentPitch.value = pitchDetector.detect(buffer)
+                        val detected = pitchDetector.detect(buffer)
+                        if (detected != null) {
+                            _currentPitch.value = detected
+                            lastDetectionTimeMs = System.currentTimeMillis()
+                        }
                     } else if (read > 0) {
-                        _currentPitch.value = null
+                        val elapsed = System.currentTimeMillis() - lastDetectionTimeMs
+                        if (elapsed > HOLD_DURATION_MS) {
+                            _currentPitch.value = null
+                        }
                     }
                 }
             }
