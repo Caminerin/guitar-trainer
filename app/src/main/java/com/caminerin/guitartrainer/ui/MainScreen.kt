@@ -19,6 +19,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -38,7 +39,13 @@ fun MainScreen(
     isListening: Boolean
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    var isFullscreenScale by remember { mutableStateOf(false) }
     val modes = AppMode.entries
+
+    if (isFullscreenScale) {
+        ScaleFretboardScreen(onBack = { isFullscreenScale = false })
+        return
+    }
 
     Scaffold(
         topBar = {
@@ -70,7 +77,7 @@ fun MainScreen(
             when (modes[selectedTab]) {
                 AppMode.TUNER -> TunerMode(pitchResult = pitchResult)
                 AppMode.METRONOME -> MetronomeMode()
-                AppMode.TRAINER -> TrainerMode()
+                AppMode.TRAINER -> TrainerMode(onOpenScales = { isFullscreenScale = true })
             }
         }
     }

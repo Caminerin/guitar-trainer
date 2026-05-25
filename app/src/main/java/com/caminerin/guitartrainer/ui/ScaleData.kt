@@ -248,3 +248,11 @@ fun getDegreeLabel(degree: Int): String {
         else -> "$degree"
     }
 }
+
+private val SPANISH_NOTE_NAMES = listOf("Do", "Do#", "Re", "Mib", "Mi", "Fa", "Fa#", "Sol", "Lab", "La", "Sib", "Si")
+
+fun getSpanishNoteName(midiNote: Int): String {
+    return SPANISH_NOTE_NAMES[midiNote % 12]
+}
+
+val OPEN_STRING_NAMES = listOf("E", "A", "D", "G", "B", "E")
