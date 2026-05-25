@@ -19,8 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.Divider
-import androidx.compose.material3.HorizontalDivider
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -124,7 +123,7 @@ fun ScaleInfoSheet(
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
             Spacer(modifier = Modifier.height(16.dp))
 
             // Chords table
@@ -207,7 +206,7 @@ fun ScaleInfoSheet(
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
             Spacer(modifier = Modifier.height(12.dp))
 
             // Intervals row
