@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.PitchDetector
 
+private enum class FullscreenMode { NONE, SCALES, CAGED, QUIZ }
+
 enum class AppMode(val title: String, val icon: ImageVector) {
     TUNER("Afinar", Icons.Default.Tune),
     METRONOME("Metr\u00f3nomo", Icons.Default.Speed),
@@ -50,18 +52,30 @@ fun MainScreen(
     isListening: Boolean
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(0) }
-    var isFullscreenScale by rememberSaveable { mutableStateOf(false) }
+    var fullscreenMode by rememberSaveable { mutableStateOf(FullscreenMode.NONE.name) }
     val modes = AppMode.entries
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    if (isFullscreenScale) {
-        if (isLandscape) {
-            ScaleFretboardScreen(onBack = { isFullscreenScale = false })
-        } else {
-            RotatePhoneMessage(onBack = { isFullscreenScale = false })
+    val currentMode = try { FullscreenMode.valueOf(fullscreenMode) } catch (_: Exception) { FullscreenMode.NONE }
+
+    when (currentMode) {
+        FullscreenMode.SCALES -> {
+            if (isLandscape) ScaleFretboardScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            return
         }
-        return
+        FullscreenMode.CAGED -> {
+            if (isLandscape) CagedPracticeScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            return
+        }
+        FullscreenMode.QUIZ -> {
+            if (isLandscape) ScaleQuizScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            return
+        }
+        FullscreenMode.NONE -> { /* show normal UI below */ }
     }
 
     Scaffold(
@@ -94,7 +108,11 @@ fun MainScreen(
             when (modes[selectedTab]) {
                 AppMode.TUNER -> TunerMode(pitchResult = pitchResult)
                 AppMode.METRONOME -> MetronomeMode()
-                AppMode.TRAINER -> TrainerMode(onOpenScales = { isFullscreenScale = true })
+                AppMode.TRAINER -> TrainerMode(
+                    onOpenScales = { fullscreenMode = FullscreenMode.SCALES.name },
+                    onOpenCagedPractice = { fullscreenMode = FullscreenMode.CAGED.name },
+                    onOpenQuiz = { fullscreenMode = FullscreenMode.QUIZ.name }
+                )
             }
         }
     }
@@ -125,7 +143,7 @@ private fun RotatePhoneMessage(onBack: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "El entrenador de escalas necesita la pantalla en horizontal para mostrar el m\u00e1stil completo",
+            text = "El entrenador necesita la pantalla en horizontal para mostrar el m\u00e1stil completo",
             fontSize = 15.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center
