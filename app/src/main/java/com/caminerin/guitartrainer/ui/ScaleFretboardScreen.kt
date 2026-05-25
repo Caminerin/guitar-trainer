@@ -14,11 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -182,7 +181,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                     onClick = { currentPosition = (currentPosition - 1 + scale.positions.size) % scale.positions.size },
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(Icons.Default.ChevronLeft, "Anterior", tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowLeft, "Anterior", tint = Color.White)
                 }
                 Text(
                     scale.positions[currentPosition].name,
@@ -194,7 +193,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                     onClick = { currentPosition = (currentPosition + 1) % scale.positions.size },
                     modifier = Modifier.size(32.dp)
                 ) {
-                    Icon(Icons.Default.ChevronRight, "Siguiente", tint = Color.White)
+                    Icon(Icons.Default.KeyboardArrowRight, "Siguiente", tint = Color.White)
                 }
             }
         }
