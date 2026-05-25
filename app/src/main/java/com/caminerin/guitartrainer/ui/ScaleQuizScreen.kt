@@ -372,7 +372,7 @@ private fun DrawScope.drawQuizFretboard(
 
     // Strings
     for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (s + 1)
+        val y = fbTop + stringSpacing * (6 - s)
         drawLine(STRING_COLORS_Q[s], Offset(nutX, y), Offset(size.width, y), strokeWidth = STRING_WIDTHS_Q[s])
     }
 
@@ -385,7 +385,7 @@ private fun DrawScope.drawQuizFretboard(
         isAntiAlias = true
     }
     for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (s + 1)
+        val y = fbTop + stringSpacing * (6 - s)
         drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 12f, openPaint)
     }
 
@@ -401,7 +401,7 @@ private fun DrawScope.drawQuizFretboard(
     // Hit targets and revealed notes
     for (s in 0 until 6) {
         val openNote = STANDARD_TUNING_MIDI[s]
-        val y = fbTop + stringSpacing * (s + 1)
+        val y = fbTop + stringSpacing * (6 - s)
 
         for (fret in 0..maxFret) {
             val noteIdx = (openNote + fret) % 12

@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -37,6 +38,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.caminerin.guitartrainer.audio.TickPlayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -108,15 +110,21 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
     val openStringWidth = 48.dp
     val totalWidthDp = openStringWidth + (TOTAL_FRETS * 60 * zoom + 30).dp
 
-    // BPM tick
+    // Metronome tick player
+    val tickPlayer = remember { TickPlayer() }
+    DisposableEffect(Unit) {
+        onDispose { tickPlayer.release() }
+    }
+
+    // BPM tick with metronome sound
     LaunchedEffect(isPlaying, isPaused, bpm, noteSequence) {
         if (!isPlaying || isPaused || noteSequence.isEmpty()) return@LaunchedEffect
         val intervalMs = 60_000L / bpm
         while (isPlaying && !isPaused) {
             delay(intervalMs)
+            tickPlayer.tick()
             val nextIdx = currentNoteIndex + 1
             if (nextIdx >= noteSequence.size) {
-                // Move to next CAGED position
                 val nextPos = (currentPositionIndex + 1) % positions.size
                 currentPositionIndex = nextPos
                 currentNoteIndex = 0
@@ -389,7 +397,7 @@ private fun DrawScope.drawCagedFretboard(
 
     // Strings
     for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (s + 1)
+        val y = fbTop + stringSpacing * (6 - s)
         drawLine(STRING_COLORS[s], Offset(nutX, y), Offset(size.width, y), strokeWidth = STRING_WIDTHS[s])
     }
 
@@ -402,7 +410,7 @@ private fun DrawScope.drawCagedFretboard(
         isAntiAlias = true
     }
     for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (s + 1)
+        val y = fbTop + stringSpacing * (6 - s)
         drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 12f, openPaint)
     }
 
@@ -418,7 +426,7 @@ private fun DrawScope.drawCagedFretboard(
     // Draw scale notes in position
     for (s in 0 until 6) {
         val openNote = STANDARD_TUNING_MIDI[s]
-        val y = fbTop + stringSpacing * (s + 1)
+        val y = fbTop + stringSpacing * (6 - s)
 
         for (fret in position.startFret..position.endFret) {
             val noteIdx = (openNote + fret) % 12

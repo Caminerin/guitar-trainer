@@ -148,7 +148,8 @@ private fun TunerPortraitLayout(
         Spacer(modifier = Modifier.height(16.dp))
         TunerGauge(
             cents = if (pitchResult != null && activeString != null) centsFromTarget else 0f,
-            isActive = pitchResult != null && activeString != null
+            isActive = pitchResult != null && activeString != null,
+            modifier = Modifier.fillMaxWidth().height(160.dp)
         )
         Spacer(modifier = Modifier.height(8.dp))
         TunerInfo(activeString, pitchResult, centsFromTarget, isAutoMode)
@@ -173,7 +174,7 @@ private fun TunerLandscapeLayout(
     Row(
         modifier = modifier
             .fillMaxSize()
-            .padding(12.dp),
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Left: strings + controls
@@ -194,20 +195,21 @@ private fun TunerLandscapeLayout(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // Right: gauge + info
+        // Right: gauge + info (constrained height to avoid overflow)
         Column(
             modifier = Modifier
                 .weight(0.65f)
-                .fillMaxHeight(),
+                .fillMaxHeight()
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             TunerGauge(
                 cents = if (pitchResult != null && activeString != null) centsFromTarget else 0f,
                 isActive = pitchResult != null && activeString != null,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().height(120.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             TunerInfo(activeString, pitchResult, centsFromTarget, isAutoMode)
         }
     }
@@ -351,7 +353,6 @@ private fun TunerGauge(
     Canvas(
         modifier = modifier
             .fillMaxWidth()
-            .height(160.dp)
             .padding(horizontal = 24.dp)
     ) {
         val centerX = size.width / 2f

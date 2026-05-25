@@ -450,9 +450,9 @@ private fun DrawScope.drawGuitarFretboard(
         drawContext.canvas.nativeCanvas.drawText("$fret", x, fbTop - 10f, fretNumPaint)
     }
 
-    // Strings
+    // Strings (6th=bottom, 1st=top like tablature)
     for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (s + 1)
+        val y = fbTop + stringSpacing * (6 - s)
         drawLine(Color(0x33000000), Offset(nutX, y + 1f), Offset(size.width, y + 1f), strokeWidth = STRING_WIDTHS[s] + 1f)
         drawLine(STRING_COLORS[s], Offset(nutX, y), Offset(size.width, y), strokeWidth = STRING_WIDTHS[s])
         drawLine(Color(0x22FFFFFF), Offset(nutX, y - STRING_WIDTHS[s] * 0.3f), Offset(size.width, y - STRING_WIDTHS[s] * 0.3f), strokeWidth = 0.5f)
@@ -467,7 +467,7 @@ private fun DrawScope.drawGuitarFretboard(
         isAntiAlias = true
     }
     for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (s + 1)
+        val y = fbTop + stringSpacing * (6 - s)
         drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 12f, openPaint)
     }
 
@@ -496,7 +496,7 @@ private fun DrawScope.drawGuitarFretboard(
 
     for (s in 0 until 6) {
         val openNote = STANDARD_TUNING_MIDI[s]
-        val y = fbTop + stringSpacing * (s + 1)
+        val y = fbTop + stringSpacing * (6 - s)
 
         for (fret in 0..TOTAL_FRETS) {
             val noteIdx = (openNote + fret) % 12
