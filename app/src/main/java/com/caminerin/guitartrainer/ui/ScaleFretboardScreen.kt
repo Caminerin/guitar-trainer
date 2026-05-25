@@ -2,7 +2,7 @@ package com.caminerin.guitartrainer.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,15 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -40,7 +42,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,7 +61,6 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
     var positionsEnabled by remember { mutableStateOf(false) }
     var currentPosition by remember { mutableIntStateOf(0) }
     var zoom by remember { mutableFloatStateOf(1.5f) }
-    var scrollOffset by remember { mutableFloatStateOf(0f) }
 
     var keyMenuExpanded by remember { mutableStateOf(false) }
     var scaleMenuExpanded by remember { mutableStateOf(false) }
@@ -77,25 +77,28 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
                 Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White)
             }
-            Text(
-                "Escalas",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Escalas", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.weight(1f))
+            // Zoom controls
+            IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(1f) }) {
+                Icon(Icons.Default.ZoomOut, "Alejar", tint = Color.White)
+            }
+            IconButton(onClick = { zoom = (zoom + 0.3f).coerceAtMost(3f) }) {
+                Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White)
+            }
         }
 
         // Controls row
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -117,11 +120,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             // Scale selector
             Box {
                 OutlinedButton(onClick = { scaleMenuExpanded = true }) {
-                    Text(
-                        scale.name.take(12),
-                        color = Color.White,
-                        fontSize = 11.sp
-                    )
+                    Text(scale.name.take(14), color = Color.White, fontSize = 11.sp)
                 }
                 DropdownMenu(expanded = scaleMenuExpanded, onDismissRequest = { scaleMenuExpanded = false }) {
                     ALL_SCALES.forEachIndexed { index, s ->
@@ -164,19 +163,16 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .padding(horizontal = 12.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             Text("Posiciones", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp)
             Spacer(modifier = Modifier.width(8.dp))
-            Switch(
-                checked = positionsEnabled,
-                onCheckedChange = { positionsEnabled = it }
-            )
+            Switch(checked = positionsEnabled, onCheckedChange = { positionsEnabled = it })
 
             if (positionsEnabled && scale.positions.isNotEmpty()) {
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 IconButton(
                     onClick = { currentPosition = (currentPosition - 1 + scale.positions.size) % scale.positions.size },
                     modifier = Modifier.size(32.dp)
@@ -198,20 +194,13 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             }
         }
 
-        // Fretboard (takes remaining space)
+        // Fretboard - scrollable horizontally
+        val fretboardWidth = (TOTAL_FRETS * 60 * zoom).toInt()
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(4.dp)
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, gestureZoom, _ ->
-                        zoom = (zoom * gestureZoom).coerceIn(1f, 3f)
-                        scrollOffset = (scrollOffset + pan.x).coerceIn(
-                            -(TOTAL_FRETS * 60f * zoom - size.width),
-                            0f
-                        )
-                    }
-                }
+                .horizontalScroll(rememberScrollState())
         ) {
             FretboardCanvas(
                 rootNote = selectedKey,
@@ -219,8 +208,10 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                 noteDisplay = noteDisplay,
                 positionsEnabled = positionsEnabled,
                 currentPosition = currentPosition,
-                zoom = zoom,
-                scrollOffset = scrollOffset
+                fretWidth = 60f * zoom,
+                modifier = Modifier
+                    .width(fretboardWidth.dp)
+                    .fillMaxSize()
             )
         }
     }
@@ -233,27 +224,26 @@ private fun FretboardCanvas(
     noteDisplay: NoteDisplay,
     positionsEnabled: Boolean,
     currentPosition: Int,
-    zoom: Float,
-    scrollOffset: Float
+    fretWidth: Float,
+    modifier: Modifier = Modifier
 ) {
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val canvasWidth = size.width
+    Canvas(modifier = modifier) {
         val canvasHeight = size.height
+        val canvasWidth = size.width
         val stringSpacing = canvasHeight / 7f
-        val fretWidth = 60f * zoom
-        val nutWidth = 12f
+        val nutWidth = 14f
 
-        // Draw nut
+        // Nut
         drawRect(
             color = Color(0xFFE0E0E0),
-            topLeft = Offset(scrollOffset, stringSpacing * 0.5f),
+            topLeft = Offset(0f, stringSpacing * 0.5f),
             size = Size(nutWidth, stringSpacing * 6f)
         )
 
-        // Draw frets
+        // Frets
         for (fret in 0..TOTAL_FRETS) {
-            val x = nutWidth + fret * fretWidth + scrollOffset
-            if (x < -fretWidth || x > canvasWidth + fretWidth) continue
+            val x = nutWidth + fret * fretWidth
+            if (x > canvasWidth) break
             drawLine(
                 color = Color(0xFF666666),
                 start = Offset(x, stringSpacing * 0.5f),
@@ -262,13 +252,12 @@ private fun FretboardCanvas(
             )
         }
 
-        // Draw fret markers (dots)
+        // Fret markers
         val markerFrets = listOf(3, 5, 7, 9, 12, 15, 17, 19, 21)
-        val doubleMarkerFrets = listOf(12)
         for (fret in markerFrets) {
-            val x = nutWidth + (fret - 0.5f) * fretWidth + scrollOffset
-            if (x < -fretWidth || x > canvasWidth + fretWidth) continue
-            if (fret in doubleMarkerFrets) {
+            val x = nutWidth + (fret - 0.5f) * fretWidth
+            if (x > canvasWidth) break
+            if (fret == 12) {
                 drawCircle(Color(0xFF444444), radius = 6f, center = Offset(x, stringSpacing * 2.5f))
                 drawCircle(Color(0xFF444444), radius = 6f, center = Offset(x, stringSpacing * 4.5f))
             } else {
@@ -276,35 +265,36 @@ private fun FretboardCanvas(
             }
         }
 
-        // Draw strings
+        // Strings
         for (string in 0 until 6) {
             val y = stringSpacing * (string + 1)
-            val thickness = 1f + (5 - string) * 0.4f
+            val thickness = 1f + (5 - string) * 0.5f
             drawLine(
                 color = Color(0xFFBDBDBD),
-                start = Offset(scrollOffset.coerceAtLeast(0f), y),
+                start = Offset(0f, y),
                 end = Offset(canvasWidth, y),
                 strokeWidth = thickness
             )
         }
 
-        // Draw fret numbers
+        // Fret numbers
         for (fret in 1..TOTAL_FRETS) {
-            val x = nutWidth + (fret - 0.5f) * fretWidth + scrollOffset
-            if (x < -fretWidth || x > canvasWidth + fretWidth) continue
+            val x = nutWidth + (fret - 0.5f) * fretWidth
+            if (x > canvasWidth) break
             drawContext.canvas.nativeCanvas.drawText(
                 "$fret",
                 x,
-                stringSpacing * 0.35f,
+                stringSpacing * 0.4f,
                 android.graphics.Paint().apply {
                     color = android.graphics.Color.argb(150, 200, 200, 200)
-                    textSize = 22f
+                    textSize = 24f
                     textAlign = android.graphics.Paint.Align.CENTER
+                    isAntiAlias = true
                 }
             )
         }
 
-        // Determine position range
+        // Position range
         val posStart = if (positionsEnabled && scale.positions.isNotEmpty()) {
             scale.positions[currentPosition].startFret
         } else 0
@@ -312,7 +302,7 @@ private fun FretboardCanvas(
             scale.positions[currentPosition].endFret
         } else TOTAL_FRETS
 
-        // Draw scale notes
+        // Scale notes
         for (string in 0 until 6) {
             val openNote = STANDARD_TUNING[string]
             val y = stringSpacing * (string + 1)
@@ -322,19 +312,17 @@ private fun FretboardCanvas(
                 if (!isNoteInScale(noteIndex, rootNote, scale.intervals)) continue
 
                 val x = if (fret == 0) {
-                    nutWidth * 0.5f + scrollOffset
+                    nutWidth * 0.5f
                 } else {
-                    nutWidth + (fret - 0.5f) * fretWidth + scrollOffset
+                    nutWidth + (fret - 0.5f) * fretWidth
                 }
-
-                if (x < -30f || x > canvasWidth + 30f) continue
+                if (x > canvasWidth) break
 
                 val degree = getDegreeInScale(noteIndex, rootNote, scale.intervals) ?: continue
                 val isInPosition = fret in posStart..posEnd
 
-                // If positions enabled, dim notes outside position
                 if (positionsEnabled && !isInPosition) {
-                    drawCircle(COLOR_POSITION_DIM, radius = 12f, center = Offset(x, y))
+                    drawCircle(COLOR_POSITION_DIM, radius = 10f, center = Offset(x, y))
                     continue
                 }
 
@@ -348,36 +336,31 @@ private fun FretboardCanvas(
                 val radius = if (degree == 1) 14f else 12f
                 drawCircle(noteColor, radius = radius, center = Offset(x, y))
 
-                // Draw text label
                 if (noteDisplay != NoteDisplay.NONE) {
                     val label = when (noteDisplay) {
                         NoteDisplay.NOTE -> getNoteName(noteIndex)
                         NoteDisplay.DEGREE -> getDegreeLabel(degree)
-                        NoteDisplay.BOTH -> "${getNoteName(noteIndex)}\n${getDegreeLabel(degree)}"
+                        NoteDisplay.BOTH -> "${getNoteName(noteIndex)}/${getDegreeLabel(degree)}"
                         NoteDisplay.NONE -> ""
                     }
-                    drawNoteLabel(label, x, y, noteDisplay == NoteDisplay.BOTH)
+                    drawNoteLabel(label, x, y)
                 }
             }
         }
     }
 }
 
-private fun DrawScope.drawNoteLabel(label: String, x: Float, y: Float, isDouble: Boolean) {
-    val paint = android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE
-        textSize = if (isDouble) 16f else 18f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
-        isAntiAlias = true
-    }
-
-    if (isDouble && label.contains("\n")) {
-        val parts = label.split("\n")
-        drawContext.canvas.nativeCanvas.drawText(parts[0], x, y - 3f, paint)
-        paint.textSize = 14f
-        drawContext.canvas.nativeCanvas.drawText(parts[1], x, y + 11f, paint)
-    } else {
-        drawContext.canvas.nativeCanvas.drawText(label, x, y + 5f, paint)
-    }
+private fun DrawScope.drawNoteLabel(label: String, x: Float, y: Float) {
+    drawContext.canvas.nativeCanvas.drawText(
+        label,
+        x,
+        y + 5f,
+        android.graphics.Paint().apply {
+            color = android.graphics.Color.WHITE
+            textSize = 18f
+            textAlign = android.graphics.Paint.Align.CENTER
+            isFakeBoldText = true
+            isAntiAlias = true
+        }
+    )
 }
