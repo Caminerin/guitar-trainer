@@ -6,13 +6,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -28,7 +29,8 @@ import com.caminerin.guitartrainer.audio.PitchDetector
 enum class AppMode(val title: String, val icon: ImageVector) {
     VERIFY("Verificar", Icons.Default.MusicNote),
     FREE("Libre", Icons.Default.GraphicEq),
-    TUNER("Afinar", Icons.Default.Tune)
+    TUNER("Afinar", Icons.Default.Tune),
+    METRONOME("Metrónomo", Icons.Default.Speed)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,7 +58,7 @@ fun MainScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            TabRow(selectedTabIndex = selectedTab) {
+            ScrollableTabRow(selectedTabIndex = selectedTab) {
                 modes.forEachIndexed { index, mode ->
                     Tab(
                         selected = selectedTab == index,
@@ -71,6 +73,7 @@ fun MainScreen(
                 AppMode.VERIFY -> VerifyMode(pitchResult = pitchResult)
                 AppMode.FREE -> FreeMode(pitchResult = pitchResult)
                 AppMode.TUNER -> TunerMode(pitchResult = pitchResult)
+                AppMode.METRONOME -> MetronomeMode()
             }
         }
     }
