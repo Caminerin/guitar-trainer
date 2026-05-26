@@ -85,6 +85,7 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) { ChordRepository.loadChords(context) }
 
     LaunchedEffect(Unit) { ScaleChordRepository.load(context) }
+    LaunchedEffect(Unit) { SongRepository.load(context) }
 
     var modeKey by rememberSaveable { mutableStateOf(true) } // true = by tonality, false = free
     var selectedKey by rememberSaveable { mutableIntStateOf(0) }
@@ -104,6 +105,8 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
 
     var showKeyCircle by remember { mutableStateOf(false) }
     var showChordPicker by remember { mutableStateOf<Pair<Int, Int>?>(null) } // measureIdx, subIdx
+    var showSongPicker by remember { mutableStateOf(false) }
+    var currentSong by remember { mutableStateOf<Song?>(null) }
     var bpmMenuExpanded by remember { mutableStateOf(false) }
     var measuresMenuExpanded by remember { mutableStateOf(false) }
 
@@ -245,6 +248,22 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
                     }
                 }
 
+                // Song picker button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (currentSong != null) Color(0xFFFFC107).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
+                        .clickable { showSongPicker = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        currentSong?.let { "\u266A ${it.title}" } ?: "\u266A Canciones",
+                        color = if (currentSong != null) Color(0xFFFFC107) else Color(0xFF90A4AE),
+                        fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                }
+
                 Spacer(modifier = Modifier.weight(1f))
 
                 // Play / Stop button
@@ -261,6 +280,34 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
                         tint = Color.White,
                         modifier = Modifier.size(28.dp)
                     )
+                }
+            }
+
+            // Song info bar
+            currentSong?.let { song ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF2A1A3A))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("${song.title} \u2022 ${song.artist}",
+                            color = Color(0xFFFFC107), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("Rasgueo: ${song.strumPattern} \u2022 Cejilla: traste ${song.capo} \u2022 ${song.key}",
+                            color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, maxLines = 1)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .clickable { currentSong = null }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text("\u2715", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                    }
                 }
             }
 
@@ -347,6 +394,80 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
                 onDismiss = { showChordPicker = null }
             )
         }
+
+        // Song picker overlay
+        if (showSongPicker) {
+            SongPickerOverlay(
+                songs = SongRepository.getSongs(),
+                onPick = { song ->
+                    currentSong = song
+                    bpm = song.bpmStart
+                    measureCount = song.measuresUsed
+                    // Auto-fill measures with song chords
+                    measures.clear()
+                    val allChords = ChordRepository.getChords()
+                    song.measures.forEach { chordName ->
+                        val chordId = findChordIdByName(chordName, allChords)
+                        measures.add(Measure(listOf(ChordSlot(chordId))))
+                    }
+                    // Fill remaining measures if needed
+                    while (measures.size < measureCount) measures.add(Measure())
+                    modeKey = false
+                    showSongPicker = false
+                },
+                onDismiss = { showSongPicker = false }
+            )
+        }
+    }
+}
+
+private fun findChordIdByName(name: String, chords: List<ChordShape>): String? {
+    val normalized = name.trim()
+    if (normalized.isEmpty()) return null
+    // Try exact match on displayName first
+    chords.firstOrNull { it.displayName.equals(normalized, ignoreCase = true) }
+        ?.let { return it.id }
+    // Try matching root+quality
+    chords.filter { matchesChordName(it, normalized) }
+        .minByOrNull { it.priority }
+        ?.let { return it.id }
+    return null
+}
+
+private fun matchesChordName(chord: ChordShape, name: String): Boolean {
+    val root = extractChordRoot(name)
+    val quality = name.removePrefix(root).trim()
+    if (chord.root != root && chord.root != enharmonicEquivalent(root)) return false
+    val qualityMatch = when (quality.lowercase()) {
+        "", "maj", "major" -> chord.qualityLabel == "major"
+        "m", "min", "minor" -> chord.qualityLabel == "minor"
+        "7" -> chord.qualityLabel == "7"
+        "m7", "min7" -> chord.qualityLabel == "m7"
+        "maj7" -> chord.qualityLabel == "maj7"
+        "dim" -> chord.qualityLabel == "dim"
+        "sus2" -> chord.qualityLabel == "sus2"
+        "sus4" -> chord.qualityLabel == "sus4"
+        "add9", "add(9)" -> chord.qualityLabel.contains("add9")
+        else -> chord.qualityLabel.contains(quality, ignoreCase = true)
+    }
+    return qualityMatch
+}
+
+private fun extractChordRoot(name: String): String {
+    if (name.isEmpty()) return ""
+    val first = name[0]
+    if (name.length >= 2 && (name[1] == '#' || name[1] == 'b')) return "${first}${name[1]}"
+    return "$first"
+}
+
+private fun enharmonicEquivalent(note: String): String {
+    return when (note) {
+        "Db" -> "C#"; "C#" -> "Db"
+        "Eb" -> "D#"; "D#" -> "Eb"
+        "Gb" -> "F#"; "F#" -> "Gb"
+        "Ab" -> "G#"; "G#" -> "Ab"
+        "Bb" -> "A#"; "A#" -> "Bb"
+        else -> note
     }
 }
 
