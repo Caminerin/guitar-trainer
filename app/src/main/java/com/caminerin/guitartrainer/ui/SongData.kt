@@ -13,29 +13,56 @@ data class Song(
     val level: Int,
     val bpmStart: Int,
     val bpmTarget: Int,
+    val meter: String,
     val key: String,
     val capo: Int,
+    val tuning: String,
     val chordsUsed: List<String>,
     val measuresUsed: Int,
     val subdivisionsPerMeasure: Int,
     val strumPattern: String,
     val strumLegend: String,
-    val measures: List<String>, // chord name for each measure (up to 12)
-    val tips: String
+    val measures: List<SongMeasure>,
+    val arrangementType: String,
+    val practiceFocus: String,
+    val sourceUrl: String,
+    val notes: String
 )
+
+data class SongMeasure(
+    val index: Int,
+    val chordSymbol: String,
+    val strumPattern: String?,
+    val raw: String
+)
+
+private val MEASURE_REGEX = Regex("^\\s*(.*?)\\s*(?:\\[(.*?)])?\\s*$")
+
+private fun parseMeasureCell(raw: String): SongMeasure? {
+    if (raw.isBlank()) return null
+    val match = MEASURE_REGEX.matchEntire(raw)
+    val chord = match?.groupValues?.getOrNull(1)?.trim().orEmpty()
+    val pattern = match?.groupValues?.getOrNull(2)?.trim()?.takeIf { it.isNotBlank() }
+    if (chord.isBlank()) return null
+    return SongMeasure(index = 0, chordSymbol = chord, strumPattern = pattern, raw = raw)
+}
 
 object SongRepository {
     private var songs: List<Song> = emptyList()
     private var allStyles: List<String> = emptyList()
     private var allLanguages: List<String> = emptyList()
     private var allLevels: List<Int> = emptyList()
+    private var headerIndex: Map<String, Int> = emptyMap()
 
     fun load(context: Context) {
         if (songs.isNotEmpty()) return
         val result = mutableListOf<Song>()
         try {
             val reader = BufferedReader(InputStreamReader(context.assets.open("songs.csv")))
-            reader.readLine() // skip header (with BOM)
+            val headerLine = reader.readLine()?.removePrefix("\uFEFF") ?: return
+            val headerParts = smartSplit(headerLine)
+            headerIndex = headerParts.withIndex().associate { (i, v) -> v.trim() to i }
+
             var line = reader.readLine()
             while (line != null) {
                 parseSongLine(line)?.let { result.add(it) }
@@ -70,39 +97,44 @@ object SongRepository {
         }
     }
 
+    private fun col(parts: List<String>, name: String): String {
+        val idx = headerIndex[name] ?: return ""
+        return parts.getOrElse(idx) { "" }.trim()
+    }
+
     private fun parseSongLine(line: String): Song? {
         try {
             val parts = smartSplit(line)
-            if (parts.size < 30) return null
+            if (parts.size < 20) return null
 
-            val ranking = parts[0].trim().toIntOrNull() ?: return null
-            val title = parts[1].trim()
-            val artist = parts[2].trim()
-            val language = parts[3].trim()
-            val style = parts[4].trim()
-            val level = parts[5].trim().toIntOrNull() ?: 1
-            val bpmStart = parts[6].trim().toIntOrNull() ?: 60
-            val bpmTarget = parts[7].trim().toIntOrNull() ?: 80
-            val key = parts[9].trim()
-            val capo = parts[10].trim().toIntOrNull() ?: 0
-            val chordsUsed = parts[12].trim().split(";").map { it.trim() }.filter { it.isNotEmpty() }
-            val measuresUsed = parts[14].trim().toIntOrNull() ?: 4
-            val subdivisionsPerMeasure = parts[15].trim().toIntOrNull() ?: 4
-            val strumPattern = parts[17].trim()
-            val strumLegend = parts[18].trim()
+            val ranking = col(parts, "ranking_aprox").toIntOrNull() ?: return null
+            val title = col(parts, "titulo")
+            val artist = col(parts, "artista")
+            val language = col(parts, "idioma")
+            val style = col(parts, "estilo")
+            val level = col(parts, "nivel_1_5").toIntOrNull() ?: 1
+            val bpmStart = col(parts, "bpm_practica_inicio").toIntOrNull() ?: 60
+            val bpmTarget = col(parts, "bpm_practica_objetivo").toIntOrNull() ?: 80
+            val meter = col(parts, "metro_adaptado")
+            val key = col(parts, "tonalidad_sugerida")
+            val capo = col(parts, "capo_traste").toIntOrNull() ?: 0
+            val tuning = col(parts, "afinacion")
+            val chordsUsed = col(parts, "acordes_sugeridos")
+                .split(";").map { it.trim() }.filter { it.isNotEmpty() }
+            val measuresUsed = col(parts, "compases_usados").toIntOrNull() ?: 4
+            val subdivisionsPerMeasure = col(parts, "subdivisiones_por_compas").toIntOrNull() ?: 4
+            val strumPattern = col(parts, "patron_golpes_4_subdiv")
+            val strumLegend = col(parts, "leyenda_golpes")
 
-            // Parse measures (compas_01 to compas_12 are at indices 24..35)
-            val measures = mutableListOf<String>()
-            for (i in 24..35) {
-                val m = parts.getOrElse(i) { "" }.trim()
-                if (m.isNotEmpty()) {
-                    // Extract chord name: "Em [D - D U]" -> "Em"
-                    val chordName = m.split("[").firstOrNull()?.trim() ?: m
-                    measures.add(chordName)
-                }
+            val measures = (1..12).mapNotNull { n ->
+                val raw = col(parts, "compas_%02d".format(n))
+                parseMeasureCell(raw)?.copy(index = n)
             }
 
-            val tips = parts.getOrElse(37) { "" }.trim()
+            val arrangementType = col(parts, "tipo_arreglo")
+            val practiceFocus = col(parts, "foco_practica")
+            val sourceUrl = col(parts, "fuente_url")
+            val notes = col(parts, "notas")
 
             return Song(
                 ranking = ranking,
@@ -113,15 +145,20 @@ object SongRepository {
                 level = level,
                 bpmStart = bpmStart,
                 bpmTarget = bpmTarget,
+                meter = meter,
                 key = key,
                 capo = capo,
+                tuning = tuning,
                 chordsUsed = chordsUsed,
                 measuresUsed = measuresUsed,
                 subdivisionsPerMeasure = subdivisionsPerMeasure,
                 strumPattern = strumPattern,
                 strumLegend = strumLegend,
                 measures = measures,
-                tips = tips
+                arrangementType = arrangementType,
+                practiceFocus = practiceFocus,
+                sourceUrl = sourceUrl,
+                notes = notes
             )
         } catch (_: Exception) {
             return null

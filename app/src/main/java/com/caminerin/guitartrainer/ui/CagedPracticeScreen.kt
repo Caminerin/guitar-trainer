@@ -82,13 +82,7 @@ private val STRING_COLORS = listOf(
 )
 private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 
-private val CAGED_COLORS = mapOf(
-    'C' to Color(0xFFE53935),
-    'A' to Color(0xFFFF9800),
-    'G' to Color(0xFF4CAF50),
-    'E' to Color(0xFF2196F3),
-    'D' to Color(0xFF9C27B0)
-)
+
 
 @Composable
 fun CagedPracticeScreen(onBack: () -> Unit) {
@@ -109,7 +103,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
     var showSubdivisionMenu by remember { mutableStateOf(false) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
-    val positions = scale.positions
+    val positions = if (scale.hasCaged) computeCagedPositions(selectedKey) else scale.positions
     val currentPosition = positions.getOrElse(currentPositionIndex) { positions.first() }
     val noteSequence = remember(selectedKey, selectedScaleIndex, currentPositionIndex) {
         getPositionNoteSequence(selectedKey, scale.intervals, currentPosition)
@@ -184,7 +178,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                         .clickable { showKeyCircle = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(getChromaticNames()[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Scale selector -> overlay
@@ -304,14 +298,14 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                val posColor = CAGED_COLORS[currentPosition.cagedLetter] ?: Color.Gray
+                val posColor = SHARED_CAGED_COLORS[currentPosition.cagedLetter] ?: Color.Gray
                 Text(
                     "CAGED: ${currentPosition.name} (trastes ${currentPosition.startFret}-${currentPosition.endFret})",
                     color = posColor, fontSize = 12.sp, fontWeight = FontWeight.Bold
                 )
                 if (currentNote != null) {
                     Text(
-                        "Nota: ${getSpanishNoteName(currentNote.noteIndex)} | Cuerda ${6 - currentNote.string} | Traste ${currentNote.fret}",
+                        "Nota: ${getSpanishNoteName(currentNote.noteIndex, selectedKey)} | Cuerda ${6 - currentNote.string} | Traste ${currentNote.fret}",
                         color = Color(0xFFFFD600), fontSize = 12.sp, fontWeight = FontWeight.Bold
                     )
                 }
@@ -520,7 +514,7 @@ private fun DrawScope.drawCagedFretboard(
                 drawCircle(COLOR_HIGHLIGHT.copy(alpha = 0.3f), r + 16f, Offset(cx, y), style = Stroke(3f))
             }
 
-            val label = getSpanishNoteName(noteIdx)
+            val label = getSpanishNoteName(noteIdx, rootNote)
             notePaint.color = if (isCurrentNote) android.graphics.Color.WHITE
             else android.graphics.Color.argb(180, 255, 255, 255)
             drawContext.canvas.nativeCanvas.drawText(label, cx, y + notePaint.textSize * 0.35f, notePaint)

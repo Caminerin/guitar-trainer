@@ -262,64 +262,90 @@ fun SongPickerOverlay(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SongCard(song: Song, onClick: () -> Unit) {
     val levelColor = LEVEL_COLORS.getOrElse(song.level - 1) { Color.Gray }
+    val styleColor = STYLE_COLORS[song.style] ?: Color(0xFF607D8B)
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(Color.White.copy(alpha = 0.05f))
             .clickable { onClick() }
-            .padding(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(12.dp)
     ) {
-        // Level indicator
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(levelColor.copy(alpha = 0.2f)),
-            contentAlignment = Alignment.Center
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("${song.level}", color = levelColor, fontSize = 14.sp,
-                fontWeight = FontWeight.Bold)
-        }
+            // Level indicator
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(levelColor.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("${song.level}", color = levelColor, fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold)
+            }
 
-        Spacer(modifier = Modifier.width(10.dp))
+            Spacer(modifier = Modifier.width(10.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(song.title, color = Color.White, fontSize = 15.sp,
-                fontWeight = FontWeight.Bold, maxLines = 1)
-            Text(song.artist, color = Color.White.copy(alpha = 0.5f),
-                fontSize = 12.sp, maxLines = 1)
-        }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(song.title, color = Color.White, fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(song.artist, color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 13.sp, maxLines = 1)
+            }
 
-        Spacer(modifier = Modifier.width(6.dp))
-
-        Column(horizontalAlignment = Alignment.End) {
-            Text("${song.bpmStart}-${song.bpmTarget}", color = Color(0xFF90A4AE),
-                fontSize = 11.sp)
-            Text("${song.measuresUsed} comp.", color = Color(0xFF90A4AE),
-                fontSize = 11.sp)
-            Row {
-                song.chordsUsed.take(4).forEach { chord ->
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 2.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF7B1FA2).copy(alpha = 0.3f))
-                            .padding(horizontal = 4.dp, vertical = 1.dp)
-                    ) {
-                        Text(chord, color = Color.White, fontSize = 9.sp)
-                    }
-                }
-                if (song.chordsUsed.size > 4) {
-                    Text("+${song.chordsUsed.size - 4}", color = Color.White.copy(alpha = 0.3f),
-                        fontSize = 9.sp, modifier = Modifier.padding(start = 2.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text("${song.bpmStart} BPM", color = Color(0xFF90A4AE), fontSize = 11.sp)
+                if (song.key.isNotBlank()) {
+                    Text(song.key, color = Color(0xFFFFD600), fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold)
                 }
             }
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Style tag + chords
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(styleColor.copy(alpha = 0.25f))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(song.style, color = styleColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
+            song.chordsUsed.take(6).forEach { chord ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFF7B1FA2).copy(alpha = 0.25f))
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                ) {
+                    Text(chord, color = Color(0xFFCE93D8), fontSize = 10.sp)
+                }
+            }
+            if (song.chordsUsed.size > 6) {
+                Text("+${song.chordsUsed.size - 6}", color = Color.White.copy(alpha = 0.3f),
+                    fontSize = 10.sp, modifier = Modifier.padding(start = 2.dp))
+            }
+        }
+
+        // Arrangement type info
+        if (song.arrangementType.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(song.arrangementType, color = Color.White.copy(alpha = 0.3f),
+                fontSize = 10.sp, maxLines = 1)
         }
     }
 }

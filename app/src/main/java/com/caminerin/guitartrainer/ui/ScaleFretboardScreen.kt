@@ -94,6 +94,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
     var showChromaticCircle by remember { mutableStateOf(false) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
+    val positions = if (scale.hasCaged) computeCagedPositions(selectedKey) else scale.positions
     val density = LocalDensity.current
     val fretWidthDp = (60f * zoom).dp
 
@@ -125,7 +126,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(
-                    getChromaticNames()[selectedKey],
+                    getChromaticNames(selectedKey)[selectedKey],
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -157,9 +158,9 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                 Text("CAGED", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
-            if (positionsEnabled && scale.positions.isNotEmpty()) {
+            if (positionsEnabled && positions.isNotEmpty()) {
                 CagedPositionBar(
-                    positions = scale.positions,
+                    positions = positions,
                     currentIndex = currentPosition,
                     onSelect = { currentPosition = it }
                 )
@@ -202,6 +203,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                     drawGuitarFretboard(
                         rootNote = selectedKey,
                         scale = scale,
+                        positions = positions,
                         noteDisplay = noteDisplay,
                         positionsEnabled = positionsEnabled,
                         currentPosition = currentPosition,
@@ -247,6 +249,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
 private fun DrawScope.drawGuitarFretboard(
     rootNote: Int,
     scale: Scale,
+    positions: List<ScalePosition>,
     noteDisplay: NoteDisplay,
     positionsEnabled: Boolean,
     currentPosition: Int,
@@ -280,8 +283,8 @@ private fun DrawScope.drawGuitarFretboard(
     }
 
     // Position highlight
-    if (positionsEnabled && scale.positions.isNotEmpty()) {
-        val pos = scale.positions[currentPosition]
+    if (positionsEnabled && positions.isNotEmpty()) {
+        val pos = positions[currentPosition]
         val startX = if (pos.startFret == 0) nutX else nutX + nutWidth + (pos.startFret - 1) * fretWidthPx
         val endX = nutX + nutWidth + pos.endFret * fretWidthPx
         drawRect(
@@ -347,7 +350,7 @@ private fun DrawScope.drawGuitarFretboard(
         drawLine(Color(0x22FFFFFF), Offset(nutX, y - STRING_WIDTHS[s] * 0.3f), Offset(size.width, y - STRING_WIDTHS[s] * 0.3f), strokeWidth = 0.5f)
     }
 
-    // Open string labels — only show when the open note is NOT in the scale (avoids overlap with note circles)
+    // Open string labels
     val openPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb(220, 240, 240, 240)
         textSize = 72f
@@ -356,17 +359,13 @@ private fun DrawScope.drawGuitarFretboard(
         isAntiAlias = true
     }
     for (s in 0 until 6) {
-        val openNote = STANDARD_TUNING_MIDI[s]
-        val noteIdx = openNote % 12
-        if (!isNoteInScale(noteIdx, rootNote, scale.intervals)) {
-            val y = fbTop + stringSpacing * (6 - s)
-            drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], nutX * 0.5f, y + 24f, openPaint)
-        }
+        val y = fbTop + stringSpacing * (6 - s)
+        drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], nutX * 0.5f, y + 24f, openPaint)
     }
 
     // Position range
-    val posStart = if (positionsEnabled && scale.positions.isNotEmpty()) scale.positions[currentPosition].startFret else 0
-    val posEnd = if (positionsEnabled && scale.positions.isNotEmpty()) scale.positions[currentPosition].endFret else TOTAL_FRETS
+    val posStart = if (positionsEnabled && positions.isNotEmpty()) positions[currentPosition].startFret else 0
+    val posEnd = if (positionsEnabled && positions.isNotEmpty()) positions[currentPosition].endFret else TOTAL_FRETS
 
     // Note text paints - 3x bigger
     val notePaintBig = android.graphics.Paint().apply {
@@ -408,7 +407,7 @@ private fun DrawScope.drawGuitarFretboard(
                 val dimR = noteRadius * 0.65f
                 drawCircle(COLOR_DIM.copy(alpha = 0.35f), dimR, Offset(cx, y))
                 if (noteDisplay != NoteDisplay.NONE) {
-                    val lbl = buildNoteLabel(noteIdx, degree, noteDisplay)
+                    val lbl = buildNoteLabel(noteIdx, degree, noteDisplay, rootNote)
                     notePaintSmall.color = android.graphics.Color.argb(100, 255, 255, 255)
                     notePaintSmall.textSize = 28f
                     drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + 10f, notePaintSmall)
@@ -435,7 +434,7 @@ private fun DrawScope.drawGuitarFretboard(
 
             // Label
             if (noteDisplay != NoteDisplay.NONE) {
-                val label = buildNoteLabel(noteIdx, degree, noteDisplay)
+                val label = buildNoteLabel(noteIdx, degree, noteDisplay, rootNote)
                 val paint = if (label.length > 4) notePaintSmall else notePaintBig
                 drawContext.canvas.nativeCanvas.drawText(label, cx, y + paint.textSize * 0.35f, paint)
             }
@@ -443,8 +442,8 @@ private fun DrawScope.drawGuitarFretboard(
     }
 }
 
-private fun buildNoteLabel(noteIdx: Int, degree: Int, display: NoteDisplay): String {
-    val noteName = getSpanishNoteName(noteIdx)
+private fun buildNoteLabel(noteIdx: Int, degree: Int, display: NoteDisplay, rootNote: Int = -1): String {
+    val noteName = getSpanishNoteName(noteIdx, rootNote)
     val degreeStr = getDegreeLabel(degree)
     return when (display) {
         NoteDisplay.NOTE -> noteName
