@@ -99,7 +99,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
     var showRootSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
     var showLevelSelector by remember { mutableStateOf(false) }
-    var displayMenuExpanded by remember { mutableStateOf(false) }
+    var showDisplaySelector by remember { mutableStateOf(false) }
 
     val rootName = SCALE_NOTE_NAMES[selectedRoot]
     val quality = ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
@@ -163,39 +163,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
             }
 
             // Display mode selector (N+G)
-            Box {
-                val label = when (noteDisplay) {
-                    NoteDisplay.NOTE -> "Nota"
-                    NoteDisplay.DEGREE -> "Grado"
-                    NoteDisplay.BOTH -> "N+G"
-                    NoteDisplay.NONE -> "\u2205"
-                }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .clickable { displayMenuExpanded = true }
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
-                ) {
-                    Text(label, color = Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-                androidx.compose.material3.DropdownMenu(
-                    expanded = displayMenuExpanded,
-                    onDismissRequest = { displayMenuExpanded = false }
-                ) {
-                    listOf(
-                        NoteDisplay.NOTE to "Nota",
-                        NoteDisplay.DEGREE to "Intervalo",
-                        NoteDisplay.BOTH to "Nota + Intervalo",
-                        NoteDisplay.NONE to "Nada"
-                    ).forEach { (d, l) ->
-                        androidx.compose.material3.DropdownMenuItem(
-                            text = { Text(l, fontSize = 14.sp) },
-                            onClick = { noteDisplay = d; displayMenuExpanded = false }
-                        )
-                    }
-                }
-            }
+            NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
 
             Spacer(modifier = Modifier.weight(1f))
 
@@ -449,6 +417,15 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
             }
         }
     }
+
+    // Display mode overlay
+    if (showDisplaySelector) {
+        NoteDisplaySelectorOverlay(
+            current = noteDisplay,
+            onSelect = { noteDisplay = it },
+            onDismiss = { showDisplaySelector = false }
+        )
+    }
 }
 
 private val CHORD_COLOR_ROOT = Color(0xFFE53935)
@@ -617,8 +594,8 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
 
     // Open string labels on right side
     val openStringPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(180, 200, 200, 200)
-        textSize = 36f
+        color = android.graphics.Color.argb(220, 240, 240, 240)
+        textSize = 72f
         textAlign = android.graphics.Paint.Align.LEFT
         isAntiAlias = true
     }

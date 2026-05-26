@@ -399,3 +399,80 @@ fun BpmToolbarButton(bpm: Int, onClick: () -> Unit) {
         Text("$bpm BPM", color = Color(0xFFB39DDB), fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 }
+
+// ===== NOTE DISPLAY MODE SELECTOR OVERLAY =====
+@Composable
+fun NoteDisplaySelectorOverlay(
+    current: NoteDisplay,
+    onSelect: (NoteDisplay) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        NoteDisplay.NOTE to "Nota",
+        NoteDisplay.DEGREE to "Grado / Intervalo",
+        NoteDisplay.BOTH to "Nota + Grado",
+        NoteDisplay.NONE to "Nada"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF2A2A2A))
+                .clickable(enabled = false) {}
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Mostrar en notas", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            options.forEach { (display, label) ->
+                val selected = display == current
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (selected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.06f))
+                        .clickable { onSelect(display); onDismiss() }
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Text(label, color = Color.White, fontSize = 16.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+        }
+    }
+}
+
+// ===== NOTE DISPLAY TOOLBAR BUTTON =====
+@Composable
+fun NoteDisplayToolbarButton(noteDisplay: NoteDisplay, onClick: () -> Unit) {
+    val label = when (noteDisplay) {
+        NoteDisplay.NOTE -> "Nota"
+        NoteDisplay.DEGREE -> "Grado"
+        NoteDisplay.BOTH -> "N+G"
+        NoteDisplay.NONE -> "\u2205"
+    }
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFF26A69A).copy(alpha = 0.25f))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+    ) {
+        Text(label, color = Color(0xFF80CBC4), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    }
+}

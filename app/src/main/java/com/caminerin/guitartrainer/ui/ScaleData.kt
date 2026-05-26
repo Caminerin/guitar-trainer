@@ -27,6 +27,51 @@ object NoteFormatPreference {
     }
 }
 
+object AppPreferences {
+    private const val PREFS = "guitar_prefs"
+
+    var lastTab by mutableStateOf(0)
+        private set
+    var lastKey by mutableStateOf(0)
+        private set
+    var lastScaleIndex by mutableStateOf(0)
+        private set
+    var lastBpm by mutableStateOf(60)
+        private set
+
+    fun load(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        lastTab = prefs.getInt("last_tab", 0)
+        lastKey = prefs.getInt("last_key", 0)
+        lastScaleIndex = prefs.getInt("last_scale", 0)
+        lastBpm = prefs.getInt("last_bpm", 60)
+    }
+
+    fun saveTab(tab: Int, context: Context) {
+        lastTab = tab
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putInt("last_tab", tab).apply()
+    }
+
+    fun saveKey(key: Int, context: Context) {
+        lastKey = key
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putInt("last_key", key).apply()
+    }
+
+    fun saveScale(index: Int, context: Context) {
+        lastScaleIndex = index
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putInt("last_scale", index).apply()
+    }
+
+    fun saveBpm(bpm: Int, context: Context) {
+        lastBpm = bpm
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putInt("last_bpm", bpm).apply()
+    }
+}
+
 val AMERICAN_NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 val EUROPEAN_NOTE_NAMES = listOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
 val OPEN_STRING_NAMES_AMERICAN = listOf("E", "A", "D", "G", "B", "E")

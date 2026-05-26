@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -78,15 +79,16 @@ private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 
 @Composable
 fun ScaleFretboardScreen(onBack: () -> Unit) {
-    var selectedKey by rememberSaveable { mutableIntStateOf(0) }
-    var selectedScaleIndex by rememberSaveable { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
+    var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex.coerceIn(0, ALL_SCALES.size - 1)) }
     var noteDisplay by rememberSaveable { mutableStateOf(NoteDisplay.BOTH) }
     var positionsEnabled by rememberSaveable { mutableStateOf(false) }
     var currentPosition by rememberSaveable { mutableIntStateOf(0) }
     var zoom by remember { mutableFloatStateOf(1.5f) }
 
     var showScaleSelector by remember { mutableStateOf(false) }
-    var displayMenuExpanded by remember { mutableStateOf(false) }
+    var showDisplaySelector by remember { mutableStateOf(false) }
 
     // State for chromatic circle overlay on key selection
     var showChromaticCircle by remember { mutableStateOf(false) }
@@ -142,36 +144,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             }
 
             // Display mode
-            Box {
-                val label = when (noteDisplay) {
-                    NoteDisplay.NOTE -> "Nota"
-                    NoteDisplay.DEGREE -> "Grado"
-                    NoteDisplay.BOTH -> "N+G"
-                    NoteDisplay.NONE -> "\u2205"
-                }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .clickable { displayMenuExpanded = true }
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                ) {
-                    Text(label, color = Color(0xFF90A4AE), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-                DropdownMenu(expanded = displayMenuExpanded, onDismissRequest = { displayMenuExpanded = false }) {
-                    listOf(
-                        NoteDisplay.NOTE to "Nota",
-                        NoteDisplay.DEGREE to "Grado",
-                        NoteDisplay.BOTH to "Grado + Nota",
-                        NoteDisplay.NONE to "Nada"
-                    ).forEach { (d, l) ->
-                        DropdownMenuItem(
-                            text = { Text(l, fontSize = 14.sp) },
-                            onClick = { noteDisplay = d; displayMenuExpanded = false }
-                        )
-                    }
-                }
-            }
+            NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
 
             // Position toggle + CAGED bar
             Box(
@@ -247,7 +220,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             selectedNote = selectedKey,
             rootNote = selectedKey,
             scaleIntervals = scale.intervals,
-            onNoteSelected = { selectedKey = it; showChromaticCircle = false },
+            onNoteSelected = { selectedKey = it; AppPreferences.saveKey(it, context); showChromaticCircle = false },
             onDismiss = { showChromaticCircle = false }
         )
     }
@@ -256,8 +229,17 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
     if (showScaleSelector) {
         ScaleSelectorOverlay(
             currentIndex = selectedScaleIndex,
-            onSelected = { selectedScaleIndex = it; currentPosition = 0; showScaleSelector = false },
+            onSelected = { selectedScaleIndex = it; currentPosition = 0; AppPreferences.saveScale(it, context); showScaleSelector = false },
             onDismiss = { showScaleSelector = false }
+        )
+    }
+
+    // Display mode overlay
+    if (showDisplaySelector) {
+        NoteDisplaySelectorOverlay(
+            current = noteDisplay,
+            onSelect = { noteDisplay = it },
+            onDismiss = { showDisplaySelector = false }
         )
     }
 }
