@@ -25,7 +25,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -250,14 +255,12 @@ fun ToolsMenu(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    var selectedTool by androidx.compose.runtime.saveable.rememberSaveable {
-        androidx.compose.runtime.mutableStateOf("none")
-    }
+    var selectedTool by rememberSaveable { mutableStateOf("none") }
 
     when (selectedTool) {
         "tuner" -> {
             Column(modifier = modifier.fillMaxSize()) {
-                androidx.compose.material3.TextButton(
+                TextButton(
                     onClick = { selectedTool = "none" },
                     modifier = Modifier.padding(8.dp)
                 ) {
@@ -268,7 +271,7 @@ fun ToolsMenu(
         }
         "metronome" -> {
             Column(modifier = modifier.fillMaxSize()) {
-                androidx.compose.material3.TextButton(
+                TextButton(
                     onClick = { selectedTool = "none" },
                     modifier = Modifier.padding(8.dp)
                 ) {
