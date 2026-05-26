@@ -1,13 +1,17 @@
 package com.caminerin.guitartrainer.ui
 
 import android.content.res.Configuration
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -24,14 +28,18 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -59,6 +67,9 @@ fun MainScreen(
     pitchResult: PitchDetector.PitchResult?,
     isListening: Boolean
 ) {
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { NoteFormatPreference.load(context) }
+
     var selectedTab by rememberSaveable { mutableStateOf(0) }
     var fullscreenMode by rememberSaveable { mutableStateOf(FullscreenMode.NONE.name) }
     val modes = AppMode.entries
@@ -95,6 +106,27 @@ fun MainScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Guitar Trainer") },
+                actions = {
+                    Box(
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF5C6BC0).copy(alpha = 0.3f))
+                            .clickable {
+                                val newFormat = if (NoteFormatPreference.current == NoteFormat.AMERICAN)
+                                    NoteFormat.EUROPEAN else NoteFormat.AMERICAN
+                                NoteFormatPreference.set(newFormat, context)
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            NoteFormatPreference.current.label,
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                     titleContentColor = MaterialTheme.colorScheme.onSurface

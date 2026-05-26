@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -140,7 +141,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(
-                    SCALE_NOTE_NAMES[selectedKey],
+                    getChromaticNames()[selectedKey],
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -255,6 +256,11 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, _, gestureZoom, _ ->
+                        zoom = (zoom * gestureZoom).coerceIn(0.5f, 3f)
+                    }
+                }
         ) {
             Box(
                 modifier = Modifier
@@ -436,7 +442,7 @@ private fun DrawScope.drawGuitarFretboard(
         drawLine(Color(0x22FFFFFF), Offset(nutX, y - STRING_WIDTHS[s] * 0.3f), Offset(size.width, y - STRING_WIDTHS[s] * 0.3f), strokeWidth = 0.5f)
     }
 
-    // Open string labels
+    // Open string labels — only show when the open note is NOT in the scale (avoids overlap with note circles)
     val openPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb(220, 240, 240, 240)
         textSize = 72f
@@ -445,8 +451,12 @@ private fun DrawScope.drawGuitarFretboard(
         isAntiAlias = true
     }
     for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (6 - s)
-        drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 24f, openPaint)
+        val openNote = STANDARD_TUNING_MIDI[s]
+        val noteIdx = openNote % 12
+        if (!isNoteInScale(noteIdx, rootNote, scale.intervals)) {
+            val y = fbTop + stringSpacing * (6 - s)
+            drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], nutX * 0.5f, y + 24f, openPaint)
+        }
     }
 
     // Position range

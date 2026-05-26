@@ -283,13 +283,13 @@ private fun TunerInfo(
 ) {
     if (activeString != null && pitchResult != null) {
         Text(
-            text = "${activeString.noteName}${activeString.octave}",
+            text = "${if (NoteFormatPreference.current == NoteFormat.EUROPEAN) activeString.spanishName else activeString.noteName}${activeString.octave}",
             fontSize = 48.sp,
             fontWeight = FontWeight.Bold,
             color = statusColor(centsFromTarget)
         )
         Text(
-            text = "${activeString.spanishName} \u00b7 Cuerda ${activeString.number}",
+            text = "Cuerda ${activeString.number}",
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
         )
@@ -492,7 +492,7 @@ private fun StringChip(
                 color = textColor.copy(alpha = 0.5f)
             )
             Text(
-                text = guitarString.noteName,
+                text = if (NoteFormatPreference.current == NoteFormat.EUROPEAN) guitarString.spanishName else guitarString.noteName,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor

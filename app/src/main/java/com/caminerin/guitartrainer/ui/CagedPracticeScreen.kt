@@ -3,6 +3,7 @@ package com.caminerin.guitartrainer.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import com.caminerin.guitartrainer.audio.TickPlayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -183,7 +185,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                         .clickable { showKeyCircle = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(SCALE_NOTE_NAMES[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(getChromaticNames()[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Scale selector -> overlay
@@ -333,8 +335,17 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, _, gestureZoom, _ ->
+                            zoom = (zoom * gestureZoom).coerceIn(0.5f, 3f)
+                        }
+                    }
             ) {
+              Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .horizontalScroll(rememberScrollState())
+              ) {
                 Canvas(
                     modifier = Modifier
                         .width(totalWidthDp)
@@ -349,6 +360,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                         openStringWidthPx = with(density) { openStringWidth.toPx() }
                     )
                 }
+              }
             }
         }
 

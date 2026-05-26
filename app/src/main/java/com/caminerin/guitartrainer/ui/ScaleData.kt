@@ -1,5 +1,58 @@
 package com.caminerin.guitartrainer.ui
 
+import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
+enum class NoteFormat(val label: String) {
+    AMERICAN("A B C"),
+    EUROPEAN("Do Re Mi")
+}
+
+object NoteFormatPreference {
+    var current by mutableStateOf(NoteFormat.EUROPEAN)
+        private set
+
+    fun set(format: NoteFormat, context: Context) {
+        current = format
+        context.getSharedPreferences("guitar_prefs", Context.MODE_PRIVATE)
+            .edit().putString("note_format", format.name).apply()
+    }
+
+    fun load(context: Context) {
+        val saved = context.getSharedPreferences("guitar_prefs", Context.MODE_PRIVATE)
+            .getString("note_format", NoteFormat.EUROPEAN.name)
+        current = try { NoteFormat.valueOf(saved ?: NoteFormat.EUROPEAN.name) } catch (_: Exception) { NoteFormat.EUROPEAN }
+    }
+}
+
+val AMERICAN_NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+val EUROPEAN_NOTE_NAMES = listOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
+val OPEN_STRING_NAMES_AMERICAN = listOf("E", "A", "D", "G", "B", "E")
+val OPEN_STRING_NAMES_EUROPEAN = listOf("Mi", "La", "Re", "Sol", "Si", "Mi")
+
+fun getNoteName(noteIndex: Int): String {
+    return when (NoteFormatPreference.current) {
+        NoteFormat.AMERICAN -> AMERICAN_NOTE_NAMES[noteIndex % 12]
+        NoteFormat.EUROPEAN -> EUROPEAN_NOTE_NAMES[noteIndex % 12]
+    }
+}
+
+fun getChromaticNames(): List<String> {
+    return when (NoteFormatPreference.current) {
+        NoteFormat.AMERICAN -> AMERICAN_NOTE_NAMES
+        NoteFormat.EUROPEAN -> EUROPEAN_NOTE_NAMES
+    }
+}
+
+fun getOpenStringNames(): List<String> {
+    return when (NoteFormatPreference.current) {
+        NoteFormat.AMERICAN -> OPEN_STRING_NAMES_AMERICAN
+        NoteFormat.EUROPEAN -> OPEN_STRING_NAMES_EUROPEAN
+    }
+}
+
 data class Scale(
     val name: String,
     val intervals: List<Int>,
@@ -222,7 +275,7 @@ fun getNoteAtFret(stringMidi: Int, fret: Int): Int {
     return (stringMidi + fret) % 12
 }
 
-fun getNoteName(midiNote: Int): String {
+fun getAmericanNoteName(midiNote: Int): String {
     return SCALE_NOTE_NAMES[midiNote % 12]
 }
 
@@ -253,14 +306,12 @@ fun getDegreeLabel(degree: Int): String {
 private val SPANISH_NOTE_NAMES = listOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
 
 fun getSpanishNoteName(midiNote: Int): String {
-    return SPANISH_NOTE_NAMES[midiNote % 12]
+    return getNoteName(midiNote)
 }
 
-val OPEN_STRING_NAMES = listOf("E", "A", "D", "G", "B", "E")
+val OPEN_STRING_NAMES: List<String> get() = getOpenStringNames()
 
-val SPANISH_CHROMATIC_NAMES = listOf(
-    "Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si"
-)
+val SPANISH_CHROMATIC_NAMES: List<String> get() = getChromaticNames()
 
 data class ScaleChordInfo(
     val degree: Int,

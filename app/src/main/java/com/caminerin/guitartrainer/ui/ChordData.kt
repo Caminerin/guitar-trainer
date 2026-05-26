@@ -22,6 +22,7 @@ data class ChordShape(
 ) {
     val displayName: String
         get() {
+            val rootDisplay = getNoteName(AMERICAN_NOTE_NAMES.indexOf(root))
             val qualDisplay = when (qualityLabel) {
                 "major" -> ""
                 "minor" -> "m"
@@ -35,14 +36,42 @@ data class ChordShape(
                 "m7b5" -> "m7b5"
                 else -> qualityLabel
             }
-            return "$root$qualDisplay"
+            return "$rootDisplay$qualDisplay"
         }
 
     val shortLabel: String
         get() {
-            val shape = shapeName.replace("_shape", "").replace("_minor", "m")
-                .replace("common_", "").replace("compact_", "")
-            return shape
+            val inv = when {
+                inversion.contains("first") -> "1ª inv."
+                inversion.contains("second") -> "2ª inv."
+                inversion.contains("third") -> "3ª inv."
+                inversion == "root_position" -> "raíz"
+                else -> ""
+            }
+            val shape = shapeName
+                .replace(Regex("_shape.*"), "")
+                .replace("common_", "")
+                .replace("compact_", "")
+                .replace("caged_", "")
+                .replace("barre_", "")
+                .replace("open_", "")
+                .replace("_", " ")
+                .trim()
+            val cagedLetter = when {
+                shapeName.contains("C_shape") -> "Forma C"
+                shapeName.contains("A_shape") -> "Forma A"
+                shapeName.contains("G_shape") -> "Forma G"
+                shapeName.contains("E_shape") -> "Forma E"
+                shapeName.contains("D_shape") -> "Forma D"
+                else -> ""
+            }
+            return when {
+                cagedLetter.isNotEmpty() && inv.isNotEmpty() -> "$cagedLetter $inv"
+                cagedLetter.isNotEmpty() -> cagedLetter
+                inv.isNotEmpty() -> inv
+                shape.length <= 20 -> shape
+                else -> "Pos ${priority}"
+            }
         }
 }
 

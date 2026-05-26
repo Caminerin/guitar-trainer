@@ -151,7 +151,7 @@ fun DrawScope.drawChromaticCircleShared(
             isAntiAlias = true
             setShadowLayer(4f, 1f, 1f, android.graphics.Color.argb(180, 0, 0, 0))
         }
-        drawContext.canvas.nativeCanvas.drawText(SPANISH_CHROMATIC_NAMES[i], labelX, labelY + textSize * 0.35f, labelPaint)
+        drawContext.canvas.nativeCanvas.drawText(getChromaticNames()[i], labelX, labelY + textSize * 0.35f, labelPaint)
     }
 
     drawCircle(Color(0xFF111111).copy(alpha = alpha), innerRadius, center)
@@ -164,7 +164,7 @@ fun DrawScope.drawChromaticCircleShared(
         isFakeBoldText = true
         isAntiAlias = true
     }
-    drawContext.canvas.nativeCanvas.drawText(SPANISH_CHROMATIC_NAMES[selectedNote], center.x, center.y + 60f, centerPaint)
+    drawContext.canvas.nativeCanvas.drawText(getChromaticNames()[selectedNote], center.x, center.y + 60f, centerPaint)
 }
 
 @Composable

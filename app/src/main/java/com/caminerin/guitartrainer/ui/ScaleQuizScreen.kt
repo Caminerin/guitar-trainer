@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -161,7 +162,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                         .clickable { showKeyCircle = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(SCALE_NOTE_NAMES[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(getChromaticNames()[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Scale selector -> overlay
@@ -237,8 +238,17 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, _, gestureZoom, _ ->
+                            zoom = (zoom * gestureZoom).coerceIn(0.5f, 3f)
+                        }
+                    }
             ) {
+              Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .horizontalScroll(rememberScrollState())
+              ) {
                 val hitTargets = remember { mutableStateListOf<QuizHitTarget>() }
 
                 Canvas(
@@ -284,6 +294,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                         hitTargets = hitTargets
                     )
                 }
+              }
             }
         }
 

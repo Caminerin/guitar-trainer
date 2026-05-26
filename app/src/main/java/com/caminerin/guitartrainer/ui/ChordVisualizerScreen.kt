@@ -94,9 +94,12 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
     var selectedLevel by rememberSaveable { mutableStateOf(ChordLevel.BEGINNER.csvValue) }
     var selectedChordIndex by rememberSaveable { mutableIntStateOf(0) }
 
+    var noteDisplay by rememberSaveable { mutableStateOf(NoteDisplay.NOTE) }
+
     var showRootSelector by remember { mutableStateOf(false) }
     var showQualitySelector by remember { mutableStateOf(false) }
     var showLevelSelector by remember { mutableStateOf(false) }
+    var displayMenuExpanded by remember { mutableStateOf(false) }
 
     val rootName = SCALE_NOTE_NAMES[selectedRoot]
     val quality = ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
@@ -134,7 +137,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                     .clickable { showRootSelector = true }
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Text(rootName, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(getChromaticNames()[selectedRoot], color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
 
             // Quality selector
@@ -157,6 +160,41 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Text(level.displayName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // Display mode selector (N+G)
+            Box {
+                val label = when (noteDisplay) {
+                    NoteDisplay.NOTE -> "Nota"
+                    NoteDisplay.DEGREE -> "Grado"
+                    NoteDisplay.BOTH -> "N+G"
+                    NoteDisplay.NONE -> "\u2205"
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable { displayMenuExpanded = true }
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Text(label, color = Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                androidx.compose.material3.DropdownMenu(
+                    expanded = displayMenuExpanded,
+                    onDismissRequest = { displayMenuExpanded = false }
+                ) {
+                    listOf(
+                        NoteDisplay.NOTE to "Nota",
+                        NoteDisplay.DEGREE to "Intervalo",
+                        NoteDisplay.BOTH to "Nota + Intervalo",
+                        NoteDisplay.NONE to "Nada"
+                    ).forEach { (d, l) ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(l, fontSize = 14.sp) },
+                            onClick = { noteDisplay = d; displayMenuExpanded = false }
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -241,8 +279,14 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                         fontSize = 11.sp
                     )
                     if (currentChord.inversion.isNotEmpty() && currentChord.inversion != "root_position") {
+                        val invText = when {
+                            currentChord.inversion.contains("first") -> "1\u00aa inv."
+                            currentChord.inversion.contains("second") -> "2\u00aa inv."
+                            currentChord.inversion.contains("third") -> "3\u00aa inv."
+                            else -> currentChord.inversion.replace("_", " ")
+                        }
                         Text(
-                            currentChord.inversion.replace("_", " "),
+                            invText,
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 10.sp
                         )
@@ -261,7 +305,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                         .fillMaxSize()
                         .padding(8.dp)
                 ) {
-                    drawChordDiagram(currentChord)
+                    drawChordDiagram(currentChord, noteDisplay, selectedRoot)
                 }
             }
         } else {
@@ -407,7 +451,21 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
     }
 }
 
-private fun DrawScope.drawChordDiagram(chord: ChordShape) {
+private val CHORD_COLOR_ROOT = Color(0xFFE53935)
+private val CHORD_COLOR_THIRD = Color(0xFF1E88E5)
+private val CHORD_COLOR_FIFTH = Color(0xFF43A047)
+private val CHORD_COLOR_OTHER = Color(0xFF26A69A)
+
+private fun getChordNoteColor(interval: String): Color {
+    return when (interval) {
+        "1" -> CHORD_COLOR_ROOT
+        "3", "b3" -> CHORD_COLOR_THIRD
+        "5", "b5", "#5" -> CHORD_COLOR_FIFTH
+        else -> CHORD_COLOR_OTHER
+    }
+}
+
+private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDisplay, rootNoteIdx: Int) {
     val w = size.width
     val h = size.height
     val frets = chord.frets
@@ -429,6 +487,8 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape) {
     val fbLeft = leftPad
     val fbRight = w - rightPad
     val fretWidth = (fbRight - fbLeft) / fretsToShow
+
+    val intervalParts = chord.intervals.split(" ")
 
     // Wood background
     drawRoundRect(
@@ -487,52 +547,88 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape) {
         isFakeBoldText = true
         isAntiAlias = true
     }
-    val fingerPaint = android.graphics.Paint().apply {
+    val notePaintBig = android.graphics.Paint().apply {
         color = android.graphics.Color.WHITE
         textSize = 42f
         textAlign = android.graphics.Paint.Align.CENTER
         isFakeBoldText = true
         isAntiAlias = true
     }
+    val notePaintSmall = android.graphics.Paint().apply {
+        color = android.graphics.Color.WHITE
+        textSize = 30f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isFakeBoldText = true
+        isAntiAlias = true
+    }
 
     val noteRadius = (stringSpacing * 0.38f).coerceIn(24f, 60f)
-    val noteColor = QUALITY_COLORS[chord.quality] ?: Color(0xFF5C6BC0)
 
-    // Notes for each string
-    // frets[0] = 6th string (lowest), frets[5] = 1st string (highest)
     for (s in 0 until 6) {
         val fretVal = frets[s]
         val y = fbTop + stringSpacing * (6 - s)
+        val interval = intervalParts.getOrNull(s) ?: ""
 
         when {
             fretVal == null -> {
-                // Muted
                 labelPaint.color = android.graphics.Color.argb(180, 220, 80, 80)
                 drawContext.canvas.nativeCanvas.drawText("X", fbLeft * 0.5f, y + 20f, labelPaint)
                 labelPaint.color = android.graphics.Color.WHITE
             }
             fretVal == 0 -> {
-                // Open
-                labelPaint.color = android.graphics.Color.argb(220, 100, 220, 100)
-                drawContext.canvas.nativeCanvas.drawText("O", fbLeft * 0.5f, y + 20f, labelPaint)
-                labelPaint.color = android.graphics.Color.WHITE
+                val noteIdx = STANDARD_TUNING_MIDI[s] % 12
+                val noteName = getNoteName(noteIdx)
+                val noteColor = if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else Color(0xFF43A047)
+
+                val cx = fbLeft * 0.5f
+                drawCircle(Color(0x55000000), noteRadius + 2f, Offset(cx + 1f, y + 1.5f))
+                drawCircle(noteColor, noteRadius, Offset(cx, y))
+                drawCircle(Color(0x44000000), noteRadius, Offset(cx, y), style = Stroke(2f))
+
+                if (noteDisplay != NoteDisplay.NONE) {
+                    val lbl = buildChordNoteLabel(noteName, interval, noteDisplay)
+                    val paint = if (lbl.length > 3) notePaintSmall else notePaintBig
+                    drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + paint.textSize * 0.35f, paint)
+                }
             }
             else -> {
                 val displayPos = fretVal - startFret
                 if (displayPos in 1..fretsToShow) {
                     val cx = fbLeft + (displayPos - 0.5f) * fretWidth
-                    drawCircle(Color(0x55000000), noteRadius + 3f, Offset(cx + 1.5f, y + 2f))
-                    drawCircle(noteColor, noteRadius, Offset(cx, y))
-                    drawCircle(Color(0x44000000), noteRadius, Offset(cx, y), style = Stroke(2f))
-                    drawCircle(Color(0x22FFFFFF), noteRadius * 0.6f, Offset(cx - noteRadius * 0.12f, y - noteRadius * 0.15f))
+                    val noteIdx = (STANDARD_TUNING_MIDI[s] + fretVal) % 12
+                    val noteName = getNoteName(noteIdx)
+                    val noteColor = if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else CHORD_COLOR_OTHER
+                    val r = if (interval == "1") noteRadius * 1.1f else noteRadius
+
+                    drawCircle(Color(0x55000000), r + 3f, Offset(cx + 1.5f, y + 2f))
+                    drawCircle(noteColor, r, Offset(cx, y))
+                    drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
+                    drawCircle(Color(0x22FFFFFF), r * 0.6f, Offset(cx - r * 0.12f, y - r * 0.15f))
+
+                    if (noteDisplay != NoteDisplay.NONE) {
+                        val lbl = buildChordNoteLabel(noteName, interval, noteDisplay)
+                        val paint = if (lbl.length > 3) notePaintSmall else notePaintBig
+                        drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + paint.textSize * 0.35f, paint)
+                    }
                 }
             }
         }
     }
 
+    // Open string labels on right side
+    val openStringPaint = android.graphics.Paint().apply {
+        color = android.graphics.Color.argb(180, 200, 200, 200)
+        textSize = 36f
+        textAlign = android.graphics.Paint.Align.LEFT
+        isAntiAlias = true
+    }
+    for (s in 0 until 6) {
+        val y = fbTop + stringSpacing * (6 - s)
+        drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], fbRight + 8f, y + 12f, openStringPaint)
+    }
+
     // Notes annotation at bottom
     val notesParts = chord.notesSharp.split(" ").filter { it != "None" }
-    val intervalParts = chord.intervals.split(" ").filter { it != "None" }
     if (notesParts.isNotEmpty()) {
         val notePaint = android.graphics.Paint().apply {
             color = android.graphics.Color.argb(180, 200, 200, 200)
@@ -558,4 +654,14 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape) {
         h - bottomPad * 0.55f,
         chordNamePaint
     )
+}
+
+private fun buildChordNoteLabel(noteName: String, interval: String, display: NoteDisplay): String {
+    val intervalClean = if (interval == "None" || interval.isEmpty()) "" else interval
+    return when (display) {
+        NoteDisplay.NOTE -> noteName
+        NoteDisplay.DEGREE -> intervalClean
+        NoteDisplay.BOTH -> if (intervalClean.isNotEmpty()) "$intervalClean $noteName" else noteName
+        NoteDisplay.NONE -> ""
+    }
 }
