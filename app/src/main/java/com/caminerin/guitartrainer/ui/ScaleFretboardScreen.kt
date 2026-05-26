@@ -1,7 +1,5 @@
 package com.caminerin.guitartrainer.ui
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,16 +20,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,17 +43,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.PI
-import kotlin.math.atan2
-import kotlin.math.min
-import kotlin.math.sqrt
+
 
 private const val TOTAL_FRETS = 22
 
@@ -97,17 +85,11 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
     var currentPosition by rememberSaveable { mutableIntStateOf(0) }
     var zoom by remember { mutableFloatStateOf(1.5f) }
 
-    var scaleMenuExpanded by remember { mutableStateOf(false) }
+    var showScaleSelector by remember { mutableStateOf(false) }
     var displayMenuExpanded by remember { mutableStateOf(false) }
 
     // State for chromatic circle overlay on key selection
     var showChromaticCircle by remember { mutableStateOf(false) }
-
-    val circleAlpha by animateFloatAsState(
-        targetValue = if (showChromaticCircle) 1f else 0f,
-        animationSpec = tween(durationMillis = 250),
-        label = "circleAlpha"
-    )
 
     val scale = ALL_SCALES[selectedScaleIndex]
     val density = LocalDensity.current
@@ -148,25 +130,15 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                 )
             }
 
-            // Scale selector
-            Box {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
-                        .clickable { scaleMenuExpanded = true }
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                ) {
-                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-                DropdownMenu(expanded = scaleMenuExpanded, onDismissRequest = { scaleMenuExpanded = false }) {
-                    ALL_SCALES.forEachIndexed { i, s ->
-                        DropdownMenuItem(
-                            text = { Text(s.name, fontSize = 14.sp) },
-                            onClick = { selectedScaleIndex = i; scaleMenuExpanded = false; currentPosition = 0 }
-                        )
-                    }
-                }
+            // Scale selector -> overlay
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
+                    .clickable { showScaleSelector = true }
+                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
 
             // Display mode
@@ -201,41 +173,23 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                 }
             }
 
-            // Position controls
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Pos", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-                Switch(
-                    checked = positionsEnabled,
-                    onCheckedChange = { positionsEnabled = it },
-                    modifier = Modifier
-                        .height(28.dp)
-                        .padding(horizontal = 4.dp),
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = COLOR_TONIC,
-                        checkedTrackColor = COLOR_TONIC.copy(alpha = 0.3f)
-                    )
-                )
+            // Position toggle + CAGED bar
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (positionsEnabled) COLOR_TONIC.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
+                    .clickable { positionsEnabled = !positionsEnabled }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text("CAGED", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
             if (positionsEnabled && scale.positions.isNotEmpty()) {
-                IconButton(
-                    onClick = { currentPosition = (currentPosition - 1 + scale.positions.size) % scale.positions.size },
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(Icons.Default.KeyboardArrowLeft, "Ant", tint = Color.White, modifier = Modifier.size(20.dp))
-                }
-                Text(
-                    scale.positions[currentPosition].name,
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
+                CagedPositionBar(
+                    positions = scale.positions,
+                    currentIndex = currentPosition,
+                    onSelect = { currentPosition = it }
                 )
-                IconButton(
-                    onClick = { currentPosition = (currentPosition + 1) % scale.positions.size },
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(Icons.Default.KeyboardArrowRight, "Sig", tint = Color.White, modifier = Modifier.size(20.dp))
-                }
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -284,58 +238,27 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                 }
             }
 
-            // Chromatic circle overlay - interactive: tap a segment to select key
-            if (circleAlpha > 0.01f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.6f * circleAlpha))
-                        .clickable { showChromaticCircle = false },
-                    contentAlignment = Alignment.Center
-                ) {
-                    val circleSize = 320.dp
-                    Canvas(
-                        modifier = Modifier
-                            .size(circleSize)
-                            .pointerInput(Unit) {
-                                detectTapGestures { tapOffset ->
-                                    val cx = size.width / 2f
-                                    val cy = size.height / 2f
-                                    val dx = tapOffset.x - cx
-                                    val dy = tapOffset.y - cy
-                                    val dist = sqrt(dx * dx + dy * dy)
-                                    val outerR = min(size.width, size.height) / 2f * 0.95f
-                                    val innerR = min(size.width, size.height) / 2f * 0.35f
-
-                                    if (dist in innerR..outerR) {
-                                        // Determine which segment was tapped
-                                        var angle = atan2(dy, dx).toDouble()
-                                        // Adjust for starting offset (top center, shifted by half segment)
-                                        val segAngle = 2.0 * PI / 12.0
-                                        angle += PI / 2.0 + segAngle / 2.0
-                                        if (angle < 0) angle += 2.0 * PI
-                                        if (angle >= 2.0 * PI) angle -= 2.0 * PI
-                                        val segmentIndex = (angle / segAngle).toInt() % 12
-                                        selectedKey = segmentIndex
-                                        showChromaticCircle = false
-                                    } else if (dist < innerR) {
-                                        showChromaticCircle = false
-                                    }
-                                }
-                            }
-                    ) {
-                        drawChromaticCircleShared(
-                            center = Offset(size.width / 2f, size.height / 2f),
-                            maxRadius = min(size.width, size.height) / 2f,
-                            selectedNote = selectedKey,
-                            alpha = circleAlpha,
-                            rootNote = selectedKey,
-                            scaleIntervals = scale.intervals
-                        )
-                    }
-                }
-            }
         }
+    }
+
+    // Chromatic circle overlay
+    if (showChromaticCircle) {
+        ChromaticCircleOverlay(
+            selectedNote = selectedKey,
+            rootNote = selectedKey,
+            scaleIntervals = scale.intervals,
+            onNoteSelected = { selectedKey = it; showChromaticCircle = false },
+            onDismiss = { showChromaticCircle = false }
+        )
+    }
+
+    // Scale selector overlay
+    if (showScaleSelector) {
+        ScaleSelectorOverlay(
+            currentIndex = selectedScaleIndex,
+            onSelected = { selectedScaleIndex = it; currentPosition = 0; showScaleSelector = false },
+            onDismiss = { showScaleSelector = false }
+        )
     }
 }
 

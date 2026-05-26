@@ -26,8 +26,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -100,7 +98,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
     var maxFret by rememberSaveable { mutableIntStateOf(12) }
     var zoom by remember { mutableFloatStateOf(1.5f) }
 
-    var fretMenuExpanded by remember { mutableStateOf(false) }
+    var showFretSelector by remember { mutableStateOf(false) }
     var showKeyCircle by remember { mutableStateOf(false) }
     var showScaleSelector by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
@@ -177,24 +175,14 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                 }
 
                 // Max fret selector
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable { fretMenuExpanded = true }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text("Traste $maxFret", color = Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                    DropdownMenu(expanded = fretMenuExpanded, onDismissRequest = { fretMenuExpanded = false }) {
-                        listOf(5, 7, 9, 12, 15, 17, 22).forEach { f ->
-                            DropdownMenuItem(text = { Text("Hasta traste $f") }, onClick = {
-                                maxFret = f; fretMenuExpanded = false
-                                revealedNotes.clear(); correctCount = 0; errorCount = 0
-                            })
-                        }
-                    }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF00BCD4).copy(alpha = 0.25f))
+                        .clickable { showFretSelector = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("Traste $maxFret", color = Color(0xFF80DEEA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Reset button
@@ -326,6 +314,18 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                 rootNote = selectedKey,
                 scale = scale,
                 onDismiss = { showInfo = false }
+            )
+        }
+
+        // Fret selector overlay
+        if (showFretSelector) {
+            FretSelectorOverlay(
+                maxFret = maxFret,
+                onFretChange = { f ->
+                    maxFret = f
+                    revealedNotes.clear(); correctCount = 0; errorCount = 0
+                },
+                onDismiss = { showFretSelector = false }
             )
         }
     }

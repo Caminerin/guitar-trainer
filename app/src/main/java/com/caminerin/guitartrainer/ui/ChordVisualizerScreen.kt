@@ -562,7 +562,7 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
         isAntiAlias = true
     }
 
-    val noteRadius = (stringSpacing * 0.38f).coerceIn(24f, 60f)
+    val noteRadius = (stringSpacing * 0.44f).coerceIn(36f, 80f)
 
     for (s in 0 until 6) {
         val fretVal = frets[s]

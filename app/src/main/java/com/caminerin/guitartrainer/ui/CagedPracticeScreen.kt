@@ -283,25 +283,12 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // CAGED position indicators
-                positions.forEachIndexed { i, pos ->
-                    val isCurrent = i == currentPositionIndex
-                    val color = CAGED_COLORS[pos.cagedLetter] ?: Color.Gray
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isCurrent) color else color.copy(alpha = 0.2f))
-                            .clickable { currentPositionIndex = i; currentNoteIndex = 0 }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            "${pos.cagedLetter}",
-                            color = if (isCurrent) Color.White else color.copy(alpha = 0.6f),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
+                // CAGED position indicators (shared component)
+                CagedPositionBar(
+                    positions = positions,
+                    currentIndex = currentPositionIndex,
+                    onSelect = { currentPositionIndex = it; currentNoteIndex = 0 }
+                )
             }
 
             // Info bar

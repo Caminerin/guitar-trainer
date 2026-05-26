@@ -27,8 +27,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -107,8 +105,8 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
     var showChordPicker by remember { mutableStateOf<Pair<Int, Int>?>(null) } // measureIdx, subIdx
     var showSongPicker by remember { mutableStateOf(false) }
     var currentSong by remember { mutableStateOf<Song?>(null) }
-    var bpmMenuExpanded by remember { mutableStateOf(false) }
-    var measuresMenuExpanded by remember { mutableStateOf(false) }
+    var showBpmSelector by remember { mutableStateOf(false) }
+    var showMeasuresSelector by remember { mutableStateOf(false) }
 
 
     var isPlaying by remember { mutableStateOf(false) }
@@ -213,53 +211,31 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
                 }
 
                 // BPM
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable { bpmMenuExpanded = true }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text("$bpm BPM", color = Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                    DropdownMenu(expanded = bpmMenuExpanded, onDismissRequest = { bpmMenuExpanded = false }) {
-                        listOf(40, 50, 60, 70, 80, 90, 100, 110, 120, 140, 160).forEach { v ->
-                            DropdownMenuItem(text = { Text("$v BPM") }, onClick = { bpm = v; bpmMenuExpanded = false })
-                        }
-                    }
-                }
+                BpmToolbarButton(bpm) { showBpmSelector = true }
 
                 // Measures count
-                Box {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable { measuresMenuExpanded = true }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text("$measureCount comp.", color = Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
-                    DropdownMenu(expanded = measuresMenuExpanded, onDismissRequest = { measuresMenuExpanded = false }) {
-                        (1..12).forEach { v ->
-                            DropdownMenuItem(text = { Text("$v compases") }, onClick = { measureCount = v; measuresMenuExpanded = false })
-                        }
-                    }
-                }
-
-                // Song picker button
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (currentSong != null) Color(0xFFFFC107).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
-                        .clickable { showSongPicker = true }
+                        .background(Color(0xFF00BCD4).copy(alpha = 0.25f))
+                        .clickable { showMeasuresSelector = true }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("$measureCount comp.", color = Color(0xFF80DEEA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Song picker button (more visible)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (currentSong != null) Color(0xFFFFC107).copy(alpha = 0.4f) else Color(0xFFFFC107).copy(alpha = 0.15f))
+                        .clickable { showSongPicker = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         currentSong?.let { "\u266A ${it.title}" } ?: "\u266A Canciones",
-                        color = if (currentSong != null) Color(0xFFFFC107) else Color(0xFF90A4AE),
-                        fontSize = 12.sp, fontWeight = FontWeight.Bold,
+                        color = if (currentSong != null) Color(0xFFFFC107) else Color(0xFFFFD54F),
+                        fontSize = 13.sp, fontWeight = FontWeight.Bold,
                         maxLines = 1
                     )
                 }
@@ -416,6 +392,24 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
                     showSongPicker = false
                 },
                 onDismiss = { showSongPicker = false }
+            )
+        }
+
+        // BPM selector overlay
+        if (showBpmSelector) {
+            BpmSelectorOverlay(
+                bpm = bpm,
+                onBpmChange = { bpm = it },
+                onDismiss = { showBpmSelector = false }
+            )
+        }
+
+        // Measures selector overlay
+        if (showMeasuresSelector) {
+            MeasuresSelectorOverlay(
+                count = measureCount,
+                onCountChange = { measureCount = it },
+                onDismiss = { showMeasuresSelector = false }
             )
         }
     }
