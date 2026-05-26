@@ -51,7 +51,8 @@ private enum class FullscreenMode {
     SCALES,
     CHORDS,
     CAGED,
-    QUIZ
+    QUIZ,
+    CHORD_PRACTICE
 }
 
 enum class AppMode(val title: String, val icon: ImageVector) {
@@ -97,6 +98,10 @@ fun MainScreen(
         FullscreenMode.QUIZ -> {
             if (isLandscape) ScaleQuizScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
             else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            return
+        }
+        FullscreenMode.CHORD_PRACTICE -> {
+            ChordPracticeScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
             return
         }
         FullscreenMode.NONE -> { /* show normal UI below */ }
@@ -156,7 +161,8 @@ fun MainScreen(
                     onOpenChords = { fullscreenMode = FullscreenMode.CHORDS.name }
                 )
                 AppMode.PRACTICE -> PracticeMenu(
-                    onOpenCagedPractice = { fullscreenMode = FullscreenMode.CAGED.name }
+                    onOpenCagedPractice = { fullscreenMode = FullscreenMode.CAGED.name },
+                    onOpenChordPractice = { fullscreenMode = FullscreenMode.CHORD_PRACTICE.name }
                 )
                 AppMode.QUIZ -> QuizMenu(
                     onOpenQuiz = { fullscreenMode = FullscreenMode.QUIZ.name }

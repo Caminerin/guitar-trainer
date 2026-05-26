@@ -126,6 +126,7 @@ fun VisualizerMenu(
 @Composable
 fun PracticeMenu(
     onOpenCagedPractice: () -> Unit,
+    onOpenChordPractice: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
@@ -145,6 +146,14 @@ fun PracticeMenu(
                 title = "Escalas (CAGED)",
                 subtitle = "Con guitarra \u2022 nota a nota",
                 color = Color(0xFF4CAF50),
+                modifier = Modifier.weight(1f).fillMaxHeight()
+            )
+            MenuButton(
+                onClick = onOpenChordPractice,
+                icon = Icons.Default.Piano,
+                title = "Acordes",
+                subtitle = "Progresiones \u2022 compases",
+                color = Color(0xFF7B1FA2),
                 modifier = Modifier.weight(1f).fillMaxHeight()
             )
         }
@@ -178,6 +187,15 @@ fun PracticeMenu(
                 title = "Escalas (CAGED)",
                 subtitle = "Con guitarra \u2022 nota a nota al BPM",
                 color = Color(0xFF4CAF50),
+                modifier = Modifier.fillMaxWidth().height(80.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            MenuButton(
+                onClick = onOpenChordPractice,
+                icon = Icons.Default.Piano,
+                title = "Acordes",
+                subtitle = "Progresiones \u2022 compases",
+                color = Color(0xFF7B1FA2),
                 modifier = Modifier.fillMaxWidth().height(80.dp)
             )
         }
