@@ -22,7 +22,8 @@ data class ChordShape(
 ) {
     val displayName: String
         get() {
-            val rootDisplay = getNoteName(AMERICAN_NOTE_NAMES.indexOf(root))
+            val rootIdx = AMERICAN_NOTE_NAMES.indexOf(root)
+            val rootDisplay = getNoteName(rootIdx, rootIdx)
             val qualDisplay = when (qualityLabel) {
                 "major" -> ""
                 "minor" -> "m"

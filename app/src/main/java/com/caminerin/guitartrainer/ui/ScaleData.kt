@@ -74,20 +74,28 @@ object AppPreferences {
 
 val AMERICAN_NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 val EUROPEAN_NOTE_NAMES = listOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
+val AMERICAN_NOTE_NAMES_FLAT = listOf("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
+val EUROPEAN_NOTE_NAMES_FLAT = listOf("Do", "Reb", "Re", "Mib", "Mi", "Fa", "Solb", "Sol", "Lab", "La", "Sib", "Si")
 val OPEN_STRING_NAMES_AMERICAN = listOf("E", "A", "D", "G", "B", "E")
 val OPEN_STRING_NAMES_EUROPEAN = listOf("Mi", "La", "Re", "Sol", "Si", "Mi")
 
-fun getNoteName(noteIndex: Int): String {
+private val FLAT_KEYS = setOf(1, 3, 5, 8, 10)
+
+fun keyUsesFlats(rootNote: Int): Boolean = rootNote in FLAT_KEYS
+
+fun getNoteName(noteIndex: Int, rootNote: Int = -1): String {
+    val useFlats = rootNote >= 0 && keyUsesFlats(rootNote)
     return when (NoteFormatPreference.current) {
-        NoteFormat.AMERICAN -> AMERICAN_NOTE_NAMES[noteIndex % 12]
-        NoteFormat.EUROPEAN -> EUROPEAN_NOTE_NAMES[noteIndex % 12]
+        NoteFormat.AMERICAN -> if (useFlats) AMERICAN_NOTE_NAMES_FLAT[noteIndex % 12] else AMERICAN_NOTE_NAMES[noteIndex % 12]
+        NoteFormat.EUROPEAN -> if (useFlats) EUROPEAN_NOTE_NAMES_FLAT[noteIndex % 12] else EUROPEAN_NOTE_NAMES[noteIndex % 12]
     }
 }
 
-fun getChromaticNames(): List<String> {
+fun getChromaticNames(rootNote: Int = -1): List<String> {
+    val useFlats = rootNote >= 0 && keyUsesFlats(rootNote)
     return when (NoteFormatPreference.current) {
-        NoteFormat.AMERICAN -> AMERICAN_NOTE_NAMES
-        NoteFormat.EUROPEAN -> EUROPEAN_NOTE_NAMES
+        NoteFormat.AMERICAN -> if (useFlats) AMERICAN_NOTE_NAMES_FLAT else AMERICAN_NOTE_NAMES
+        NoteFormat.EUROPEAN -> if (useFlats) EUROPEAN_NOTE_NAMES_FLAT else EUROPEAN_NOTE_NAMES
     }
 }
 
@@ -101,7 +109,8 @@ fun getOpenStringNames(): List<String> {
 data class Scale(
     val name: String,
     val intervals: List<Int>,
-    val positions: List<ScalePosition>
+    val positions: List<ScalePosition>,
+    val hasCaged: Boolean = true
 )
 
 data class ScalePosition(
@@ -113,6 +122,18 @@ data class ScalePosition(
 
 enum class NoteDisplay {
     NOTE, DEGREE, BOTH, NONE
+}
+
+private val CAGED_BASE_OFFSETS = listOf(
+    'C' to 0, 'A' to 2, 'G' to 4, 'E' to 7, 'D' to 9
+)
+private const val CAGED_SPAN = 4
+
+fun computeCagedPositions(key: Int): List<ScalePosition> {
+    return CAGED_BASE_OFFSETS.map { (letter, baseOffset) ->
+        val start = (baseOffset + key) % 12
+        ScalePosition("$letter", start, start + CAGED_SPAN, letter)
+    }.sortedBy { it.startFret }
 }
 
 val SCALE_NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
@@ -296,23 +317,23 @@ val ALL_SCALES = listOf(
         name = "Tonos enteros",
         intervals = listOf(0, 2, 4, 6, 8, 10),
         positions = listOf(
-            ScalePosition("C", 0, 4, 'C'),
-            ScalePosition("A", 2, 6, 'A'),
-            ScalePosition("G", 4, 8, 'G'),
-            ScalePosition("E", 6, 10, 'E'),
-            ScalePosition("D", 8, 12, 'D')
-        )
+            ScalePosition("1", 0, 4, '1'),
+            ScalePosition("2", 4, 8, '2'),
+            ScalePosition("3", 8, 12, '3')
+        ),
+        hasCaged = false
     ),
     Scale(
         name = "Cromática",
         intervals = listOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
         positions = listOf(
-            ScalePosition("C", 0, 4, 'C'),
-            ScalePosition("A", 4, 8, 'A'),
-            ScalePosition("G", 8, 12, 'G'),
-            ScalePosition("E", 12, 16, 'E'),
-            ScalePosition("D", 16, 20, 'D')
-        )
+            ScalePosition("1", 0, 4, '1'),
+            ScalePosition("2", 4, 8, '2'),
+            ScalePosition("3", 8, 12, '3'),
+            ScalePosition("4", 12, 16, '4'),
+            ScalePosition("5", 16, 20, '5')
+        ),
+        hasCaged = false
     )
 )
 
@@ -350,11 +371,13 @@ fun getDegreeLabel(degree: Int): String {
 
 private val SPANISH_NOTE_NAMES = listOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
 
-fun getSpanishNoteName(midiNote: Int): String {
-    return getNoteName(midiNote)
+fun getSpanishNoteName(midiNote: Int, rootNote: Int = -1): String {
+    return getNoteName(midiNote, rootNote)
 }
 
 val OPEN_STRING_NAMES: List<String> get() = getOpenStringNames()
+
+fun getSpanishChromaticNames(rootNote: Int = -1): List<String> = getChromaticNames(rootNote)
 
 val SPANISH_CHROMATIC_NAMES: List<String> get() = getChromaticNames()
 
@@ -369,7 +392,7 @@ fun getScaleChords(rootNote: Int, scaleIntervals: List<Int>): List<ScaleChordInf
     val result = mutableListOf<ScaleChordInfo>()
     for ((degIdx, interval) in scaleIntervals.withIndex()) {
         val noteIdx = (rootNote + interval) % 12
-        val noteName = SPANISH_CHROMATIC_NAMES[noteIdx]
+        val noteName = getSpanishChromaticNames(rootNote)[noteIdx]
         val degree = degIdx + 1
 
         // Determine chord quality by stacking thirds

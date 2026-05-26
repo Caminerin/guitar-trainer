@@ -143,8 +143,8 @@ fun PracticeMenu(
             MenuButton(
                 onClick = onOpenCagedPractice,
                 icon = Icons.Default.MusicNote,
-                title = "Escalas (CAGED)",
-                subtitle = "Con guitarra \u2022 nota a nota",
+                title = "Guía CAGED",
+                subtitle = "Guía visual \u2022 nota a nota",
                 color = Color(0xFF4CAF50),
                 modifier = Modifier.weight(1f).fillMaxHeight()
             )
@@ -184,8 +184,8 @@ fun PracticeMenu(
             MenuButton(
                 onClick = onOpenCagedPractice,
                 icon = Icons.Default.MusicNote,
-                title = "Escalas (CAGED)",
-                subtitle = "Con guitarra \u2022 nota a nota al BPM",
+                title = "Guía CAGED",
+                subtitle = "Guía visual \u2022 nota a nota al BPM",
                 color = Color(0xFF4CAF50),
                 modifier = Modifier.fillMaxWidth().height(80.dp)
             )

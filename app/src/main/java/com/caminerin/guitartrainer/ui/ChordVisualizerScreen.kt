@@ -141,7 +141,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Text(
-                    if (hasSelectedRoot) getChromaticNames()[selectedRoot] else "Nota",
+                    if (hasSelectedRoot) getChromaticNames(selectedRoot)[selectedRoot] else "Nota",
                     color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold
                 )
             }
@@ -560,7 +560,7 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
             }
             fretVal == 0 -> {
                 val noteIdx = STANDARD_TUNING_MIDI[s] % 12
-                val noteName = getNoteName(noteIdx)
+                val noteName = getNoteName(noteIdx, rootNoteIdx)
                 val noteColor = if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else Color(0xFF43A047)
 
                 val cx = fbLeft * 0.5f
@@ -579,7 +579,7 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
                 if (displayPos in 1..fretsToShow) {
                     val cx = fbLeft + (displayPos - 0.5f) * fretWidth
                     val noteIdx = (STANDARD_TUNING_MIDI[s] + fretVal) % 12
-                    val noteName = getNoteName(noteIdx)
+                    val noteName = getNoteName(noteIdx, rootNoteIdx)
                     val noteColor = if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else CHORD_COLOR_OTHER
                     val r = if (interval == "1") noteRadius * 1.1f else noteRadius
 

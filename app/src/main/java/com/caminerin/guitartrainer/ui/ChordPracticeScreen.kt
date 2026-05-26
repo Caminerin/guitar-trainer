@@ -208,7 +208,7 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
                             .clickable { showKeyCircle = true }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text(getChromaticNames()[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -379,8 +379,8 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
                     // Auto-fill measures with song chords
                     measures.clear()
                     val allChords = ChordRepository.getChords()
-                    song.measures.forEach { chordName ->
-                        val chordId = findChordIdByName(chordName, allChords)
+                    song.measures.forEach { measure ->
+                        val chordId = findChordIdByName(measure.chordSymbol, allChords)
                         measures.add(Measure(listOf(ChordSlot(chordId))))
                     }
                     // Fill remaining measures if needed
