@@ -183,15 +183,15 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, _, gestureZoom, _ ->
-                        zoom = (zoom * gestureZoom).coerceIn(0.5f, 3f)
-                    }
-                }
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, _, gestureZoom, _ ->
+                            zoom = (zoom * gestureZoom).coerceIn(0.5f, 3f)
+                        }
+                    }
                     .horizontalScroll(rememberScrollState())
             ) {
                 Canvas(
@@ -432,8 +432,6 @@ private fun DrawScope.drawGuitarFretboard(
             drawCircle(noteColor, r, Offset(cx, y))
             // Border
             drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
-            // Inner highlight
-            drawCircle(Color(0x22FFFFFF), r * 0.6f, Offset(cx - r * 0.12f, y - r * 0.15f))
 
             // Label
             if (noteDisplay != NoteDisplay.NONE) {

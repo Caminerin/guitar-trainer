@@ -386,6 +386,186 @@ fun CagedPositionBar(
     }
 }
 
+// ===== SUBDIVISION SELECTOR OVERLAY =====
+@Composable
+fun SubdivisionSelectorOverlay(
+    current: Int,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        1 to "\u2669 Negras",
+        2 to "\u266a\u266a Corcheas",
+        3 to "\u266a\u266a\u266a Tresillos",
+        4 to "\u266c Semicorcheas"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF2A2A2A))
+                .clickable(enabled = false) {}
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Subdivisión", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            options.forEach { (sub, label) ->
+                val selected = sub == current
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (selected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.06f))
+                        .clickable { onSelect(sub); onDismiss() }
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Text(label, color = Color.White, fontSize = 18.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+        }
+    }
+}
+
+// ===== CHORD MODE SELECTOR OVERLAY (tonality vs free) =====
+@Composable
+fun ChordModeSelectorOverlay(
+    isTonalityMode: Boolean,
+    onSelectTonality: () -> Unit,
+    onSelectFree: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF2A2A2A))
+                .clickable(enabled = false) {}
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Modo de acordes", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isTonalityMode) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
+                    .clickable { onSelectTonality(); onDismiss() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Column {
+                    Text("Por tonalidad", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Solo acordes de la escala seleccionada", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (!isTonalityMode) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
+                    .clickable { onSelectFree(); onDismiss() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Column {
+                    Text("Todos los acordes", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Sin restricción de tonalidad", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
+
+// ===== MEASURE SUBDIVISION SELECTOR OVERLAY =====
+@Composable
+fun MeasureSubdivisionOverlay(
+    current: Int,
+    onSelect: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val options = listOf(
+        1 to "1 acorde por compás",
+        2 to "2 acordes por compás",
+        3 to "3 acordes por compás",
+        4 to "4 acordes por compás"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF2A2A2A))
+                .clickable(enabled = false) {}
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Divisiones del compás", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            options.forEach { (count, label) ->
+                val selected = count == current
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (selected) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
+                        .clickable { onSelect(count) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                ) {
+                    Text(label, color = Color.White, fontSize = 16.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+        }
+    }
+}
+
 // ===== BPM TOOLBAR BUTTON (compact, opens overlay) =====
 @Composable
 fun BpmToolbarButton(bpm: Int, onClick: () -> Unit) {

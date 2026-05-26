@@ -89,10 +89,11 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
         ChordRepository.loadChords(context)
     }
 
-    var selectedRoot by rememberSaveable { mutableIntStateOf(0) }
+    var selectedRoot by rememberSaveable { mutableIntStateOf(-1) }
     var selectedQuality by rememberSaveable { mutableStateOf(ChordQuality.MAJOR.csvValue) }
     var selectedLevel by rememberSaveable { mutableStateOf(ChordLevel.BEGINNER.csvValue) }
     var selectedChordIndex by rememberSaveable { mutableIntStateOf(0) }
+    val hasSelectedRoot = selectedRoot >= 0
 
     var noteDisplay by rememberSaveable { mutableStateOf(NoteDisplay.NOTE) }
 
@@ -101,12 +102,14 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
     var showLevelSelector by remember { mutableStateOf(false) }
     var showDisplaySelector by remember { mutableStateOf(false) }
 
-    val rootName = SCALE_NOTE_NAMES[selectedRoot]
     val quality = ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
     val level = ChordLevel.entries.find { it.csvValue == selectedLevel } ?: ChordLevel.BEGINNER
 
-    val filteredChords = ChordRepository.getChordsByRootLevelQuality(rootName, level, quality)
-        .sortedBy { it.priority }
+    val filteredChords = if (hasSelectedRoot) {
+        val rootName = SCALE_NOTE_NAMES[selectedRoot]
+        ChordRepository.getChordsByRootLevelQuality(rootName, level, quality)
+            .sortedBy { it.priority }
+    } else emptyList()
 
     val safeIndex = if (filteredChords.isEmpty()) 0 else selectedChordIndex.coerceIn(0, filteredChords.size - 1)
     val currentChord = filteredChords.getOrNull(safeIndex)
@@ -133,11 +136,14 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .background(CHROMATIC_COLORS[selectedRoot].copy(alpha = 0.4f))
+                    .background(if (hasSelectedRoot) CHROMATIC_COLORS[selectedRoot].copy(alpha = 0.4f) else Color.White.copy(alpha = 0.12f))
                     .clickable { showRootSelector = true }
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Text(getChromaticNames()[selectedRoot], color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (hasSelectedRoot) getChromaticNames()[selectedRoot] else "Nota",
+                    color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold
+                )
             }
 
             // Quality selector
@@ -284,7 +290,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    "No hay acordes para esta combinaci\u00f3n",
+                    if (hasSelectedRoot) "No hay acordes para esta combinaci\u00f3n" else "Selecciona una nota ra\u00edz para ver acordes",
                     color = Color.White.copy(alpha = 0.5f),
                     fontSize = 16.sp
                 )
@@ -295,7 +301,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
     // Root selector overlay (chromatic circle)
     if (showRootSelector) {
         ChromaticCircleOverlay(
-            selectedNote = selectedRoot,
+            selectedNote = if (hasSelectedRoot) selectedRoot else 0,
             onNoteSelected = { note ->
                 selectedRoot = note
                 selectedChordIndex = 0
@@ -580,7 +586,6 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
                     drawCircle(Color(0x55000000), r + 3f, Offset(cx + 1.5f, y + 2f))
                     drawCircle(noteColor, r, Offset(cx, y))
                     drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
-                    drawCircle(Color(0x22FFFFFF), r * 0.6f, Offset(cx - r * 0.12f, y - r * 0.15f))
 
                     if (noteDisplay != NoteDisplay.NONE) {
                         val lbl = buildChordNoteLabel(noteName, interval, noteDisplay)

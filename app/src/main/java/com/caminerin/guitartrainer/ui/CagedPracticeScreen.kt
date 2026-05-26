@@ -28,8 +28,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -98,6 +96,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(0) }
     var bpm by rememberSaveable { mutableIntStateOf(60) }
     var subdivision by rememberSaveable { mutableIntStateOf(1) }
+    var positionsEnabled by rememberSaveable { mutableStateOf(true) }
     var currentPositionIndex by remember { mutableIntStateOf(0) }
     var currentNoteIndex by remember { mutableIntStateOf(0) }
     var isPlaying by remember { mutableStateOf(false) }
@@ -218,25 +217,18 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                     ) { Text("+", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
                 }
 
-                // Subdivision selector (button + dropdown like external metronome)
-                Box {
-                    val subLabel = when (subdivision) {
-                        1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF7C4DFF).copy(alpha = 0.3f))
-                            .clickable { showSubdivisionMenu = true }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(subLabel, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
-                    DropdownMenu(expanded = showSubdivisionMenu, onDismissRequest = { showSubdivisionMenu = false }) {
-                        listOf(1 to "\u2669 Negras", 2 to "\u266a\u266a Corcheas", 3 to "\u266a\u266a\u266a Tresillos", 4 to "\u266c Semicorcheas").forEach { (sub, label) ->
-                            DropdownMenuItem(text = { Text(label) }, onClick = { subdivision = sub; showSubdivisionMenu = false })
-                        }
-                    }
+                // Subdivision selector
+                val subLabel = when (subdivision) {
+                    1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF7C4DFF).copy(alpha = 0.3f))
+                        .clickable { showSubdivisionMenu = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(subLabel, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Play/Pause/Stop
@@ -283,12 +275,24 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // CAGED position indicators (shared component)
-                CagedPositionBar(
-                    positions = positions,
-                    currentIndex = currentPositionIndex,
-                    onSelect = { currentPositionIndex = it; currentNoteIndex = 0 }
-                )
+                // CAGED toggle + position bar
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (positionsEnabled) COLOR_TONIC.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
+                        .clickable { positionsEnabled = !positionsEnabled }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("CAGED", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                if (positionsEnabled && positions.isNotEmpty()) {
+                    CagedPositionBar(
+                        positions = positions,
+                        currentIndex = currentPositionIndex,
+                        onSelect = { currentPositionIndex = it; currentNoteIndex = 0 }
+                    )
+                }
             }
 
             // Info bar
@@ -379,6 +383,13 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                 rootNote = selectedKey,
                 scale = scale,
                 onDismiss = { showInfo = false }
+            )
+        }
+        if (showSubdivisionMenu) {
+            SubdivisionSelectorOverlay(
+                current = subdivision,
+                onSelect = { subdivision = it },
+                onDismiss = { showSubdivisionMenu = false }
             )
         }
     }
