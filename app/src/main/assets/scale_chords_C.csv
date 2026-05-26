@@ -1,0 +1,188 @@
+escala,tonica_ejemplo,formula_intervalos,notas_escala_en_C,criterio,tipo_acorde,grado_o_raiz,acorde,notas_acorde,observaciones
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,triada,I,C,C-E-G,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,triada,ii,Dm,D-F-A,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,triada,iii,Em,E-G-B,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,triada,IV,F,F-A-C,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,triada,V,G,G-B-D,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,triada,vi,Am,A-C-E,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,triada,vii°,Bdim,B-D-F,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,cuatriada,Imaj7,Cmaj7,C-E-G-B,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,cuatriada,ii7,Dm7,D-F-A-C,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,cuatriada,iii7,Em7,E-G-B-D,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,cuatriada,IVmaj7,Fmaj7,F-A-C-E,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,cuatriada,V7,G7,G-B-D-F,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,cuatriada,vi7,Am7,A-C-E-G,
+Mayor (Jonica),C,1 2 3 4 5 6 7,C D E F G A B,Por terceras diatonicas sobre cada grado,cuatriada,viiø7,Bm7b5,B-D-F-A,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,i,Cm,C-Eb-G,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,ii°,Ddim,D-F-Ab,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bIII,Eb,Eb-G-Bb,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,iv,Fm,F-Ab-C,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,v,Gm,G-Bb-D,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bVI,Ab,Ab-C-Eb,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bVII,Bb,Bb-D-F,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,i7,Cm7,C-Eb-G-Bb,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,iiø7,Dm7b5,D-F-Ab-C,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bIIImaj7,Ebmaj7,Eb-G-Bb-D,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,iv7,Fm7,F-Ab-C-Eb,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,v7,Gm7,G-Bb-D-F,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bVImaj7,Abmaj7,Ab-C-Eb-G,
+Menor natural (Eolica),C,1 2 b3 4 5 b6 b7,C D Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bVII7,Bb7,Bb-D-F-Ab,
+Pentatonica mayor,C,1 2 3 5 6,C D E G A,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,C,C,C-E-G,Escala pentatonica: no genera una armonizacion diatonica completa de 7 grados.
+Pentatonica mayor,C,1 2 3 5 6,C D E G A,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,A,Am,A-C-E,Escala pentatonica: no genera una armonizacion diatonica completa de 7 grados.
+Pentatonica mayor,C,1 2 3 5 6,C D E G A,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,C,C6,C-E-G-A,Escala pentatonica: no genera una armonizacion diatonica completa de 7 grados.
+Pentatonica mayor,C,1 2 3 5 6,C D E G A,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,A,Am7,A-C-E-G,Escala pentatonica: no genera una armonizacion diatonica completa de 7 grados.
+Pentatonica menor,C,1 b3 4 5 b7,C Eb F G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,C,Cm,C-Eb-G,Escala pentatonica: no genera una armonizacion diatonica completa de 7 grados.
+Pentatonica menor,C,1 b3 4 5 b7,C Eb F G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,Eb,Eb,Eb-G-Bb,Escala pentatonica: no genera una armonizacion diatonica completa de 7 grados.
+Pentatonica menor,C,1 b3 4 5 b7,C Eb F G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,C,Cm7,C-Eb-G-Bb,Escala pentatonica: no genera una armonizacion diatonica completa de 7 grados.
+Pentatonica menor,C,1 b3 4 5 b7,C Eb F G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,Eb,Eb6,Eb-G-Bb-C,Escala pentatonica: no genera una armonizacion diatonica completa de 7 grados.
+Blues menor,C,1 b3 4 b5 5 b7,C Eb F Gb G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,C,Cm,C-Eb-G,"Escala hexatonica de blues: estos son acordes basicos contenidos, no una armonizacion funcional completa."
+Blues menor,C,1 b3 4 b5 5 b7,C Eb F Gb G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,C,Cdim,C-Eb-Gb,"Escala hexatonica de blues: estos son acordes basicos contenidos, no una armonizacion funcional completa."
+Blues menor,C,1 b3 4 b5 5 b7,C Eb F Gb G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,Eb,Eb,Eb-G-Bb,"Escala hexatonica de blues: estos son acordes basicos contenidos, no una armonizacion funcional completa."
+Blues menor,C,1 b3 4 b5 5 b7,C Eb F Gb G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,C,Cm7,C-Eb-G-Bb,"Escala hexatonica de blues: estos son acordes basicos contenidos, no una armonizacion funcional completa."
+Blues menor,C,1 b3 4 b5 5 b7,C Eb F Gb G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,C,Cm7b5,C-Eb-Gb-Bb,"Escala hexatonica de blues: estos son acordes basicos contenidos, no una armonizacion funcional completa."
+Blues menor,C,1 b3 4 b5 5 b7,C Eb F Gb G Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,Eb,Eb6,Eb-G-Bb-C,"Escala hexatonica de blues: estos son acordes basicos contenidos, no una armonizacion funcional completa."
+Blues mayor,C,1 2 b3 3 5 6,C D Eb E G A,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,C,C,C-E-G,Escala hexatonica de blues: combina 3 mayor y b3; no equivale a una tonalidad diatonica completa.
+Blues mayor,C,1 2 b3 3 5 6,C D Eb E G A,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,C,Cm,C-Eb-G,Escala hexatonica de blues: combina 3 mayor y b3; no equivale a una tonalidad diatonica completa.
+Blues mayor,C,1 2 b3 3 5 6,C D Eb E G A,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,A,Am,A-C-E,Escala hexatonica de blues: combina 3 mayor y b3; no equivale a una tonalidad diatonica completa.
+Blues mayor,C,1 2 b3 3 5 6,C D Eb E G A,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,C,C6,C-E-G-A,Escala hexatonica de blues: combina 3 mayor y b3; no equivale a una tonalidad diatonica completa.
+Blues mayor,C,1 2 b3 3 5 6,C D Eb E G A,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,A,Am7,A-C-E-G,Escala hexatonica de blues: combina 3 mayor y b3; no equivale a una tonalidad diatonica completa.
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,triada,i,Cm,C-Eb-G,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,triada,ii,Dm,D-F-A,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,triada,bIII,Eb,Eb-G-Bb,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,triada,IV,F,F-A-C,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,triada,v,Gm,G-Bb-D,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,triada,vi°,Adim,A-C-Eb,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,triada,bVII,Bb,Bb-D-F,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,i7,Cm7,C-Eb-G-Bb,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,ii7,Dm7,D-F-A-C,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,bIIImaj7,Ebmaj7,Eb-G-Bb-D,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,IV7,F7,F-A-C-Eb,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,v7,Gm7,G-Bb-D-F,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,viø7,Am7b5,A-C-Eb-G,
+Dorica,C,1 2 b3 4 5 6 b7,C D Eb F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,bVIImaj7,Bbmaj7,Bb-D-F-A,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,i,Cm,C-Eb-G,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bII,Db,Db-F-Ab,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bIII,Eb,Eb-G-Bb,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,iv,Fm,F-Ab-C,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,v°,Gdim,G-Bb-Db,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bVI,Ab,Ab-C-Eb,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bvii,Bbm,Bb-Db-F,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,i7,Cm7,C-Eb-G-Bb,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bIImaj7,Dbmaj7,Db-F-Ab-C,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bIII7,Eb7,Eb-G-Bb-Db,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,iv7,Fm7,F-Ab-C-Eb,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,vø7,Gm7b5,G-Bb-Db-F,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bVImaj7,Abmaj7,Ab-C-Eb-G,
+Frigia,C,1 b2 b3 4 5 b6 b7,C Db Eb F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bvii7,Bbm7,Bb-Db-F-Ab,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,triada,I,C,C-E-G,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,triada,II,D,D-F#-A,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,triada,iii,Em,E-G-B,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,triada,#iv°,F#dim,F#-A-C,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,triada,V,G,G-B-D,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,triada,vi,Am,A-C-E,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,triada,vii,Bm,B-D-F#,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,cuatriada,Imaj7,Cmaj7,C-E-G-B,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,cuatriada,II7,D7,D-F#-A-C,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,cuatriada,iii7,Em7,E-G-B-D,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,cuatriada,#ivø7,F#m7b5,F#-A-C-E,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,cuatriada,Vmaj7,Gmaj7,G-B-D-F#,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,cuatriada,vi7,Am7,A-C-E-G,
+Lidia,C,1 2 3 #4 5 6 7,C D E F# G A B,Por terceras diatonicas sobre cada grado,cuatriada,vii7,Bm7,B-D-F#-A,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,triada,I,C,C-E-G,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,triada,ii,Dm,D-F-A,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,triada,iii°,Edim,E-G-Bb,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,triada,IV,F,F-A-C,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,triada,v,Gm,G-Bb-D,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,triada,vi,Am,A-C-E,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,triada,bVII,Bb,Bb-D-F,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,I7,C7,C-E-G-Bb,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,ii7,Dm7,D-F-A-C,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,iiiø7,Em7b5,E-G-Bb-D,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,IVmaj7,Fmaj7,F-A-C-E,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,v7,Gm7,G-Bb-D-F,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,vi7,Am7,A-C-E-G,
+Mixolidia,C,1 2 3 4 5 6 b7,C D E F G A Bb,Por terceras diatonicas sobre cada grado,cuatriada,bVIImaj7,Bbmaj7,Bb-D-F-A,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,triada,i°,Cdim,C-Eb-Gb,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,triada,bII,Db,Db-F-Ab,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,triada,biii,Ebm,Eb-Gb-Bb,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,triada,iv,Fm,F-Ab-C,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,triada,bV,Gb,Gb-Bb-Db,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,triada,bVI,Ab,Ab-C-Eb,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,triada,bvii,Bbm,Bb-Db-F,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,iø7,Cm7b5,C-Eb-Gb-Bb,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bIImaj7,Dbmaj7,Db-F-Ab-C,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,biii7,Ebm7,Eb-Gb-Bb-Db,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,iv7,Fm7,F-Ab-C-Eb,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bVmaj7,Gbmaj7,Gb-Bb-Db-F,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bVI7,Ab7,Ab-C-Eb-Gb,
+Locria,C,1 b2 b3 4 b5 b6 b7,C Db Eb F Gb Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bvii7,Bbm7,Bb-Db-F-Ab,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,triada,i,Cm,C-Eb-G,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,triada,ii°,Ddim,D-F-Ab,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,triada,bIII+,Ebaug,Eb-G-B,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,triada,iv,Fm,F-Ab-C,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,triada,V,G,G-B-D,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,triada,bVI,Ab,Ab-C-Eb,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,triada,vii°,Bdim,B-D-F,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,iMaj7,CmMaj7,C-Eb-G-B,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,iiø7,Dm7b5,D-F-Ab-C,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,bIIImaj7#5,Ebmaj7#5,Eb-G-B-D,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,iv7,Fm7,F-Ab-C-Eb,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,V7,G7,G-B-D-F,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,bVImaj7,Abmaj7,Ab-C-Eb-G,
+Menor armonica,C,1 2 b3 4 5 b6 7,C D Eb F G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,vii°7,Bdim7,B-D-F-Ab,
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,triada,i,Cm,C-Eb-G,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,triada,ii,Dm,D-F-A,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,triada,bIII+,Ebaug,Eb-G-B,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,triada,IV,F,F-A-C,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,triada,V,G,G-B-D,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,triada,vi°,Adim,A-C-Eb,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,triada,vii°,Bdim,B-D-F,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,cuatriada,iMaj7,CmMaj7,C-Eb-G-B,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,cuatriada,ii7,Dm7,D-F-A-C,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,cuatriada,bIIImaj7#5,Ebmaj7#5,Eb-G-B-D,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,cuatriada,IV7,F7,F-A-C-Eb,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,cuatriada,V7,G7,G-B-D-F,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,cuatriada,viø7,Am7b5,A-C-Eb-G,Menor melodica ascendente/jazz.
+Menor melodica,C,1 2 b3 4 5 6 7,C D Eb F G A B,Por terceras diatonicas sobre cada grado,cuatriada,viiø7,Bm7b5,B-D-F-A,Menor melodica ascendente/jazz.
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,I,C,C-E-G,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bII,Db,Db-F-Ab,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,iii°,Edim,E-G-Bb,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,iv,Fm,F-Ab-C,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,v°,Gdim,G-Bb-Db,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bVI+,Abaug,Ab-C-E,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,triada,bvii,Bbm,Bb-Db-F,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,I7,C7,C-E-G-Bb,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bIImaj7,Dbmaj7,Db-F-Ab-C,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,iii°7,Edim7,E-G-Bb-Db,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,ivMaj7,FmMaj7,F-Ab-C-E,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,vø7,Gm7b5,G-Bb-Db-F,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bVImaj7#5,Abmaj7#5,Ab-C-E-G,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Frigia espanola,C,1 b2 3 4 5 b6 b7,C Db E F G Ab Bb,Por terceras diatonicas sobre cada grado,cuatriada,bvii7,Bbm7,Bb-Db-F-Ab,"Asumida como frigia dominante, tambien llamada escala espanola/gitana en muchos contextos."
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,triada,i,Cm,C-Eb-G,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,triada,II(b5),D(b5),D-F#-Ab,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,triada,bIII+,Ebaug,Eb-G-B,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,triada,#iv,F# no estandar,F#-Ab-C,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,triada,V,G,G-B-D,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,triada,bVI,Ab,Ab-C-Eb,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,triada,vii,Bm,B-D-F#,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,iMaj7,CmMaj7,C-Eb-G-B,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,II7b5,D7b5,D-F#-Ab-C,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,bIIImaj7#5,Ebmaj7#5,Eb-G-B-D,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,#iv,F# no estandar,F#-Ab-C-Eb,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,Vmaj7,Gmaj7,G-B-D-F#,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,bVImaj7,Abmaj7,Ab-C-Eb-G,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Hungara menor,C,1 2 b3 #4 5 b6 7,C D Eb F# G Ab B,Por terceras diatonicas sobre cada grado,cuatriada,vii,Bm6 enh.,B-D-F#-Ab,Algunos acordes por terceras tienen grafia o calidad no estandar; se dan las notas exactas.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,C,Caug,C-E-G#,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,D,Daug,D-F#-Bb,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,E,Eaug,E-G#-C,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,F#,F#aug,F#-Bb-D,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,G#,G#aug,G#-C-E,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,triada,Bb,Bbaug,Bb-D-F#,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,C,C7#5,C-E-G#-Bb,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,D,D7#5,D-F#-Bb-C,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,E,E7#5,E-G#-C-D,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,F#,F#7#5,F#-Bb-D-E,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,G#,G#7#5,G#-C-E-F#,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Tonos enteros,C,1 2 3 #4 #5 b7,C D E F# G# Bb,Triadas y cuatriadas basicas contenidas en las notas de la escala,cuatriada,Bb,Bb7#5,Bb-D-F#-G#,Escala simetrica: muchas escrituras son enharmonicas; en guitarra suenan igual aunque se escriban distinto.
+Cromatica,C,1 b2 2 b3 3 4 b5 5 b6 6 b7 7,C Db D Eb E F Gb G Ab A Bb B,Contiene los 12 semitonos; no restringe la armonia diatonica,resumen,todas,"Todas las triadas mayores, menores, disminuidas y aumentadas en cualquier raiz",Cualquier combinacion de 3 notas de la escala cromatica,"La lista completa de acordes posibles es abierta si se incluyen extensiones, inversiones y alteraciones."
+Cromatica,C,1 b2 2 b3 3 4 b5 5 b6 6 b7 7,C Db D Eb E F Gb G Ab A Bb B,Contiene los 12 semitonos; no restringe la armonia diatonica,resumen,todas,"Todas las cuatriadas basicas: maj7, 7, m7, mMaj7, m7b5, dim7, aug7, augMaj7, etc. en cualquier raiz",Cualquier combinacion de 4 notas de la escala cromatica,"Para uso practico conviene elegir acordes por funcion tonal, no por pertenencia a la escala cromatica."
