@@ -9,10 +9,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Quiz
+import androidx.compose.material.icons.filled.RemoveRedEye
 import androidx.compose.material.icons.filled.ScreenRotation
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,12 +38,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.PitchDetector
 
-private enum class FullscreenMode { NONE, SCALES, CAGED, QUIZ }
+private enum class FullscreenMode {
+    NONE,
+    SCALES,
+    CHORDS,
+    CAGED,
+    QUIZ
+}
 
 enum class AppMode(val title: String, val icon: ImageVector) {
-    TUNER("Afinar", Icons.Default.Tune),
-    METRONOME("Metr\u00f3nomo", Icons.Default.Speed),
-    TRAINER("Entrenador", Icons.Default.School)
+    VISUALIZER("Visualizador", Icons.Default.RemoveRedEye),
+    PRACTICE("Pr\u00e1ctica", Icons.Default.FitnessCenter),
+    QUIZ("Quiz", Icons.Default.Quiz),
+    TOOLS("Herramientas", Icons.Default.Build)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -62,6 +70,11 @@ fun MainScreen(
     when (currentMode) {
         FullscreenMode.SCALES -> {
             if (isLandscape) ScaleFretboardScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            return
+        }
+        FullscreenMode.CHORDS -> {
+            if (isLandscape) ChordVisualizerScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
             else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
             return
         }
@@ -99,19 +112,25 @@ fun MainScreen(
                     Tab(
                         selected = selectedTab == index,
                         onClick = { selectedTab = index },
-                        text = { Text(mode.title) },
-                        icon = { Icon(mode.icon, contentDescription = mode.title) }
+                        text = { Text(mode.title, fontSize = 11.sp) },
+                        icon = { Icon(mode.icon, contentDescription = mode.title, modifier = Modifier.size(20.dp)) }
                     )
                 }
             }
 
             when (modes[selectedTab]) {
-                AppMode.TUNER -> TunerMode(pitchResult = pitchResult)
-                AppMode.METRONOME -> MetronomeMode()
-                AppMode.TRAINER -> TrainerMode(
+                AppMode.VISUALIZER -> VisualizerMenu(
                     onOpenScales = { fullscreenMode = FullscreenMode.SCALES.name },
-                    onOpenCagedPractice = { fullscreenMode = FullscreenMode.CAGED.name },
+                    onOpenChords = { fullscreenMode = FullscreenMode.CHORDS.name }
+                )
+                AppMode.PRACTICE -> PracticeMenu(
+                    onOpenCagedPractice = { fullscreenMode = FullscreenMode.CAGED.name }
+                )
+                AppMode.QUIZ -> QuizMenu(
                     onOpenQuiz = { fullscreenMode = FullscreenMode.QUIZ.name }
+                )
+                AppMode.TOOLS -> ToolsMenu(
+                    pitchResult = pitchResult
                 )
             }
         }
@@ -143,7 +162,7 @@ private fun RotatePhoneMessage(onBack: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = "El entrenador necesita la pantalla en horizontal para mostrar el m\u00e1stil completo",
+            text = "Esta vista necesita la pantalla en horizontal para mostrar el m\u00e1stil completo",
             fontSize = 15.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
             textAlign = TextAlign.Center

@@ -166,3 +166,18 @@ fun DrawScope.drawChromaticCircleShared(
     }
     drawContext.canvas.nativeCanvas.drawText(SPANISH_CHROMATIC_NAMES[selectedNote], center.x, center.y + 60f, centerPaint)
 }
+
+@Composable
+fun ChromaticCircleOverlay(
+    selectedNote: Int,
+    onNoteSelected: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    ChromaticCircleOverlay(
+        selectedNote = selectedNote,
+        rootNote = selectedNote,
+        scaleIntervals = listOf(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11),
+        onNoteSelected = onNoteSelected,
+        onDismiss = onDismiss
+    )
+}
