@@ -49,6 +49,10 @@ fun ScaleInfoSheet(
     scale: Scale,
     onDismiss: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) { ScaleChordRepository.load(context) }
+
+    val csvChords = ScaleChordRepository.getChordsForScale(scale.name, rootNote)
     val chords = getScaleChords(rootNote, scale.intervals)
     val rootName = SPANISH_CHROMATIC_NAMES[rootNote]
 
@@ -126,83 +130,123 @@ fun ScaleInfoSheet(
             Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Chords table
-            Text("Acordes", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(12.dp))
+            // Chords table - use CSV data if available, fallback to computed
+            if (csvChords.isNotEmpty()) {
+                // Triads section
+                val triads = csvChords.filter { it.chordType == "triada" }
+                val tetrads = csvChords.filter { it.chordType == "cuatriada" }
 
-            // Header row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("Grado", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
-                    modifier = Modifier.weight(0.15f), textAlign = TextAlign.Center)
-                Text("Nota", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
-                    modifier = Modifier.weight(0.2f), textAlign = TextAlign.Center)
-                Text("Acorde", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
-                    modifier = Modifier.weight(0.35f), textAlign = TextAlign.Center)
-                Text("Intervalo", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
-                    modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
-            }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            chords.forEach { chord ->
-                val colorIdx = (chord.degree - 1).coerceIn(0, DEGREE_COLORS.size - 1)
-                val degreeRoman = when (chord.degree) {
-                    1 -> "I"; 2 -> "II"; 3 -> "III"; 4 -> "IV"
-                    5 -> "V"; 6 -> "VI"; 7 -> "VII"; else -> "${chord.degree}"
-                }
-                val displayDegree = when (chord.chordType) {
-                    "menor" -> degreeRoman.lowercase()
-                    "dim" -> degreeRoman.lowercase() + "°"
-                    "aug" -> degreeRoman + "+"
-                    else -> degreeRoman
-                }
-
+                Text("Tr\u00edadas", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(DEGREE_COLORS[colorIdx].copy(alpha = 0.1f))
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        displayDegree,
-                        color = DEGREE_COLORS[colorIdx],
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(0.15f),
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        chord.noteName,
-                        color = Color.White,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(0.2f),
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        "${chord.noteName} ${chord.chordType}",
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontSize = 14.sp,
-                        modifier = Modifier.weight(0.35f),
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        chord.intervalName,
-                        color = Color.White.copy(alpha = 0.6f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.weight(0.3f),
-                        textAlign = TextAlign.Center
-                    )
+                    Text("Grado", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                        modifier = Modifier.weight(0.25f), textAlign = TextAlign.Center)
+                    Text("Acorde", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                        modifier = Modifier.weight(0.75f), textAlign = TextAlign.Center)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                triads.forEachIndexed { idx, chord ->
+                    val colorIdx = idx.coerceIn(0, DEGREE_COLORS.size - 1)
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DEGREE_COLORS[colorIdx].copy(alpha = 0.1f))
+                            .padding(horizontal = 8.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(chord.degree, color = DEGREE_COLORS[colorIdx], fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.25f), textAlign = TextAlign.Center)
+                        Text(chord.chordName, color = Color.White, fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.75f), textAlign = TextAlign.Center)
+                    }
+                    Spacer(modifier = Modifier.height(3.dp))
+                }
+
+                if (tetrads.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Cuatr\u00edadas", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Grado", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                            modifier = Modifier.weight(0.25f), textAlign = TextAlign.Center)
+                        Text("Acorde", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                            modifier = Modifier.weight(0.75f), textAlign = TextAlign.Center)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    tetrads.forEachIndexed { idx, chord ->
+                        val colorIdx = idx.coerceIn(0, DEGREE_COLORS.size - 1)
+                        Row(
+                            modifier = Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(DEGREE_COLORS[colorIdx].copy(alpha = 0.1f))
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(chord.degree, color = DEGREE_COLORS[colorIdx], fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.25f), textAlign = TextAlign.Center)
+                            Text(chord.chordName, color = Color.White, fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.75f), textAlign = TextAlign.Center)
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
+                    }
+                }
+            } else {
+                // Fallback: computed chords
+                Text("Acordes", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Grado", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                        modifier = Modifier.weight(0.15f), textAlign = TextAlign.Center)
+                    Text("Nota", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                        modifier = Modifier.weight(0.2f), textAlign = TextAlign.Center)
+                    Text("Acorde", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                        modifier = Modifier.weight(0.35f), textAlign = TextAlign.Center)
+                    Text("Intervalo", color = Color.White.copy(alpha = 0.4f), fontSize = 11.sp,
+                        modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                chords.forEach { chord ->
+                    val colorIdx = (chord.degree - 1).coerceIn(0, DEGREE_COLORS.size - 1)
+                    val degreeRoman = when (chord.degree) {
+                        1 -> "I"; 2 -> "II"; 3 -> "III"; 4 -> "IV"
+                        5 -> "V"; 6 -> "VI"; 7 -> "VII"; else -> "${chord.degree}"
+                    }
+                    val displayDegree = when (chord.chordType) {
+                        "menor" -> degreeRoman.lowercase()
+                        "dim" -> degreeRoman.lowercase() + "\u00b0"
+                        "aug" -> degreeRoman + "+"
+                        else -> degreeRoman
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(DEGREE_COLORS[colorIdx].copy(alpha = 0.1f))
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(displayDegree, color = DEGREE_COLORS[colorIdx], fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.15f), textAlign = TextAlign.Center)
+                        Text(chord.noteName, color = Color.White, fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.2f), textAlign = TextAlign.Center)
+                        Text("${chord.noteName} ${chord.chordType}", color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 14.sp, modifier = Modifier.weight(0.35f), textAlign = TextAlign.Center)
+                        Text(chord.intervalName, color = Color.White.copy(alpha = 0.6f),
+                            fontSize = 12.sp, modifier = Modifier.weight(0.3f), textAlign = TextAlign.Center)
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

@@ -84,6 +84,8 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { ChordRepository.loadChords(context) }
 
+    LaunchedEffect(Unit) { ScaleChordRepository.load(context) }
+
     var modeKey by rememberSaveable { mutableStateOf(true) } // true = by tonality, false = free
     var selectedKey by rememberSaveable { mutableIntStateOf(0) }
     var bpm by rememberSaveable { mutableIntStateOf(60) }
@@ -152,11 +154,16 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
     // Filter chords by tonality if needed
     val availableChords = remember(modeKey, selectedKey) {
         if (modeKey) {
-            // Diatonic chords for the selected key (major scale)
-            val majorScale = ALL_SCALES.firstOrNull { it.name.contains("Mayor (J\u00f3nica)") } ?: ALL_SCALES.first()
-            val allowedRoots = majorScale.intervals.map { (selectedKey + it) % 12 }
-                .map { AMERICAN_NOTE_NAMES[it] }
-            ChordRepository.getChords().filter { it.root in allowedRoots }
+            val scaleChords = ScaleChordRepository.getChordsForScale("Mayor (J\u00f3nica)", selectedKey)
+            if (scaleChords.isNotEmpty()) {
+                val allowedRoots = scaleChords.map { AMERICAN_NOTE_NAMES[it.rootSemitone] }.distinct()
+                ChordRepository.getChords().filter { it.root in allowedRoots }
+            } else {
+                val majorScale = ALL_SCALES.firstOrNull { it.name.contains("Mayor (J\u00f3nica)") } ?: ALL_SCALES.first()
+                val allowedRoots = majorScale.intervals.map { (selectedKey + it) % 12 }
+                    .map { AMERICAN_NOTE_NAMES[it] }
+                ChordRepository.getChords().filter { it.root in allowedRoots }
+            }
         } else {
             ChordRepository.getChords()
         }
