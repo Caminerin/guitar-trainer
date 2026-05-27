@@ -164,13 +164,21 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
         }
     }
 
-    // Filter chords by tonality if needed
+    // Filter chords by tonality if needed — match root AND quality (diatonic harmony)
     val availableChords = remember(modeKey, selectedKey) {
         if (modeKey) {
             val scaleChords = ScaleChordRepository.getChordsForScale("Mayor (J\u00f3nica)", selectedKey)
             if (scaleChords.isNotEmpty()) {
-                val allowedRoots = scaleChords.map { AMERICAN_NOTE_NAMES[it.rootSemitone] }.distinct()
-                ChordRepository.getChords().filter { it.root in allowedRoots }
+                val allowedKeys = scaleChords.map { sc ->
+                    sc.rootSemitone to normalizeScaleQuality(sc.quality)
+                }.toSet()
+                ChordRepository.getChords().filter { chord ->
+                    val chordRootSemitone = AMERICAN_NOTE_NAMES.indexOf(chord.root)
+                    val chordQualityNorm = normalizeChordQuality(chord.qualityLabel)
+                    allowedKeys.any { (rootSt, qualNorm) ->
+                        rootSt == chordRootSemitone && qualNorm == chordQualityNorm
+                    }
+                }
             } else {
                 val majorScale = ALL_SCALES.firstOrNull { it.name.contains("Mayor (J\u00f3nica)") } ?: ALL_SCALES.first()
                 val allowedRoots = majorScale.intervals.map { (selectedKey + it) % 12 }
@@ -847,4 +855,38 @@ private fun DrawScope.drawSmallChord(chord: ChordShape) {
         isAntiAlias = true
     }
     drawContext.canvas.nativeCanvas.drawText(chord.displayName, w / 2f, fbTop - 4f, namePaint)
+}
+
+private fun normalizeScaleQuality(quality: String): String {
+    return when (quality.trim()) {
+        "" -> "major"
+        "m" -> "minor"
+        "dim" -> "dim"
+        "aug" -> "aug"
+        "7" -> "7"
+        "m7" -> "m7"
+        "maj7" -> "maj7"
+        "m7b5" -> "m7b5"
+        "dim7" -> "dim7"
+        "mMaj7" -> "mMaj7"
+        else -> quality.trim().lowercase()
+    }
+}
+
+private fun normalizeChordQuality(qualityLabel: String): String {
+    return when (qualityLabel.trim()) {
+        "major" -> "major"
+        "minor" -> "minor"
+        "dominant7" -> "7"
+        "diminished" -> "dim"
+        "augmented" -> "aug"
+        "7", "dom7" -> "7"
+        "maj7" -> "maj7"
+        "m7" -> "m7"
+        "m7b5", "half_diminished7" -> "m7b5"
+        "dim7", "diminished7" -> "dim7"
+        "sus2" -> "sus2"
+        "sus4" -> "sus4"
+        else -> qualityLabel.trim().lowercase()
+    }
 }
