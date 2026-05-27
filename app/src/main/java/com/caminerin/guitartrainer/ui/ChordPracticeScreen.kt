@@ -136,13 +136,14 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 val mList = measuresState.value
                 for ((mi, m) in mList.withIndex()) {
                     for ((si, slot) in m.subdivisions.withIndex()) {
+                        if (!isActive) break
                         currentMeasure = mi
                         currentSub = si
                         val beatMs = 60000L / bpmState.value
                         val subMs = beatMs / m.subdivisions.size.coerceAtLeast(1)
                         slot.chordId?.let { id ->
                             val chord = ChordRepository.getChords().firstOrNull { it.id == id }
-                            chord?.let { ChordSynth.playChord(it.frets, subMs.toInt().coerceAtLeast(200)) }
+                            chord?.let { ChordSynth.playChord(it.frets, subMs.toInt().coerceAtLeast(300)) }
                         }
                         tickPlayer.tick()
                         delay(subMs.coerceAtLeast(50L))
@@ -150,6 +151,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 }
             }
         } finally {
+            ChordSynth.stop()
             currentMeasure = -1
             currentSub = -1
         }
