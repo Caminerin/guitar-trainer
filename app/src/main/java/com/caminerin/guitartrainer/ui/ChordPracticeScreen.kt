@@ -169,22 +169,15 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     val availableChords = remember(modeKey, selectedKey) {
         if (modeKey) {
             val scaleChords = ScaleChordRepository.getChordsForScale("Mayor (J\u00f3nica)", selectedKey)
-            if (scaleChords.isNotEmpty()) {
-                val allowedKeys = scaleChords.map { sc ->
-                    sc.rootSemitone to normalizeScaleQuality(sc.quality)
-                }.toSet()
-                ChordRepository.getChords().filter { chord ->
-                    val chordRootSemitone = AMERICAN_NOTE_NAMES.indexOf(chord.root)
-                    val chordQualityNorm = normalizeChordQuality(chord.qualityLabel)
-                    allowedKeys.any { (rootSt, qualNorm) ->
-                        rootSt == chordRootSemitone && qualNorm == chordQualityNorm
-                    }
+            val allowedKeys = scaleChords.map { sc ->
+                sc.rootSemitone to normalizeScaleQuality(sc.quality)
+            }.toSet()
+            ChordRepository.getChords().filter { chord ->
+                val chordRootSemitone = AMERICAN_NOTE_NAMES.indexOf(chord.root)
+                val chordQualityNorm = normalizeChordQuality(chord.qualityLabel)
+                allowedKeys.any { (rootSt, qualNorm) ->
+                    rootSt == chordRootSemitone && qualNorm == chordQualityNorm
                 }
-            } else {
-                val majorScale = ALL_SCALES.firstOrNull { it.name.contains("Mayor (J\u00f3nica)") } ?: ALL_SCALES.first()
-                val allowedRoots = majorScale.intervals.map { (selectedKey + it) % 12 }
-                    .map { AMERICAN_NOTE_NAMES[it] }
-                ChordRepository.getChords().filter { it.root in allowedRoots }
             }
         } else {
             ChordRepository.getChords()
@@ -214,7 +207,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         .clickable { showModeSelector = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(if (modeKey) "Por tonalidad" else "Todos",
+                    Text(if (modeKey) "Por tonalidad mayor" else "Todos",
                         color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 

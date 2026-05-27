@@ -1,3 +1,6 @@
+// NOTA: Este modo está desactivado en la navegación actual de la app.
+// Se conserva como código reservado para una futura versión.
+// No se muestra al usuario ni se accede desde ningún menú.
 package com.caminerin.guitartrainer.ui
 
 import androidx.compose.foundation.layout.Arrangement

@@ -268,7 +268,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                                 if (closestTarget != null) {
                                     val key = closestTarget.string to closestTarget.fret
                                     if (revealedNotes.contains(key)) return@detectTapGestures
-                                    val tappedNoteName = getSpanishNoteName(closestTarget.noteIndex, selectedKey)
+                                    val tappedNoteName = getSpanishNoteName(closestTarget.noteIndex, selectedKey, scale.relativeMajorOffset)
                                     if (closestTarget.isInScale) {
                                         revealedNotes.add(key)
                                         correctCount++
@@ -280,7 +280,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                                         errorCount++
                                         errorFlash.value = closestTarget.cx to closestTarget.cy
                                         val scaleNotes = scale.intervals.map { interval ->
-                                            getSpanishNoteName((selectedKey + interval) % 12, selectedKey)
+                                            getSpanishNoteName((selectedKey + interval) % 12, selectedKey, scale.relativeMajorOffset)
                                         }.joinToString(", ")
                                         feedbackText = "$tappedNoteName no pertenece a la escala. Notas correctas: $scaleNotes"
                                         feedbackIsCorrect = false
