@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: read
-  actions: write
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -33,9 +29,7 @@ jobs:
           validate-wrappers: false
 
       - name: Build debug APK
-        run: |
-          set -o pipefail
-          gradle assembleDebug 2>&1 | tee build_output.log
+        run: gradle assembleDebug
 
       - name: Upload build log on failure
         if: failure()
@@ -45,17 +39,9 @@ jobs:
           path: build_output.log
           retention-days: 7
 
-      - name: Verify and upload APK
-        run: |
-          echo "=== All APK files ==="
-          find / -name "*.apk" -type f 2>/dev/null || true
-          echo "=== Expected path ==="
-          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "Expected dir does not exist"
-
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: guitar-trainer-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
-          if-no-files-found: error
