@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -43,7 +44,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -92,6 +94,9 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
 
     // State for chromatic circle overlay on key selection
     var showChromaticCircle by remember { mutableStateOf(false) }
+
+    // Degree color filter: which degrees to highlight (1=tonic, 3=third, 5=fifth, 0=other)
+    var degreeFilter by remember { mutableStateOf(setOf(1, 3, 5, 0)) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
     val positions = if (scale.hasCaged) computeCagedPositions(selectedKey) else scale.positions
@@ -167,13 +172,38 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             }
 
             Spacer(modifier = Modifier.weight(1f))
+        }
+
+        // ===== DEGREE COLOR LEGEND =====
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF252525))
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Color:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+            DegreeChip("Tónica", COLOR_TONIC, 1 in degreeFilter) {
+                degreeFilter = if (1 in degreeFilter) degreeFilter - 1 else degreeFilter + 1
+            }
+            DegreeChip("3ª", COLOR_THIRD, 3 in degreeFilter) {
+                degreeFilter = if (3 in degreeFilter) degreeFilter - 3 else degreeFilter + 3
+            }
+            DegreeChip("5ª", COLOR_FIFTH, 5 in degreeFilter) {
+                degreeFilter = if (5 in degreeFilter) degreeFilter - 5 else degreeFilter + 5
+            }
+            DegreeChip("Otros", COLOR_OTHER, 0 in degreeFilter) {
+                degreeFilter = if (0 in degreeFilter) degreeFilter - 0 else degreeFilter + 0
+            }
+            Spacer(modifier = Modifier.weight(1f))
 
             // Zoom controls
-            IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(0.5f) }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.ZoomOut, "Alejar", tint = Color.White, modifier = Modifier.size(20.dp))
+            IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(0.5f) }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.ZoomOut, "Alejar", tint = Color.White, modifier = Modifier.size(18.dp))
             }
-            IconButton(onClick = { zoom = (zoom + 0.3f).coerceAtMost(3f) }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White, modifier = Modifier.size(20.dp))
+            IconButton(onClick = { zoom = (zoom + 0.3f).coerceAtMost(3f) }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White, modifier = Modifier.size(18.dp))
             }
         }
 
@@ -184,15 +214,32 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        awaitFirstDown(requireUnconsumed = false)
+                        var prevSpan = 0f
+                        do {
+                            val event = awaitPointerEvent()
+                            val pressed = event.changes.filter { it.pressed }
+                            if (pressed.size >= 2) {
+                                val dx = pressed[0].position.x - pressed[1].position.x
+                                val dy = pressed[0].position.y - pressed[1].position.y
+                                val span = kotlin.math.sqrt(dx * dx + dy * dy)
+                                if (prevSpan > 10f && span > 10f) {
+                                    zoom = (zoom * (span / prevSpan)).coerceIn(0.5f, 3f)
+                                }
+                                prevSpan = span
+                                pressed.forEach { it.consume() }
+                            } else {
+                                prevSpan = 0f
+                            }
+                        } while (event.changes.any { it.pressed })
+                    }
+                }
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, _, gestureZoom, _ ->
-                            zoom = (zoom * gestureZoom).coerceIn(0.5f, 3f)
-                        }
-                    }
                     .horizontalScroll(rememberScrollState())
             ) {
                 Canvas(
@@ -208,7 +255,8 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                         positionsEnabled = positionsEnabled,
                         currentPosition = currentPosition,
                         fretWidthPx = with(density) { fretWidthDp.toPx() },
-                        openStringWidthPx = with(density) { openStringWidth.toPx() }
+                        openStringWidthPx = with(density) { openStringWidth.toPx() },
+                        degreeFilter = degreeFilter
                     )
                 }
             }
@@ -254,7 +302,8 @@ private fun DrawScope.drawGuitarFretboard(
     positionsEnabled: Boolean,
     currentPosition: Int,
     fretWidthPx: Float,
-    openStringWidthPx: Float
+    openStringWidthPx: Float,
+    degreeFilter: Set<Int> = setOf(1, 3, 5, 0)
 ) {
     val h = size.height
     val topPad = h * 0.08f
@@ -417,23 +466,28 @@ private fun DrawScope.drawGuitarFretboard(
                 continue
             }
 
-            val noteColor = when (degree) {
-                1 -> COLOR_TONIC
-                3 -> COLOR_THIRD
-                5 -> COLOR_FIFTH
-                else -> COLOR_OTHER
+            val degreeCategory = when (degree) {
+                1 -> 1; 3 -> 3; 5 -> 5; else -> 0
             }
-            val r = if (degree == 1) noteRadius * 1.1f else noteRadius
+            val isFiltered = degreeCategory in degreeFilter
 
-            // Shadow
+            val noteColor = if (isFiltered) {
+                when (degree) {
+                    1 -> COLOR_TONIC
+                    3 -> COLOR_THIRD
+                    5 -> COLOR_FIFTH
+                    else -> COLOR_OTHER
+                }
+            } else {
+                COLOR_DIM.copy(alpha = 0.35f)
+            }
+            val r = if (degree == 1 && isFiltered) noteRadius * 1.1f else if (!isFiltered) noteRadius * 0.7f else noteRadius
+
             drawCircle(Color(0x55000000), r + 3f, Offset(cx + 1.5f, y + 2f))
-            // Main circle
             drawCircle(noteColor, r, Offset(cx, y))
-            // Border
             drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
 
-            // Label
-            if (noteDisplay != NoteDisplay.NONE) {
+            if (noteDisplay != NoteDisplay.NONE && isFiltered) {
                 val label = buildNoteLabel(noteIdx, degree, noteDisplay, rootNote)
                 val paint = if (label.length > 4) notePaintSmall else notePaintBig
                 drawContext.canvas.nativeCanvas.drawText(label, cx, y + paint.textSize * 0.35f, paint)
@@ -450,5 +504,31 @@ private fun buildNoteLabel(noteIdx: Int, degree: Int, display: NoteDisplay, root
         NoteDisplay.DEGREE -> degreeStr
         NoteDisplay.BOTH -> "$degreeStr $noteName"
         NoteDisplay.NONE -> ""
+    }
+}
+
+@Composable
+private fun DegreeChip(label: String, color: Color, active: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (active) color.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.05f))
+            .clickable { onClick() }
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(if (active) color else Color.Gray.copy(alpha = 0.3f))
+        )
+        Text(
+            label,
+            color = if (active) Color.White else Color.White.copy(alpha = 0.3f),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
