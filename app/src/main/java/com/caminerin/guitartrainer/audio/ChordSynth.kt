@@ -98,6 +98,13 @@ object ChordSynth {
 
             while (running) {
                 synchronized(lock) {
+                    // If current finished but a new chord is pending, switch to it
+                    if (currentBuffer == null && pendingBuffer != null) {
+                        currentBuffer = pendingBuffer
+                        pendingBuffer = null
+                        currentPos = 0
+                    }
+
                     val cur = currentBuffer
                     if (cur == null) {
                         // Silence
