@@ -107,7 +107,10 @@ fun MainScreen(
             return
         }
         FullscreenMode.CHORDS -> {
-            if (isLandscape) ChordVisualizerScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            if (isLandscape) ChordVisualizerScreen(
+                onBack = { fullscreenMode = FullscreenMode.NONE.name },
+                onGoToPractice = { fullscreenMode = FullscreenMode.CHORD_PRACTICE.name }
+            )
             else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
             return
         }
@@ -122,7 +125,10 @@ fun MainScreen(
             return
         }
         FullscreenMode.CHORD_PRACTICE -> {
-            ChordPracticeScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            ChordPracticeScreen(
+                onBack = { fullscreenMode = FullscreenMode.NONE.name },
+                onGoToVisualizer = { fullscreenMode = FullscreenMode.CHORDS.name }
+            )
             return
         }
         FullscreenMode.NONE -> { /* show normal UI below */ }

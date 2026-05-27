@@ -87,6 +87,7 @@ private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 
 @Composable
 fun CagedPracticeScreen(onBack: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var selectedKey by rememberSaveable { mutableIntStateOf(0) }
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(0) }
     var bpm by rememberSaveable { mutableIntStateOf(60) }
@@ -102,6 +103,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
     var showScaleSelector by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
     var showSubdivisionMenu by remember { mutableStateOf(false) }
+    var showColorSelector by remember { mutableStateOf(false) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
     val positions = if (scale.hasCaged) computeCagedPositions(selectedKey) else scale.positions
@@ -224,6 +226,17 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text(subLabel, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Colors button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFE91E63).copy(alpha = 0.3f))
+                        .clickable { showColorSelector = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("Colores", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Play/Pause/Stop
@@ -411,6 +424,13 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                 current = subdivision,
                 onSelect = { subdivision = it },
                 onDismiss = { showSubdivisionMenu = false }
+            )
+        }
+
+        if (showColorSelector) {
+            ScaleColorSelectorOverlay(
+                context = context,
+                onDismiss = { showColorSelector = false }
             )
         }
     }

@@ -721,14 +721,16 @@ fun BpmToolbarButton(bpm: Int, onClick: () -> Unit) {
 fun NoteDisplaySelectorOverlay(
     current: NoteDisplay,
     onSelect: (NoteDisplay) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    showFingering: Boolean = false
 ) {
-    val options = listOf(
+    val baseOptions = listOf(
         NoteDisplay.NOTE to "Nota",
         NoteDisplay.DEGREE to "Grado / Intervalo",
         NoteDisplay.BOTH to "Nota + Grado",
-        NoteDisplay.NONE to "Nada"
     )
+    val fingeringOption = if (showFingering) listOf(NoteDisplay.FINGERING to "Digitaci\u00f3n") else emptyList()
+    val options = baseOptions + fingeringOption + listOf(NoteDisplay.NONE to "Nada")
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -896,6 +898,7 @@ fun NoteDisplayToolbarButton(noteDisplay: NoteDisplay, onClick: () -> Unit) {
         NoteDisplay.NOTE -> "Nota"
         NoteDisplay.DEGREE -> "Grado"
         NoteDisplay.BOTH -> "N+G"
+        NoteDisplay.FINGERING -> "Digit."
         NoteDisplay.NONE -> "\u2205"
     }
     Box(

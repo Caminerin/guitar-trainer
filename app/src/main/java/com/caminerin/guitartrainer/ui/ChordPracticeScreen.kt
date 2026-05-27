@@ -78,7 +78,7 @@ data class Measure(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ChordPracticeScreen(onBack: () -> Unit) {
+fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = null) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { ChordRepository.loadChords(context) }
 
@@ -240,6 +240,19 @@ fun ChordPracticeScreen(onBack: () -> Unit) {
                         fontSize = 13.sp, fontWeight = FontWeight.Bold,
                         maxLines = 1
                     )
+                }
+
+                // Go to visualizer
+                if (onGoToVisualizer != null) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF5C6BC0).copy(alpha = 0.3f))
+                            .clickable { onGoToVisualizer() }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text("Visualizar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
