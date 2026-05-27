@@ -18,7 +18,8 @@ data class ChordShape(
     val priority: Int,
     val maxFret: Int,
     val notesSharp: String,
-    val intervals: String
+    val intervals: String,
+    val fingering: List<String> = emptyList()
 ) {
     val displayName: String
         get() {
@@ -156,6 +157,11 @@ object ChordRepository {
             val priority = parts[13].toIntOrNull() ?: 50
             val maxFret = parts[14].toIntOrNull() ?: 0
 
+            val fingeringStr = if (parts.size > 19) parts[19] else ""
+            val fingeringList = if (fingeringStr.isNotBlank()) {
+                fingeringStr.split("-").map { it.trim() }
+            } else emptyList()
+
             return ChordShape(
                 id = parts[0],
                 root = parts[1],
@@ -170,7 +176,8 @@ object ChordRepository {
                 priority = priority,
                 maxFret = maxFret,
                 notesSharp = parts[16],
-                intervals = parts[17]
+                intervals = parts[17],
+                fingering = fingeringList
             )
         } catch (_: Exception) {
             return null

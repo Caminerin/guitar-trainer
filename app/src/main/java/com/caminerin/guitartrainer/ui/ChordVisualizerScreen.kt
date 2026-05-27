@@ -83,7 +83,7 @@ private val LEVEL_COLORS = mapOf(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ChordVisualizerScreen(onBack: () -> Unit) {
+fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = null) {
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -176,6 +176,30 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
             // Display mode selector (N+G)
             NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
 
+            // Colors button
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFE91E63).copy(alpha = 0.3f))
+                    .clickable { showColorSelector = true }
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            ) {
+                Text("Colores", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // Go to practice
+            if (onGoToPractice != null) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF4CAF50).copy(alpha = 0.3f))
+                        .clickable { onGoToPractice() }
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    Text("Practicar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
             // Navigation arrows
@@ -235,24 +259,6 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
             }
         }
 
-        // ===== INTERVAL COLOR LEGEND =====
-        if (currentChord != null) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF252525))
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Color:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-                ChordColorPreviewChip("Fundamental", DegreeColorPrefs.chordRootColor, DegreeColorPrefs.chordRootEnabled) { showColorSelector = true }
-                ChordColorPreviewChip("3\u00aa", DegreeColorPrefs.chordThirdColor, DegreeColorPrefs.chordThirdEnabled) { showColorSelector = true }
-                ChordColorPreviewChip("5\u00aa", DegreeColorPrefs.chordFifthColor, DegreeColorPrefs.chordFifthEnabled) { showColorSelector = true }
-                ChordColorPreviewChip("Otros", DegreeColorPrefs.chordOtherColor, DegreeColorPrefs.chordOtherEnabled) { showColorSelector = true }
-            }
-        }
-
         // Chord diagram
         if (currentChord != null) {
             // Info row
@@ -302,7 +308,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                         .fillMaxSize()
                         .padding(8.dp)
                 ) {
-                    drawChordDiagram(currentChord, noteDisplay, selectedRoot)
+                    drawChordDiagram(currentChord, noteDisplay, selectedRoot, currentChord.fingering)
                 }
             }
         } else {
@@ -454,7 +460,8 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
         NoteDisplaySelectorOverlay(
             current = noteDisplay,
             onSelect = { noteDisplay = it },
-            onDismiss = { showDisplaySelector = false }
+            onDismiss = { showDisplaySelector = false },
+            showFingering = true
         )
     }
 
@@ -482,7 +489,7 @@ private fun getIntervalCategory(interval: String): String {
     }
 }
 
-private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDisplay, rootNoteIdx: Int) {
+private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDisplay, rootNoteIdx: Int, fingering: List<String> = emptyList()) {
     val w = size.width
     val h = size.height
     val frets = chord.frets
@@ -609,9 +616,13 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
                 drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
 
                 if (noteDisplay != NoteDisplay.NONE && isFiltered) {
-                    val lbl = buildChordNoteLabel(noteName, interval, noteDisplay)
-                    val paint = if (lbl.length > 3) notePaintSmall else notePaintBig
-                    drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + paint.textSize * 0.35f, paint)
+                    val lbl = if (noteDisplay == NoteDisplay.FINGERING && fingering.size > s) {
+                        val f = fingering[s]; if (f == "0") "" else f
+                    } else buildChordNoteLabel(noteName, interval, noteDisplay)
+                    if (lbl.isNotEmpty()) {
+                        val paint = if (lbl.length > 3) notePaintSmall else notePaintBig
+                        drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + paint.textSize * 0.35f, paint)
+                    }
                 }
             }
             else -> {
@@ -633,9 +644,13 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
                     drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
 
                     if (noteDisplay != NoteDisplay.NONE && isFiltered2) {
-                        val lbl = buildChordNoteLabel(noteName, interval, noteDisplay)
-                        val paint = if (lbl.length > 3) notePaintSmall else notePaintBig
-                        drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + paint.textSize * 0.35f, paint)
+                        val lbl = if (noteDisplay == NoteDisplay.FINGERING && fingering.size > s) {
+                            fingering[s]
+                        } else buildChordNoteLabel(noteName, interval, noteDisplay)
+                        if (lbl != "x" && lbl.isNotEmpty()) {
+                            val paint = if (lbl.length > 3) notePaintSmall else notePaintBig
+                            drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + paint.textSize * 0.35f, paint)
+                        }
                     }
                 }
             }
@@ -689,6 +704,7 @@ private fun buildChordNoteLabel(noteName: String, interval: String, display: Not
         NoteDisplay.NOTE -> noteName
         NoteDisplay.DEGREE -> intervalClean
         NoteDisplay.BOTH -> if (intervalClean.isNotEmpty()) "$intervalClean $noteName" else noteName
+        NoteDisplay.FINGERING -> ""
         NoteDisplay.NONE -> ""
     }
 }

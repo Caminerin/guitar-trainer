@@ -154,6 +154,17 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             // Display mode
             NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
 
+            // Colors button
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFE91E63).copy(alpha = 0.3f))
+                    .clickable { showColorSelector = true }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text("Colores", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
             // Position toggle + CAGED bar
             Box(
                 modifier = Modifier
@@ -185,11 +196,6 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Color:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-            ColorPreviewChip("T\u00f3nica", DegreeColorPrefs.tonicColor, DegreeColorPrefs.tonicEnabled) { showColorSelector = true }
-            ColorPreviewChip("3\u00aa", DegreeColorPrefs.thirdColor, DegreeColorPrefs.thirdEnabled) { showColorSelector = true }
-            ColorPreviewChip("5\u00aa", DegreeColorPrefs.fifthColor, DegreeColorPrefs.fifthEnabled) { showColorSelector = true }
-            ColorPreviewChip("Otros", DegreeColorPrefs.otherColor, DegreeColorPrefs.otherEnabled) { showColorSelector = true }
             Spacer(modifier = Modifier.weight(1f))
 
             // Zoom controls
@@ -490,6 +496,7 @@ private fun buildNoteLabel(noteIdx: Int, degree: Int, display: NoteDisplay, root
         NoteDisplay.NOTE -> noteName
         NoteDisplay.DEGREE -> degreeStr
         NoteDisplay.BOTH -> "$degreeStr $noteName"
+        NoteDisplay.FINGERING -> noteName
         NoteDisplay.NONE -> ""
     }
 }

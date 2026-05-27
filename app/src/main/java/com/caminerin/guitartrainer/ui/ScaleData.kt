@@ -121,7 +121,7 @@ data class ScalePosition(
 )
 
 enum class NoteDisplay {
-    NOTE, DEGREE, BOTH, NONE
+    NOTE, DEGREE, BOTH, FINGERING, NONE
 }
 
 private val CAGED_BASE_OFFSETS = listOf(
