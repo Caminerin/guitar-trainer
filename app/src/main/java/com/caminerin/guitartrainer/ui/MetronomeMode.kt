@@ -130,15 +130,14 @@ fun MetronomeMode(
         Row(
             modifier = modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .padding(horizontal = 12.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left: Play + BPM + beats
+            // Left: Play + BPM + slider (compact, no scroll)
             Column(
                 modifier = Modifier
-                    .weight(0.4f)
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState()),
+                    .weight(0.35f)
+                    .fillMaxHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -146,14 +145,14 @@ fun MetronomeMode(
                     beatsPerMeasure = beatsPerMeasure,
                     currentBeat = if (isPlaying) currentBeat else -1
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     FilledIconButton(
                         onClick = { if (isPlaying) engine.stop() else playTrigger++ },
-                        modifier = Modifier.size(56.dp),
+                        modifier = Modifier.size(44.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = if (isPlaying) Color(0xFFF44336) else Color(0xFF4CAF50)
                         )
@@ -161,32 +160,30 @@ fun MetronomeMode(
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(28.dp),
+                            modifier = Modifier.size(22.dp),
                             tint = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "$bpm", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color.White)
-                        Text("BPM", fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
-                    }
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.Center) {
-                    PillButton("-5") { bpm = (bpm - 5).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(text = "$bpm", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color.White)
                     Spacer(modifier = Modifier.width(4.dp))
-                    PillButton("-1") { bpm = (bpm - 1).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    PillButton("+1") { bpm = (bpm + 1).coerceAtMost(300); bpmSlider = bpm.toFloat() }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    PillButton("+5") { bpm = (bpm + 5).coerceAtMost(300); bpmSlider = bpm.toFloat() }
+                    Text("BPM", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
                 }
                 Slider(
                     value = bpmSlider,
                     onValueChange = { bpmSlider = it; bpm = it.toInt() },
                     valueRange = 20f..300f,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
                 )
+                Row(horizontalArrangement = Arrangement.Center) {
+                    PillButton("-5") { bpm = (bpm - 5).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
+                    Spacer(modifier = Modifier.width(3.dp))
+                    PillButton("-1") { bpm = (bpm - 1).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    PillButton("+1") { bpm = (bpm + 1).coerceAtMost(300); bpmSlider = bpm.toFloat() }
+                    Spacer(modifier = Modifier.width(3.dp))
+                    PillButton("+5") { bpm = (bpm + 5).coerceAtMost(300); bpmSlider = bpm.toFloat() }
+                }
             }
 
             Spacer(modifier = Modifier.width(12.dp))
