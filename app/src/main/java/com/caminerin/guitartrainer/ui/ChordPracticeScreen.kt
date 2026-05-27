@@ -69,7 +69,8 @@ private val CP_SLOT = Color(0xFF3A3A3A)
 
 // A practice progression is a list of measures, each with N subdivisions and a chord assigned to each
 data class ChordSlot(
-    val chordId: String? = null
+    val chordId: String? = null,
+    val strumDirection: String = "D" // D=down, U=up, -=silent
 )
 
 data class Measure(
@@ -141,10 +142,12 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         currentSub = si
                         val beatMs = 60000L / bpmState.value
                         val subMs = beatMs / m.subdivisions.size.coerceAtLeast(1)
-                        slot.chordId?.let { id ->
-                            val chord = ChordRepository.getChords().firstOrNull { it.id == id }
-                            // Extra 200ms so the chord is still ringing when the next one arrives — enables crossfade overlap
-                            chord?.let { ChordSynth.playChord(it.frets, (subMs.toInt() + 200).coerceAtLeast(400)) }
+                        if (slot.strumDirection != "-") {
+                            slot.chordId?.let { id ->
+                                val chord = ChordRepository.getChords().firstOrNull { it.id == id }
+                                val isUpStrum = slot.strumDirection == "U"
+                                chord?.let { ChordSynth.playChord(it.frets, (subMs.toInt() + 200).coerceAtLeast(400), isUpStrum) }
+                            }
                         }
                         tickPlayer.tick()
                         delay(subMs.coerceAtLeast(50L))
@@ -397,9 +400,16 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     measures.clear()
                     val allChords = ChordRepository.getChords()
                     song.measures.forEach { measure ->
-                        val chordId = findChordIdByName(measure.chordSymbol, allChords)
-                        val pattern = measure.strumPattern ?: song.strumPattern
-                        measures.add(Measure(listOf(ChordSlot(chordId)), strumPattern = pattern.takeIf { it.isNotBlank() }))
+                        val slots = mutableListOf<ChordSlot>()
+                        val strums = measure.strumPattern
+                        for (beat in 1..4) {
+                            val chord = measure.chords.firstOrNull { beat in it.startBeat..it.endBeat }
+                            val chordId = chord?.let { findChordIdByName(it.symbol, allChords) }
+                            val direction = strums.getOrElse(beat - 1) { "D" }
+                            slots.add(ChordSlot(chordId, direction))
+                        }
+                        val patternStr = strums.joinToString(" ")
+                        measures.add(Measure(slots, strumPattern = patternStr.takeIf { it.isNotBlank() }))
                     }
                     // Fill remaining measures if needed
                     while (measures.size < measureCount) measures.add(Measure())
@@ -571,16 +581,26 @@ private fun MeasureCell(
                 }
             }
         }
-        // Strum pattern per measure
-        measure.strumPattern?.let { pattern ->
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                pattern,
-                color = Color(0xFFCE93D8),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
+        // Strum direction indicators per subdivision
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            measure.subdivisions.forEach { slot ->
+                val dirColor = when (slot.strumDirection) {
+                    "D" -> Color(0xFF81C784) // green
+                    "U" -> Color(0xFF64B5F6) // blue
+                    else -> Color.White.copy(alpha = 0.3f) // dim for silence
+                }
+                val dirSymbol = when (slot.strumDirection) {
+                    "D" -> "\u2193" // ↓
+                    "U" -> "\u2191" // ↑
+                    else -> "\u2014" // —
+                }
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text(dirSymbol, color = dirColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }

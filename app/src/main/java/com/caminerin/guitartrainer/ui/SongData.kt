@@ -22,6 +22,7 @@ data class Song(
     val subdivisionsPerMeasure: Int,
     val strumPattern: String,
     val strumLegend: String,
+    val defaultStrums: List<String>,
     val measures: List<SongMeasure>,
     val arrangementType: String,
     val practiceFocus: String,
@@ -29,22 +30,57 @@ data class Song(
     val notes: String
 )
 
-data class SongMeasure(
-    val index: Int,
-    val chordSymbol: String,
-    val strumPattern: String?,
-    val raw: String
+data class MeasureChord(
+    val symbol: String,
+    val startBeat: Int,
+    val endBeat: Int
 )
 
-private val MEASURE_REGEX = Regex("^\\s*(.*?)\\s*(?:\\[(.*?)])?\\s*$")
+data class SongMeasure(
+    val index: Int,
+    val chords: List<MeasureChord>,
+    val strumPattern: List<String>,
+    val raw: String
+) {
+    val chordSymbol: String get() = chords.firstOrNull()?.symbol.orEmpty()
+}
 
-private fun parseMeasureCell(raw: String): SongMeasure? {
+private val BRACKET_REGEX = Regex("\\[(.+?)]")
+private val MULTI_CHORD_REGEX = Regex("(\\S+?)\\((\\d+)-(\\d+)\\)")
+
+private fun parseMeasureCell(raw: String, defaultStrums: List<String>): SongMeasure? {
     if (raw.isBlank()) return null
-    val match = MEASURE_REGEX.matchEntire(raw)
-    val chord = match?.groupValues?.getOrNull(1)?.trim().orEmpty()
-    val pattern = match?.groupValues?.getOrNull(2)?.trim()?.takeIf { it.isNotBlank() }
-    if (chord.isBlank()) return null
-    return SongMeasure(index = 0, chordSymbol = chord, strumPattern = pattern, raw = raw)
+
+    val bracketMatch = BRACKET_REGEX.find(raw)
+    val strumPattern = if (bracketMatch != null) {
+        bracketMatch.groupValues[1].trim().split("\\s+".toRegex())
+    } else {
+        defaultStrums.ifEmpty { listOf("D", "D", "D", "D") }
+    }
+
+    val chordPart = BRACKET_REGEX.replace(raw, "").trim()
+    if (chordPart.isBlank()) return null
+
+    val chords = if (chordPart.contains("/") && chordPart.contains("(")) {
+        chordPart.split("/").mapNotNull { segment ->
+            val m = MULTI_CHORD_REGEX.find(segment.trim())
+            if (m != null) {
+                MeasureChord(
+                    symbol = m.groupValues[1],
+                    startBeat = m.groupValues[2].toIntOrNull() ?: 1,
+                    endBeat = m.groupValues[3].toIntOrNull() ?: 4
+                )
+            } else {
+                val trimmed = segment.trim()
+                if (trimmed.isNotBlank()) MeasureChord(trimmed, 1, 4) else null
+            }
+        }
+    } else {
+        listOf(MeasureChord(chordPart, 1, 4))
+    }
+
+    if (chords.isEmpty()) return null
+    return SongMeasure(index = 0, chords = chords, strumPattern = strumPattern, raw = raw)
 }
 
 object SongRepository {
@@ -136,9 +172,16 @@ object SongRepository {
             val strumPattern = col(parts, "patron_golpes_4_subdiv")
             val strumLegend = col(parts, "leyenda_golpes")
 
+            val defaultStrums = listOf(
+                col(parts, "golpe_1"),
+                col(parts, "golpe_2"),
+                col(parts, "golpe_3"),
+                col(parts, "golpe_4")
+            ).filter { it.isNotBlank() }
+
             val measures = (1..12).mapNotNull { n ->
                 val raw = col(parts, "compas_%02d".format(n))
-                parseMeasureCell(raw)?.copy(index = n)
+                parseMeasureCell(raw, defaultStrums)?.copy(index = n)
             }
 
             val arrangementType = col(parts, "tipo_arreglo")
@@ -164,6 +207,7 @@ object SongRepository {
                 subdivisionsPerMeasure = subdivisionsPerMeasure,
                 strumPattern = strumPattern,
                 strumLegend = strumLegend,
+                defaultStrums = defaultStrums,
                 measures = measures,
                 arrangementType = arrangementType,
                 practiceFocus = practiceFocus,
