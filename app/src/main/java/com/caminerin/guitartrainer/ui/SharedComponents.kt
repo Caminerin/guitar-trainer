@@ -504,7 +504,7 @@ fun CagedPositionBar(
         positions.forEachIndexed { i, pos ->
             val isCurrent = i == currentIndex
             val color = SHARED_POSITION_COLORS.getOrElse(i) { Color.Gray }
-            val label = "Pos ${i + 1} (${pos.startFret}-${pos.endFret})"
+            val label = "P${i + 1}"
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))

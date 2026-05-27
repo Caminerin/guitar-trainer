@@ -52,9 +52,9 @@ fun ScaleInfoSheet(
     val context = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(Unit) { ScaleChordRepository.load(context) }
 
-    val csvChords = ScaleChordRepository.getChordsForScale(scale.name, rootNote)
-    val chords = getScaleChords(rootNote, scale.intervals)
-    val rootName = SPANISH_CHROMATIC_NAMES[rootNote]
+    val csvChords = ScaleChordRepository.getChordsForScale(scale.name, rootNote, scale.relativeMajorOffset)
+    val chords = getScaleChords(rootNote, scale.intervals, scale.relativeMajorOffset)
+    val rootName = getSpanishChromaticNames(rootNote, scale.relativeMajorOffset)[rootNote]
 
     Box(
         modifier = Modifier

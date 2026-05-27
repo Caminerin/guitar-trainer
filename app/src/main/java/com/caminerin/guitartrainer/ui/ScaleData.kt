@@ -407,11 +407,11 @@ data class ScaleChordInfo(
     val intervalName: String
 )
 
-fun getScaleChords(rootNote: Int, scaleIntervals: List<Int>): List<ScaleChordInfo> {
+fun getScaleChords(rootNote: Int, scaleIntervals: List<Int>, relativeMajorOffset: Int = 0): List<ScaleChordInfo> {
     val result = mutableListOf<ScaleChordInfo>()
     for ((degIdx, interval) in scaleIntervals.withIndex()) {
         val noteIdx = (rootNote + interval) % 12
-        val noteName = getSpanishChromaticNames(rootNote)[noteIdx]
+        val noteName = getSpanishChromaticNames(rootNote, relativeMajorOffset)[noteIdx]
         val degree = degIdx + 1
 
         // Determine chord quality by stacking thirds
