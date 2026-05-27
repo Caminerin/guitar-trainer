@@ -141,7 +141,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         currentMeasure = mi
                         currentSub = si
                         val beatMs = 60000L / bpmState.value
-                        val subMs = beatMs / m.subdivisions.size.coerceAtLeast(1)
+                        val subMs = beatMs // each subdivision = one full beat
                         if (slot.strumDirection != "-") {
                             slot.chordId?.let { id ->
                                 val chord = ChordRepository.getChords().firstOrNull { it.id == id }
