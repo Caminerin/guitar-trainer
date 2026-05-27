@@ -79,6 +79,7 @@ fun MainScreen(
     LaunchedEffect(Unit) {
         NoteFormatPreference.load(context)
         AppPreferences.load(context)
+        DegreeColorPrefs.load(context)
     }
 
     var selectedTab by rememberSaveable { mutableStateOf(AppPreferences.lastTab) }

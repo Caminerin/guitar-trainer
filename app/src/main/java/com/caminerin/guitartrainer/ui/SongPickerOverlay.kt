@@ -22,6 +22,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Search
@@ -56,23 +58,32 @@ private val LEVEL_COLORS = listOf(
 private data class SongColumn(
     val header: String,
     val width: Dp,
-    val extract: (Song) -> String
+    val extract: (Song) -> String,
+    val sortKey: String
 )
 
 private val SONG_COLUMNS = listOf(
-    SongColumn("Canci\u00f3n", 180.dp) { it.title },
-    SongColumn("Artista", 140.dp) { it.artist },
-    SongColumn("Dif.", 50.dp) { "${it.level}" },
-    SongColumn("N\u00ba Ac.", 55.dp) { "${it.chordsUsed.size}" },
-    SongColumn("Tonalidad", 80.dp) { it.key },
-    SongColumn("BPM Ini.", 65.dp) { "${it.bpmStart}" },
-    SongColumn("BPM Obj.", 65.dp) { "${it.bpmTarget}" },
-    SongColumn("Capo", 50.dp) { if (it.capo > 0) "S\u00ed (${it.capo})" else "No" },
-    SongColumn("Acordes", 200.dp) { it.chordsUsed.joinToString(", ") },
-    SongColumn("Foco pr\u00e1ctica", 200.dp) { it.practiceFocus }
+    SongColumn("Canci\u00f3n", 180.dp, { it.title }, "title"),
+    SongColumn("Artista", 140.dp, { it.artist }, "artist"),
+    SongColumn("Dif.", 50.dp, { "${it.level}" }, "level"),
+    SongColumn("N\u00ba Ac.", 55.dp, { "${it.chordsUsed.size}" }, "chords_count"),
+    SongColumn("Tonalidad", 80.dp, { it.key }, "key"),
+    SongColumn("BPM Ini.", 65.dp, { "${it.bpmStart}" }, "bpm_start"),
+    SongColumn("BPM Obj.", 65.dp, { "${it.bpmTarget}" }, "bpm_target"),
+    SongColumn("Capo", 50.dp, { if (it.capo > 0) "S\u00ed (${it.capo})" else "No" }, "capo"),
+    SongColumn("Acordes", 200.dp, { it.chordsUsed.joinToString(", ") }, "chords"),
+    SongColumn("Foco pr\u00e1ctica", 200.dp, { it.practiceFocus }, "focus")
 )
 
 private val TABLE_TOTAL_WIDTH = SONG_COLUMNS.sumOf { it.width.value.toInt() }.dp
+
+private enum class SortDir { ASC, DESC }
+
+private data class SortEntry(val columnKey: String, val dir: SortDir)
+
+private enum class SearchField(val label: String) {
+    ALL("Todo"), TITLE("Canci\u00f3n"), ARTIST("Artista")
+}
 
 @Composable
 fun SongPickerOverlay(
@@ -81,16 +92,52 @@ fun SongPickerOverlay(
     onDismiss: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var searchField by remember { mutableStateOf(SearchField.ALL) }
     var selectedLevel by remember { mutableStateOf<Int?>(null) }
+    var selectedKey by remember { mutableStateOf<String?>(null) }
+    var selectedCapo by remember { mutableStateOf<Boolean?>(null) }
+    var sortStack by remember { mutableStateOf(listOf<SortEntry>()) }
 
-    val filtered = remember(searchQuery, selectedLevel) {
+    val allKeys = remember(songs) { songs.map { it.key }.distinct().sorted() }
+
+    val filtered = remember(searchQuery, searchField, selectedLevel, selectedKey, selectedCapo) {
         songs.filter { song ->
             (selectedLevel == null || song.level == selectedLevel) &&
-            (searchQuery.isBlank() ||
-                song.title.contains(searchQuery, ignoreCase = true) ||
-                song.artist.contains(searchQuery, ignoreCase = true) ||
-                song.chordsUsed.any { it.contains(searchQuery, ignoreCase = true) })
-        }.sortedBy { it.level }
+            (selectedKey == null || song.key == selectedKey) &&
+            (selectedCapo == null || (selectedCapo == true && song.capo > 0) || (selectedCapo == false && song.capo == 0)) &&
+            (searchQuery.isBlank() || when (searchField) {
+                SearchField.TITLE -> song.title.contains(searchQuery, ignoreCase = true)
+                SearchField.ARTIST -> song.artist.contains(searchQuery, ignoreCase = true)
+                SearchField.ALL -> song.title.contains(searchQuery, ignoreCase = true) ||
+                    song.artist.contains(searchQuery, ignoreCase = true)
+            })
+        }
+    }
+
+    val sorted = remember(filtered, sortStack) {
+        if (sortStack.isEmpty()) {
+            filtered.sortedBy { it.level }
+        } else {
+            filtered.sortedWith(
+                sortStack.reversed().fold(compareBy<Song> { 0 }) { comparator, entry ->
+                    val cmp: Comparator<Song> = when (entry.columnKey) {
+                        "title" -> compareBy { it.title.lowercase() }
+                        "artist" -> compareBy { it.artist.lowercase() }
+                        "level" -> compareBy { it.level }
+                        "chords_count" -> compareBy { it.chordsUsed.size }
+                        "key" -> compareBy { it.key }
+                        "bpm_start" -> compareBy { it.bpmStart }
+                        "bpm_target" -> compareBy { it.bpmTarget }
+                        "capo" -> compareBy { it.capo }
+                        "chords" -> compareBy { it.chordsUsed.joinToString() }
+                        "focus" -> compareBy { it.practiceFocus }
+                        else -> compareBy { 0 }
+                    }
+                    val directed = if (entry.dir == SortDir.DESC) cmp.reversed() else cmp
+                    comparator.then(directed)
+                }
+            )
+        }
     }
 
     Box(
@@ -127,7 +174,7 @@ fun SongPickerOverlay(
                 Text("Canciones", color = Color.White, fontSize = 20.sp,
                     fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("${filtered.size}", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                Text("${sorted.size}", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
                 Spacer(modifier = Modifier.weight(1f))
                 IconButton(onClick = onDismiss, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Default.Close, "Cerrar", tint = Color.White, modifier = Modifier.size(20.dp))
@@ -136,74 +183,156 @@ fun SongPickerOverlay(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Search + Level filter
+            // Search field selector
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                TextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Buscar...", fontSize = 13.sp) },
-                    leadingIcon = {
-                        Icon(Icons.Default.Search, null, tint = Color.White.copy(alpha = 0.4f),
-                            modifier = Modifier.size(18.dp))
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(24.dp)) {
-                                Icon(Icons.Default.Close, "Limpiar", tint = Color.White.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(16.dp))
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = Color.White.copy(alpha = 0.08f),
-                        unfocusedContainerColor = Color.White.copy(alpha = 0.06f),
-                        cursorColor = Color.White,
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White,
-                        focusedPlaceholderColor = Color.White.copy(alpha = 0.3f),
-                        unfocusedPlaceholderColor = Color.White.copy(alpha = 0.3f),
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.weight(1f).height(48.dp)
-                )
+                Text("Buscar en:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+                SearchField.entries.forEach { field ->
+                    val sel = searchField == field
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (sel) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
+                            .clickable { searchField = field }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(field.label, color = if (sel) Color.White else Color.White.copy(alpha = 0.5f),
+                            fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
 
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Search bar
+            TextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Buscar...", fontSize = 13.sp) },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, null, tint = Color.White.copy(alpha = 0.4f),
+                        modifier = Modifier.size(18.dp))
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }, modifier = Modifier.size(24.dp)) {
+                            Icon(Icons.Default.Close, "Limpiar", tint = Color.White.copy(alpha = 0.5f),
+                                modifier = Modifier.size(16.dp))
+                        }
+                    }
+                },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White.copy(alpha = 0.08f),
+                    unfocusedContainerColor = Color.White.copy(alpha = 0.06f),
+                    cursorColor = Color.White,
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White,
+                    focusedPlaceholderColor = Color.White.copy(alpha = 0.3f),
+                    unfocusedPlaceholderColor = Color.White.copy(alpha = 0.3f),
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                ),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Filters row: difficulty, key, capo
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Difficulty filter
+                Text("Dif:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(6.dp))
                         .background(if (selectedLevel == null) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
                         .clickable { selectedLevel = null }
-                        .padding(horizontal = 6.dp, vertical = 6.dp)
+                        .padding(horizontal = 5.dp, vertical = 4.dp)
                 ) {
-                    Text("All", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("All", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
-                (1..3).forEach { lvl ->
+                (1..5).forEach { lvl ->
                     val sel = selectedLevel == lvl
                     val color = LEVEL_COLORS.getOrElse(lvl - 1) { Color.Gray }
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(24.dp)
                             .clip(CircleShape)
                             .background(if (sel) color else color.copy(alpha = 0.2f))
                             .clickable { selectedLevel = if (sel) null else lvl },
                         contentAlignment = Alignment.Center
                     ) {
                         Text("$lvl", color = if (sel) Color.White else color,
-                            fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Capo filter
+                Text("Capo:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+                listOf(null to "All", true to "S\u00ed", false to "No").forEach { (capoVal, label) ->
+                    val sel = selectedCapo == capoVal
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (sel) Color(0xFFFFC107).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.06f))
+                            .clickable { selectedCapo = capoVal }
+                            .padding(horizontal = 5.dp, vertical = 4.dp)
+                    ) {
+                        Text(label, color = if (sel) Color.White else Color.White.copy(alpha = 0.5f),
+                            fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
-            // Table with horizontal scroll wrapping header + body together
-            if (filtered.isEmpty()) {
+            // Key filter row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Ton:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (selectedKey == null) Color(0xFFFFD600).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.06f))
+                        .clickable { selectedKey = null }
+                        .padding(horizontal = 5.dp, vertical = 3.dp)
+                ) {
+                    Text("All", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+                allKeys.forEach { key ->
+                    val sel = selectedKey == key
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (sel) Color(0xFFFFD600).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.06f))
+                            .clickable { selectedKey = if (sel) null else key }
+                            .padding(horizontal = 5.dp, vertical = 3.dp)
+                    ) {
+                        Text(key, color = if (sel) Color.White else Color.White.copy(alpha = 0.5f),
+                            fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Table
+            if (sorted.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     contentAlignment = Alignment.Center
@@ -219,33 +348,62 @@ fun SongPickerOverlay(
                         .horizontalScroll(rememberScrollState())
                 ) {
                     Column(modifier = Modifier.width(TABLE_TOTAL_WIDTH).fillMaxHeight()) {
-                        // Header row
+                        // Header row with sort indicators
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .background(Color(0xFF2A2A2A))
-                                .padding(vertical = 8.dp)
+                                .padding(vertical = 6.dp)
                         ) {
                             SONG_COLUMNS.forEach { col ->
-                                Box(modifier = Modifier.width(col.width).padding(horizontal = 6.dp)) {
+                                val sortEntry = sortStack.find { it.columnKey == col.sortKey }
+                                val sortIndex = sortStack.indexOfFirst { it.columnKey == col.sortKey }
+                                Row(
+                                    modifier = Modifier
+                                        .width(col.width)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .clickable {
+                                            sortStack = when {
+                                                sortEntry == null -> sortStack + SortEntry(col.sortKey, SortDir.ASC)
+                                                sortEntry.dir == SortDir.ASC -> sortStack.map {
+                                                    if (it.columnKey == col.sortKey) it.copy(dir = SortDir.DESC) else it
+                                                }
+                                                else -> sortStack.filter { it.columnKey != col.sortKey }
+                                            }
+                                        }
+                                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
                                     Text(
                                         col.header,
-                                        color = Color(0xFFB0BEC5),
+                                        color = if (sortEntry != null) Color(0xFF90CAF9) else Color(0xFFB0BEC5),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f, fill = false)
                                     )
+                                    if (sortEntry != null) {
+                                        Icon(
+                                            if (sortEntry.dir == SortDir.ASC) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                                            null,
+                                            tint = Color(0xFF90CAF9),
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        if (sortStack.size > 1) {
+                                            Text("${sortIndex + 1}", color = Color(0xFF90CAF9).copy(alpha = 0.6f),
+                                                fontSize = 8.sp)
+                                        }
+                                    }
                                 }
                             }
                         }
 
-                        // Separator
                         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.1f)))
 
-                        // Data rows
                         LazyColumn(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                            items(filtered, key = { "${it.title}-${it.artist}" }) { song ->
+                            items(sorted, key = { "${it.title}-${it.artist}" }) { song ->
                                 SongTableRow(song = song, onClick = { onPick(song) })
                             }
                         }

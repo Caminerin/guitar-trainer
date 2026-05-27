@@ -1,6 +1,8 @@
 package com.caminerin.guitartrainer.ui
 
+import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,10 +29,14 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -39,6 +45,136 @@ import androidx.compose.ui.unit.sp
 val SHARED_BG = Color(0xFF1A1A1A)
 val SHARED_TOOLBAR = Color(0xFF1E1E1E)
 val SHARED_ACCENT = Color(0xFF7B1FA2)
+
+// ===== COLOR PALETTE for degree/interval color picker =====
+val COLOR_PALETTE = listOf(
+    Color(0xFFE53935) to "Rojo",
+    Color(0xFF1E88E5) to "Azul",
+    Color(0xFF43A047) to "Verde",
+    Color(0xFF26A69A) to "Teal",
+    Color(0xFF7B1FA2) to "Morado",
+    Color(0xFFFF9800) to "Naranja",
+    Color(0xFFFFC107) to "Amarillo",
+    Color(0xFFEC407A) to "Rosa",
+    Color(0xFF00BCD4) to "Cian",
+    Color(0xFF8D6E63) to "Marr\u00f3n",
+)
+val COLOR_OFF = Color(0xFF78909C) // "Apagado"
+
+// ===== DEGREE/INTERVAL COLOR PREFERENCES =====
+object DegreeColorPrefs {
+    private const val PREFS = "guitar_prefs"
+
+    // Scale degree colors (keys: "scale_tonic", "scale_third", "scale_fifth", "scale_other")
+    var tonicColor by mutableStateOf(Color(0xFFE53935))
+        private set
+    var thirdColor by mutableStateOf(Color(0xFF1E88E5))
+        private set
+    var fifthColor by mutableStateOf(Color(0xFF43A047))
+        private set
+    var otherColor by mutableStateOf(Color(0xFF26A69A))
+        private set
+    var tonicEnabled by mutableStateOf(true)
+        private set
+    var thirdEnabled by mutableStateOf(true)
+        private set
+    var fifthEnabled by mutableStateOf(true)
+        private set
+    var otherEnabled by mutableStateOf(true)
+        private set
+
+    // Chord interval colors
+    var chordRootColor by mutableStateOf(Color(0xFFE53935))
+        private set
+    var chordThirdColor by mutableStateOf(Color(0xFF1E88E5))
+        private set
+    var chordFifthColor by mutableStateOf(Color(0xFF43A047))
+        private set
+    var chordOtherColor by mutableStateOf(Color(0xFF26A69A))
+        private set
+    var chordRootEnabled by mutableStateOf(true)
+        private set
+    var chordThirdEnabled by mutableStateOf(true)
+        private set
+    var chordFifthEnabled by mutableStateOf(true)
+        private set
+    var chordOtherEnabled by mutableStateOf(true)
+        private set
+
+    fun load(context: Context) {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        tonicColor = Color(p.getInt("scale_tonic_color", 0xFFE53935.toInt()))
+        thirdColor = Color(p.getInt("scale_third_color", 0xFF1E88E5.toInt()))
+        fifthColor = Color(p.getInt("scale_fifth_color", 0xFF43A047.toInt()))
+        otherColor = Color(p.getInt("scale_other_color", 0xFF26A69A.toInt()))
+        tonicEnabled = p.getBoolean("scale_tonic_on", true)
+        thirdEnabled = p.getBoolean("scale_third_on", true)
+        fifthEnabled = p.getBoolean("scale_fifth_on", true)
+        otherEnabled = p.getBoolean("scale_other_on", true)
+        chordRootColor = Color(p.getInt("chord_root_color", 0xFFE53935.toInt()))
+        chordThirdColor = Color(p.getInt("chord_third_color", 0xFF1E88E5.toInt()))
+        chordFifthColor = Color(p.getInt("chord_fifth_color", 0xFF43A047.toInt()))
+        chordOtherColor = Color(p.getInt("chord_other_color", 0xFF26A69A.toInt()))
+        chordRootEnabled = p.getBoolean("chord_root_on", true)
+        chordThirdEnabled = p.getBoolean("chord_third_on", true)
+        chordFifthEnabled = p.getBoolean("chord_fifth_on", true)
+        chordOtherEnabled = p.getBoolean("chord_other_on", true)
+    }
+
+    fun setScaleColor(degree: String, color: Color, enabled: Boolean, context: Context) {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        when (degree) {
+            "tonic" -> { tonicColor = color; tonicEnabled = enabled; p.putInt("scale_tonic_color", color.toArgb()); p.putBoolean("scale_tonic_on", enabled) }
+            "third" -> { thirdColor = color; thirdEnabled = enabled; p.putInt("scale_third_color", color.toArgb()); p.putBoolean("scale_third_on", enabled) }
+            "fifth" -> { fifthColor = color; fifthEnabled = enabled; p.putInt("scale_fifth_color", color.toArgb()); p.putBoolean("scale_fifth_on", enabled) }
+            "other" -> { otherColor = color; otherEnabled = enabled; p.putInt("scale_other_color", color.toArgb()); p.putBoolean("scale_other_on", enabled) }
+        }
+        p.apply()
+    }
+
+    fun setChordColor(interval: String, color: Color, enabled: Boolean, context: Context) {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        when (interval) {
+            "root" -> { chordRootColor = color; chordRootEnabled = enabled; p.putInt("chord_root_color", color.toArgb()); p.putBoolean("chord_root_on", enabled) }
+            "third" -> { chordThirdColor = color; chordThirdEnabled = enabled; p.putInt("chord_third_color", color.toArgb()); p.putBoolean("chord_third_on", enabled) }
+            "fifth" -> { chordFifthColor = color; chordFifthEnabled = enabled; p.putInt("chord_fifth_color", color.toArgb()); p.putBoolean("chord_fifth_on", enabled) }
+            "other" -> { chordOtherColor = color; chordOtherEnabled = enabled; p.putInt("chord_other_color", color.toArgb()); p.putBoolean("chord_other_on", enabled) }
+        }
+        p.apply()
+    }
+
+    fun getScaleColor(degree: Int): Color = when (degree) {
+        1 -> if (tonicEnabled) tonicColor else COLOR_OFF.copy(alpha = 0.35f)
+        3 -> if (thirdEnabled) thirdColor else COLOR_OFF.copy(alpha = 0.35f)
+        5 -> if (fifthEnabled) fifthColor else COLOR_OFF.copy(alpha = 0.35f)
+        else -> if (otherEnabled) otherColor else COLOR_OFF.copy(alpha = 0.35f)
+    }
+
+    fun isScaleEnabled(degree: Int): Boolean = when (degree) {
+        1 -> tonicEnabled; 3 -> thirdEnabled; 5 -> fifthEnabled; else -> otherEnabled
+    }
+
+    fun getChordColor(interval: String): Color {
+        val cat = when (interval) {
+            "1" -> "root"; "3", "b3" -> "third"; "5", "b5", "#5" -> "fifth"; else -> "other"
+        }
+        return when (cat) {
+            "root" -> if (chordRootEnabled) chordRootColor else COLOR_OFF.copy(alpha = 0.35f)
+            "third" -> if (chordThirdEnabled) chordThirdColor else COLOR_OFF.copy(alpha = 0.35f)
+            "fifth" -> if (chordFifthEnabled) chordFifthColor else COLOR_OFF.copy(alpha = 0.35f)
+            else -> if (chordOtherEnabled) chordOtherColor else COLOR_OFF.copy(alpha = 0.35f)
+        }
+    }
+
+    fun isChordEnabled(interval: String): Boolean {
+        return when (interval) {
+            "1" -> chordRootEnabled
+            "3", "b3" -> chordThirdEnabled
+            "5", "b5", "#5" -> chordFifthEnabled
+            else -> chordOtherEnabled
+        }
+    }
+}
 
 // ===== BPM SELECTOR OVERLAY =====
 @Composable
@@ -632,6 +768,122 @@ fun NoteDisplaySelectorOverlay(
                     Text(label, color = Color.White, fontSize = 16.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
                 }
                 Spacer(modifier = Modifier.height(6.dp))
+            }
+        }
+    }
+}
+
+// ===== DEGREE COLOR SELECTOR OVERLAY (Scale) =====
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ScaleColorSelectorOverlay(context: Context, onDismiss: () -> Unit) {
+    val degrees = listOf(
+        Triple("tonic", "T\u00f3nica (1\u00aa)", DegreeColorPrefs.tonicColor to DegreeColorPrefs.tonicEnabled),
+        Triple("third", "Tercera (3\u00aa)", DegreeColorPrefs.thirdColor to DegreeColorPrefs.thirdEnabled),
+        Triple("fifth", "Quinta (5\u00aa)", DegreeColorPrefs.fifthColor to DegreeColorPrefs.fifthEnabled),
+        Triple("other", "Otras notas", DegreeColorPrefs.otherColor to DegreeColorPrefs.otherEnabled),
+    )
+    ColorSelectorOverlayBody(
+        title = "Colores por grado",
+        items = degrees,
+        onColorChange = { key, color, enabled -> DegreeColorPrefs.setScaleColor(key, color, enabled, context) },
+        onDismiss = onDismiss
+    )
+}
+
+// ===== INTERVAL COLOR SELECTOR OVERLAY (Chord) =====
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ChordColorSelectorOverlay(context: Context, onDismiss: () -> Unit) {
+    val intervals = listOf(
+        Triple("root", "Fundamental (1\u00aa)", DegreeColorPrefs.chordRootColor to DegreeColorPrefs.chordRootEnabled),
+        Triple("third", "Tercera (3\u00aa)", DegreeColorPrefs.chordThirdColor to DegreeColorPrefs.chordThirdEnabled),
+        Triple("fifth", "Quinta (5\u00aa)", DegreeColorPrefs.chordFifthColor to DegreeColorPrefs.chordFifthEnabled),
+        Triple("other", "Otras notas", DegreeColorPrefs.chordOtherColor to DegreeColorPrefs.chordOtherEnabled),
+    )
+    ColorSelectorOverlayBody(
+        title = "Colores por intervalo",
+        items = intervals,
+        onColorChange = { key, color, enabled -> DegreeColorPrefs.setChordColor(key, color, enabled, context) },
+        onDismiss = onDismiss
+    )
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ColorSelectorOverlayBody(
+    title: String,
+    items: List<Triple<String, String, Pair<Color, Boolean>>>,
+    onColorChange: (String, Color, Boolean) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF2A2A2A))
+                .clickable(enabled = false) {}
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            items.forEach { (key, label, state) ->
+                val (currentColor, isEnabled) = state
+                Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(6.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    COLOR_PALETTE.forEach { (color, _) ->
+                        val selected = isEnabled && currentColor == color
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .then(
+                                    if (selected) Modifier.border(3.dp, Color.White, CircleShape)
+                                    else Modifier
+                                )
+                                .clickable { onColorChange(key, color, true) }
+                        )
+                    }
+                    // "Apagado" option
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (!isEnabled) Color.White.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.06f))
+                            .then(
+                                if (!isEnabled) Modifier.border(2.dp, Color.White, RoundedCornerShape(8.dp))
+                                else Modifier
+                            )
+                            .clickable { onColorChange(key, currentColor, false) }
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    ) {
+                        Text("Apagado", color = if (!isEnabled) Color.White else Color.White.copy(alpha = 0.4f),
+                            fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
             }
         }
     }
