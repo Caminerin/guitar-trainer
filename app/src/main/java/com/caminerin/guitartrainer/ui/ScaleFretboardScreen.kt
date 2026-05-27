@@ -93,6 +93,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
     var showScaleSelector by remember { mutableStateOf(false) }
     var showDisplaySelector by remember { mutableStateOf(false) }
     var showColorSelector by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
 
     // State for chromatic circle overlay on key selection
     var showChromaticCircle by remember { mutableStateOf(false) }
@@ -163,6 +164,11 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Text("Colores", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // Info button
+            IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Default.Info, "Info", tint = Color(0xFF90A4AE), modifier = Modifier.size(20.dp))
             }
 
             // Position toggle + CAGED bar
@@ -297,6 +303,14 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
         ScaleColorSelectorOverlay(
             context = context,
             onDismiss = { showColorSelector = false }
+        )
+    }
+
+    if (showInfo) {
+        ScaleInfoSheet(
+            rootNote = selectedKey,
+            scale = scale,
+            onDismiss = { showInfo = false }
         )
     }
 }
