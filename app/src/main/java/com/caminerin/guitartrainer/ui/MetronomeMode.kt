@@ -167,8 +167,8 @@ fun MetronomeMode(
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "$bpm", fontSize = 42.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground)
-                        Text("BPM", fontSize = 11.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                        Text(text = "$bpm", fontSize = 42.sp, fontWeight = FontWeight.Black, color = Color.White)
+                        Text("BPM", fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
                     }
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -281,9 +281,9 @@ fun MetronomeMode(
                     text = "$bpm",
                     fontSize = 52.sp,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = Color.White
                 )
-                Text("BPM", fontSize = 11.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                Text("BPM", fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
             }
         }
 
