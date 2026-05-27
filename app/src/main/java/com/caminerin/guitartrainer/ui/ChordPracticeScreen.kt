@@ -143,7 +143,8 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         val subMs = beatMs / m.subdivisions.size.coerceAtLeast(1)
                         slot.chordId?.let { id ->
                             val chord = ChordRepository.getChords().firstOrNull { it.id == id }
-                            chord?.let { ChordSynth.playChord(it.frets, subMs.toInt().coerceAtLeast(300)) }
+                            // Extra 200ms so the chord is still ringing when the next one arrives — enables crossfade overlap
+                            chord?.let { ChordSynth.playChord(it.frets, (subMs.toInt() + 200).coerceAtLeast(400)) }
                         }
                         tickPlayer.tick()
                         delay(subMs.coerceAtLeast(50L))
