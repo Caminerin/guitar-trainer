@@ -107,6 +107,8 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
     val errorFlash = remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var correctCount by remember { mutableIntStateOf(0) }
     var errorCount by remember { mutableIntStateOf(0) }
+    var feedbackText by remember { mutableStateOf("") }
+    var feedbackIsCorrect by remember { mutableStateOf(true) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
     val density = LocalDensity.current
@@ -130,6 +132,13 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
         LaunchedEffect(currentError) {
             delay(400)
             errorFlash.value = null
+        }
+    }
+
+    if (feedbackText.isNotEmpty()) {
+        LaunchedEffect(feedbackText) {
+            delay(3500)
+            feedbackText = ""
         }
     }
 
@@ -160,7 +169,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                         .clickable { showKeyCircle = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Scale selector -> overlay
@@ -187,7 +196,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
 
                 // Reset button
                 IconButton(
-                    onClick = { revealedNotes.clear(); correctCount = 0; errorCount = 0 },
+                    onClick = { revealedNotes.clear(); correctCount = 0; errorCount = 0; feedbackText = "" },
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(Icons.Default.Refresh, "Reset", tint = Color.White, modifier = Modifier.size(20.dp))
@@ -259,12 +268,22 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                                 if (closestTarget != null) {
                                     val key = closestTarget.string to closestTarget.fret
                                     if (revealedNotes.contains(key)) return@detectTapGestures
+                                    val tappedNoteName = getSpanishNoteName(closestTarget.noteIndex, selectedKey, scale.relativeMajorOffset)
                                     if (closestTarget.isInScale) {
                                         revealedNotes.add(key)
                                         correctCount++
+                                        val degree = getDegreeInScale(closestTarget.noteIndex, selectedKey, scale.intervals)
+                                        val degreeLabel = if (degree != null) getDegreeLabel(degree) else ""
+                                        feedbackText = "$tappedNoteName = grado $degreeLabel de la escala"
+                                        feedbackIsCorrect = true
                                     } else {
                                         errorCount++
                                         errorFlash.value = closestTarget.cx to closestTarget.cy
+                                        val scaleNotes = scale.intervals.map { interval ->
+                                            getSpanishNoteName((selectedKey + interval) % 12, selectedKey, scale.relativeMajorOffset)
+                                        }.joinToString(", ")
+                                        feedbackText = "$tappedNoteName no pertenece a la escala. Notas correctas: $scaleNotes"
+                                        feedbackIsCorrect = false
                                     }
                                 }
                             }
@@ -286,6 +305,28 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
             }
         }
 
+        // Feedback banner
+        if (feedbackText.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        if (feedbackIsCorrect) Color(0xFF2E7D32).copy(alpha = 0.95f)
+                        else Color(0xFFC62828).copy(alpha = 0.95f)
+                    )
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Text(
+                    feedbackText,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
         // Overlays
         if (showKeyCircle) {
             ChromaticCircleOverlay(
@@ -294,9 +335,10 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                 scaleIntervals = scale.intervals,
                 onNoteSelected = {
                     selectedKey = it; showKeyCircle = false
-                    revealedNotes.clear(); correctCount = 0; errorCount = 0
+                    revealedNotes.clear(); correctCount = 0; errorCount = 0; feedbackText = ""
                 },
-                onDismiss = { showKeyCircle = false }
+                onDismiss = { showKeyCircle = false },
+                relativeMajorOffset = scale.relativeMajorOffset
             )
         }
         if (showScaleSelector) {
@@ -304,7 +346,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                 currentIndex = selectedScaleIndex,
                 onSelected = {
                     selectedScaleIndex = it; showScaleSelector = false
-                    revealedNotes.clear(); correctCount = 0; errorCount = 0
+                    revealedNotes.clear(); correctCount = 0; errorCount = 0; feedbackText = ""
                 },
                 onDismiss = { showScaleSelector = false }
             )
@@ -323,7 +365,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                 maxFret = maxFret,
                 onFretChange = { f ->
                     maxFret = f
-                    revealedNotes.clear(); correctCount = 0; errorCount = 0
+                    revealedNotes.clear(); correctCount = 0; errorCount = 0; feedbackText = ""
                 },
                 onDismiss = { showFretSelector = false }
             )
@@ -448,7 +490,7 @@ private fun DrawScope.drawQuizFretboard(
                 drawCircle(Color(0x55000000), noteRadius + 3f, Offset(cx + 1.5f, y + 2f))
                 drawCircle(noteColor, noteRadius, Offset(cx, y))
                 drawCircle(Color(0x44000000), noteRadius, Offset(cx, y), style = Stroke(2f))
-                val label = getSpanishNoteName(noteIdx, rootNote)
+                val label = getSpanishNoteName(noteIdx, rootNote, scale.relativeMajorOffset)
                 drawContext.canvas.nativeCanvas.drawText(label, cx, y + notePaint.textSize * 0.35f, notePaint)
             } else {
                 if (fret <= maxFret && fret > 0) {

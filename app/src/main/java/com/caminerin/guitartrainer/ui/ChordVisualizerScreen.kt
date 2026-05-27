@@ -72,7 +72,25 @@ private val QUALITY_COLORS = mapOf(
     "sus4" to Color(0xFFAB47BC),
     "diminished" to Color(0xFF78909C),
     "diminished7" to Color(0xFF546E7A),
-    "half_diminished7" to Color(0xFF455A64)
+    "half_diminished7" to Color(0xFF455A64),
+    "augmented" to Color(0xFFD81B60),
+    "add9" to Color(0xFF1565C0),
+    "dominant9" to Color(0xFFEF6C00),
+    "maj9" to Color(0xFF2E7D32),
+    "minor9" to Color(0xFF00838F),
+    "minor_major7" to Color(0xFFC62828),
+    "minor_major9" to Color(0xFFAD1457),
+    "sixth" to Color(0xFF6A1B9A),
+    "six_nine" to Color(0xFF4A148C),
+    "minor6" to Color(0xFF880E4F),
+    "minor_six_nine" to Color(0xFF4E342E),
+    "power5" to Color(0xFF37474F),
+    "dominant7sus4" to Color(0xFFE65100),
+    "nine_sus4" to Color(0xFFBF360C),
+    "minor_add9" to Color(0xFF00695C),
+    "minor11" to Color(0xFF004D40),
+    "minor13" to Color(0xFF006064),
+    "minor7_flat9" to Color(0xFF3E2723)
 )
 
 private val LEVEL_COLORS = mapOf(
@@ -669,16 +687,23 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
         drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], fbRight + 8f, y + 12f, openStringPaint)
     }
 
-    // Notes annotation at bottom
-    val notesParts = chord.notesSharp.split(" ").filter { it != "None" }
-    if (notesParts.isNotEmpty()) {
+    // Notes annotation at bottom (context-aware: use flats when appropriate)
+    val chordNoteNames = mutableListOf<String>()
+    for (s in 0 until 6) {
+        val fretVal = frets.getOrNull(s)
+        if (fretVal != null) {
+            val noteIdx = (STANDARD_TUNING_MIDI[s] + fretVal) % 12
+            chordNoteNames.add(getNoteName(noteIdx, rootNoteIdx))
+        }
+    }
+    if (chordNoteNames.isNotEmpty()) {
         val notePaint = android.graphics.Paint().apply {
             color = android.graphics.Color.argb(180, 200, 200, 200)
             textSize = 36f
             textAlign = android.graphics.Paint.Align.CENTER
             isAntiAlias = true
         }
-        val notesText = notesParts.joinToString(" - ")
+        val notesText = chordNoteNames.joinToString(" - ")
         drawContext.canvas.nativeCanvas.drawText(notesText, w / 2f, h - bottomPad * 0.15f, notePaint)
     }
 

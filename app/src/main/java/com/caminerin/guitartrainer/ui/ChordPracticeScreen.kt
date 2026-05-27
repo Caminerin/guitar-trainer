@@ -89,6 +89,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
 
     var modeKey by rememberSaveable { mutableStateOf(true) } // true = by tonality, false = free
     var selectedKey by rememberSaveable { mutableIntStateOf(0) }
+    var selectedScaleName by rememberSaveable { mutableStateOf("Mayor (Jónica)") }
     var bpm by rememberSaveable { mutableIntStateOf(60) }
     var measureCount by rememberSaveable { mutableIntStateOf(4) }
 
@@ -104,6 +105,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     }
 
     var showKeyCircle by remember { mutableStateOf(false) }
+    var showScaleSelector by remember { mutableStateOf(false) }
     var showChordPicker by remember { mutableStateOf<Pair<Int, Int>?>(null) } // measureIdx, subIdx
     var showSongPicker by remember { mutableStateOf(false) }
     var currentSong by remember { mutableStateOf<Song?>(null) }
@@ -141,12 +143,13 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         currentMeasure = mi
                         currentSub = si
                         val beatMs = 60000L / bpmState.value
-                        val subMs = beatMs // each subdivision = one full beat
+                        val beatsPerMeasure = 4L
+                        val measureMs = beatMs * beatsPerMeasure
+                        val subMs = measureMs / m.subdivisions.size.coerceAtLeast(1)
                         if (slot.strumDirection != "-") {
                             slot.chordId?.let { id ->
                                 val chord = ChordRepository.getChords().firstOrNull { it.id == id }
                                 val isUpStrum = slot.strumDirection == "U"
-                                // Generate chord long enough to ring through any silent subdivisions that follow
                                 val remainingSlots = m.subdivisions.size - si
                                 val durationMs = (subMs * remainingSlots + 200).toInt().coerceAtLeast(400)
                                 chord?.let { ChordSynth.playChord(it.frets, durationMs, isUpStrum) }
@@ -164,18 +167,20 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
         }
     }
 
-    // Filter chords by tonality if needed
-    val availableChords = remember(modeKey, selectedKey) {
+    // Filter chords by tonality if needed — match root AND quality (diatonic harmony)
+    val availableChords = remember(modeKey, selectedKey, selectedScaleName) {
         if (modeKey) {
-            val scaleChords = ScaleChordRepository.getChordsForScale("Mayor (J\u00f3nica)", selectedKey)
-            if (scaleChords.isNotEmpty()) {
-                val allowedRoots = scaleChords.map { AMERICAN_NOTE_NAMES[it.rootSemitone] }.distinct()
-                ChordRepository.getChords().filter { it.root in allowedRoots }
-            } else {
-                val majorScale = ALL_SCALES.firstOrNull { it.name.contains("Mayor (J\u00f3nica)") } ?: ALL_SCALES.first()
-                val allowedRoots = majorScale.intervals.map { (selectedKey + it) % 12 }
-                    .map { AMERICAN_NOTE_NAMES[it] }
-                ChordRepository.getChords().filter { it.root in allowedRoots }
+            val offset = getRelativeMajorOffset(selectedScaleName)
+            val scaleChords = ScaleChordRepository.getChordsForScale(selectedScaleName, selectedKey, offset)
+            val allowedKeys = scaleChords.map { sc ->
+                sc.rootSemitone to normalizeScaleQuality(sc.quality)
+            }.toSet()
+            ChordRepository.getChords().filter { chord ->
+                val chordRootSemitone = AMERICAN_NOTE_NAMES.indexOf(chord.root)
+                val chordQualityNorm = normalizeChordQuality(chord.qualityLabel)
+                allowedKeys.any { (rootSt, qualNorm) ->
+                    rootSt == chordRootSemitone && qualNorm == chordQualityNorm
+                }
             }
         } else {
             ChordRepository.getChords()
@@ -219,6 +224,18 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Scale selector
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
+                            .clickable { showScaleSelector = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        val shortName = selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
+                        Text(shortName, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -370,6 +387,48 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 onNoteSelected = { selectedKey = it; showKeyCircle = false },
                 onDismiss = { showKeyCircle = false }
             )
+        }
+
+        // Scale selector overlay
+        if (showScaleSelector) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable { showScaleSelector = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF2A2A2A))
+                        .clickable(enabled = false) {}
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Escala", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val scaleNames = ScaleChordRepository.getAvailableScaleNames()
+                    scaleNames.forEach { name ->
+                        val isSelected = name == selectedScaleName ||
+                            name.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u") ==
+                            selectedScaleName.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) CP_PRIMARY.copy(alpha = 0.5f) else Color.Transparent)
+                                .clickable { selectedScaleName = name; showScaleSelector = false }
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            Text(name, color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+                                fontSize = 15.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            }
         }
 
         // Chord picker overlay
@@ -617,7 +676,7 @@ private fun ChordPickerOverlay(
     onDismiss: () -> Unit
 ) {
     var selectedQuality by remember { mutableStateOf<String?>(null) }
-    var selectedLevel by remember { mutableStateOf<String?>(null) }
+    var selectedLevel by remember { mutableStateOf<String?>(ChordLevel.BEGINNER.csvValue) }
 
     val filtered = chords.filter { chord ->
         (selectedQuality == null || chord.quality == selectedQuality) &&
@@ -847,4 +906,38 @@ private fun DrawScope.drawSmallChord(chord: ChordShape) {
         isAntiAlias = true
     }
     drawContext.canvas.nativeCanvas.drawText(chord.displayName, w / 2f, fbTop - 4f, namePaint)
+}
+
+private fun normalizeScaleQuality(quality: String): String {
+    return when (quality.trim()) {
+        "" -> "major"
+        "m" -> "minor"
+        "dim" -> "dim"
+        "aug" -> "aug"
+        "7" -> "7"
+        "m7" -> "m7"
+        "maj7" -> "maj7"
+        "m7b5" -> "m7b5"
+        "dim7" -> "dim7"
+        "mMaj7" -> "mMaj7"
+        else -> quality.trim().lowercase()
+    }
+}
+
+private fun normalizeChordQuality(qualityLabel: String): String {
+    return when (qualityLabel.trim()) {
+        "major" -> "major"
+        "minor" -> "minor"
+        "dominant7" -> "7"
+        "diminished" -> "dim"
+        "augmented" -> "aug"
+        "7", "dom7" -> "7"
+        "maj7" -> "maj7"
+        "m7" -> "m7"
+        "m7b5", "half_diminished7" -> "m7b5"
+        "dim7", "diminished7" -> "dim7"
+        "sus2" -> "sus2"
+        "sus4" -> "sus4"
+        else -> qualityLabel.trim().lowercase()
+    }
 }

@@ -52,9 +52,9 @@ fun ScaleInfoSheet(
     val context = androidx.compose.ui.platform.LocalContext.current
     androidx.compose.runtime.LaunchedEffect(Unit) { ScaleChordRepository.load(context) }
 
-    val csvChords = ScaleChordRepository.getChordsForScale(scale.name, rootNote)
-    val chords = getScaleChords(rootNote, scale.intervals)
-    val rootName = SPANISH_CHROMATIC_NAMES[rootNote]
+    val csvChords = ScaleChordRepository.getChordsForScale(scale.name, rootNote, scale.relativeMajorOffset)
+    val chords = getScaleChords(rootNote, scale.intervals, scale.relativeMajorOffset)
+    val rootName = getSpanishChromaticNames(rootNote, scale.relativeMajorOffset)[rootNote]
 
     Box(
         modifier = Modifier
@@ -218,15 +218,17 @@ fun ScaleInfoSheet(
                 Spacer(modifier = Modifier.height(6.dp))
                 chords.forEach { chord ->
                     val colorIdx = (chord.degree - 1).coerceIn(0, DEGREE_COLORS.size - 1)
-                    val degreeRoman = when (chord.degree) {
-                        1 -> "I"; 2 -> "II"; 3 -> "III"; 4 -> "IV"
-                        5 -> "V"; 6 -> "VI"; 7 -> "VII"; else -> "${chord.degree}"
-                    }
-                    val displayDegree = when (chord.chordType) {
-                        "menor" -> degreeRoman.lowercase()
-                        "dim" -> degreeRoman.lowercase() + "\u00b0"
-                        "aug" -> degreeRoman + "+"
-                        else -> degreeRoman
+                    val displayDegree = chord.romanDegree.ifEmpty {
+                        val base = when (chord.degree) {
+                            1 -> "I"; 2 -> "II"; 3 -> "III"; 4 -> "IV"
+                            5 -> "V"; 6 -> "VI"; 7 -> "VII"; else -> "${chord.degree}"
+                        }
+                        when (chord.chordType) {
+                            "menor" -> base.lowercase()
+                            "dim" -> base.lowercase() + "\u00b0"
+                            "aug" -> base + "+"
+                            else -> base
+                        }
                     }
                     Row(
                         modifier = Modifier.fillMaxWidth()

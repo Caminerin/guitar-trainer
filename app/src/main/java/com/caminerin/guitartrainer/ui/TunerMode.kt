@@ -69,12 +69,38 @@ fun TunerMode(
     var tuningMenuExpanded by remember { mutableStateOf(false) }
 
     val currentTuning = ALL_TUNINGS[selectedTuningIndex]
-    val activeString = resolveActiveString(
-        isAutoMode = isAutoMode,
-        selectedStringIndex = selectedStringIndex,
-        tuningStrings = currentTuning.strings,
-        pitchResult = pitchResult
-    )
+
+    // Stabilized auto-detection: require consistent candidate for multiple frames
+    var autoCandidate by remember { mutableStateOf<GuitarString?>(null) }
+    var autoCandidateCount by remember { mutableIntStateOf(0) }
+    var confirmedAutoString by remember { mutableStateOf<GuitarString?>(null) }
+    val stabilityThreshold = 3
+
+    val activeString = if (!isAutoMode) {
+        selectedStringIndex?.let { currentTuning.strings.getOrNull(it) }
+    } else if (pitchResult == null) {
+        null
+    } else {
+        val candidate = currentTuning.strings.minByOrNull {
+            abs(centsFromTarget(pitchResult.frequency, it.frequency))
+        }
+        val candidateCents = if (candidate != null) abs(centsFromTarget(pitchResult.frequency, candidate.frequency)) else 999f
+        if (candidateCents > 150f) {
+            autoCandidate = null
+            autoCandidateCount = 0
+            confirmedAutoString
+        } else if (candidate != null && candidate.number == autoCandidate?.number) {
+            autoCandidateCount++
+            if (autoCandidateCount >= stabilityThreshold) {
+                confirmedAutoString = candidate
+            }
+            confirmedAutoString
+        } else {
+            autoCandidate = candidate
+            autoCandidateCount = 1
+            confirmedAutoString
+        }
+    }
 
     val centsFromTarget = if (activeString != null && pitchResult != null) {
         centsFromTarget(pitchResult.frequency, activeString.frequency)

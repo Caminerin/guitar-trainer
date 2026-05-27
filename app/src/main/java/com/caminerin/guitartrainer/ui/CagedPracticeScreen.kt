@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.caminerin.guitartrainer.audio.PitchDetector
 import com.caminerin.guitartrainer.audio.TickPlayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
@@ -87,7 +88,7 @@ private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 
 
 @Composable
-fun CagedPracticeScreen(onBack: () -> Unit) {
+fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? = null) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var selectedKey by rememberSaveable { mutableIntStateOf(0) }
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -99,6 +100,11 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
     var isPlaying by remember { mutableStateOf(false) }
     var isPaused by remember { mutableStateOf(false) }
     var zoom by remember { mutableFloatStateOf(1.5f) }
+    var guitarMode by rememberSaveable { mutableStateOf(false) }
+    var evalFeedback by remember { mutableStateOf<String?>(null) }
+    var evalFeedbackColor by remember { mutableStateOf(Color.Transparent) }
+    var correctCount by remember { mutableIntStateOf(0) }
+    var wrongCount by remember { mutableIntStateOf(0) }
 
     var showKeyCircle by remember { mutableStateOf(false) }
     var showScaleSelector by remember { mutableStateOf(false) }
@@ -130,13 +136,15 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
     val currentSubdivision by rememberUpdatedState(subdivision)
     val currentPositions by rememberUpdatedState(positions)
 
+    val currentGuitarMode by rememberUpdatedState(guitarMode)
+
     // Audio-driven BPM loop: playBeat blocks for exactly one beat duration
     LaunchedEffect(isPlaying, isPaused) {
         if (!isPlaying || isPaused) return@LaunchedEffect
+        if (currentGuitarMode) return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            while (isActive && isPlaying && !isPaused) {
+            while (isActive && isPlaying && !isPaused && !currentGuitarMode) {
                 tickPlayer.playBeat(currentBpm, currentSubdivision)
-                // Advance note on main thread
                 withContext(Dispatchers.Main) {
                     val seq = getPositionNoteSequence(
                         selectedKey, scale.intervals,
@@ -152,6 +160,40 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                     }
                 }
             }
+        }
+    }
+
+    // Guitar evaluation mode: detect pitch and compare to expected note
+    LaunchedEffect(isPlaying, isPaused, guitarMode, pitchResult) {
+        if (!isPlaying || isPaused || !guitarMode) return@LaunchedEffect
+        val pr = pitchResult ?: return@LaunchedEffect
+        if (pr.confidence < 0.7f || pr.frequency <= 0f) return@LaunchedEffect
+        val detectedNote = pr.noteIndex % 12
+        val expected = currentNote?.noteIndex ?: return@LaunchedEffect
+        if (detectedNote == expected) {
+            correctCount++
+            evalFeedback = "✓"
+            evalFeedbackColor = Color(0xFF4CAF50)
+            val seq = getPositionNoteSequence(
+                selectedKey, scale.intervals,
+                positions.getOrElse(currentPositionIndex) { positions.first() }
+            )
+            val nextIdx = currentNoteIndex + 1
+            if (nextIdx >= seq.size) {
+                val nextPos = (currentPositionIndex + 1) % positions.size
+                currentPositionIndex = nextPos
+                currentNoteIndex = 0
+            } else {
+                currentNoteIndex = nextIdx
+            }
+        }
+    }
+
+    // Clear eval feedback after a short delay
+    LaunchedEffect(evalFeedback) {
+        if (evalFeedback != null) {
+            kotlinx.coroutines.delay(400L)
+            evalFeedback = null
         }
     }
 
@@ -182,7 +224,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                         .clickable { showKeyCircle = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Scale selector -> overlay
@@ -282,7 +324,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                     Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
-                // CAGED toggle
+                // Positions toggle
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
@@ -290,18 +332,73 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                         .clickable { positionsEnabled = !positionsEnabled }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text("CAGED", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Posiciones", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
-                if (positionsEnabled && positions.isNotEmpty()) {
+                // Guitar evaluation toggle
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (guitarMode) Color(0xFF4CAF50).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
+                        .clickable {
+                            guitarMode = !guitarMode
+                            if (!guitarMode) { evalFeedback = null; correctCount = 0; wrongCount = 0 }
+                        }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("\uD83C\uDFB8", fontSize = 14.sp)
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+            }
+
+            // Position bar (separate row)
+            if (positionsEnabled && positions.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(COLOR_TOOLBAR)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     CagedPositionBar(
                         positions = positions,
                         currentIndex = currentPositionIndex,
                         onSelect = { currentPositionIndex = it; currentNoteIndex = 0 }
                     )
                 }
+            }
 
-                Spacer(modifier = Modifier.weight(1f))
+            // Guitar evaluation status bar
+            if (guitarMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF263238))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "\uD83C\uDFB8 Toca la nota resaltada",
+                        color = Color(0xFF80CBC4), fontSize = 12.sp, fontWeight = FontWeight.Bold
+                    )
+                    if (correctCount > 0 || wrongCount > 0) {
+                        Text(
+                            "\u2714 $correctCount",
+                            color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.Bold
+                        )
+                    }
+                    if (evalFeedback != null) {
+                        Text(
+                            evalFeedback ?: "",
+                            color = evalFeedbackColor,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
 
             // Fretboard
@@ -366,7 +463,8 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                     selectedKey = it; showKeyCircle = false
                     currentNoteIndex = 0; currentPositionIndex = 0
                 },
-                onDismiss = { showKeyCircle = false }
+                onDismiss = { showKeyCircle = false },
+                relativeMajorOffset = scale.relativeMajorOffset
             )
         }
         if (showScaleSelector) {
@@ -534,7 +632,7 @@ private fun DrawScope.drawCagedFretboard(
             if (positionsEnabled && !isInPos) {
                 val dimR = noteRadius * 0.65f
                 drawCircle(COLOR_DIM.copy(alpha = 0.35f), dimR, Offset(cx, y))
-                val lbl = getSpanishNoteName(noteIdx, rootNote)
+                val lbl = getSpanishNoteName(noteIdx, rootNote, scale.relativeMajorOffset)
                 notePaintDim.color = android.graphics.Color.argb(100, 255, 255, 255)
                 drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + 10f, notePaintDim)
                 continue
@@ -557,7 +655,7 @@ private fun DrawScope.drawCagedFretboard(
 
             if (isFiltered) {
                 val degreeStr = getDegreeLabel(degree)
-                val noteName = getSpanishNoteName(noteIdx, rootNote)
+                val noteName = getSpanishNoteName(noteIdx, rootNote, scale.relativeMajorOffset)
                 val label = "$degreeStr $noteName"
                 val paint = if (label.length > 3) notePaint else notePaintBig
                 paint.color = if (isCurrentNote) android.graphics.Color.WHITE

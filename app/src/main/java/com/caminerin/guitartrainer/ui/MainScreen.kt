@@ -115,7 +115,7 @@ fun MainScreen(
             return
         }
         FullscreenMode.CAGED -> {
-            if (isLandscape) CagedPracticeScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            if (isLandscape) CagedPracticeScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name }, pitchResult = pitchResult)
             else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
             return
         }

@@ -2,23 +2,29 @@ package com.caminerin.guitartrainer.ui
 
 data class NoteInfo(
     val name: String,
-    val spanishName: String
+    val spanishName: String,
+    val altName: String = name,
+    val altSpanishName: String = spanishName,
+    val noteIndex: Int = 0
 )
 
 val ALL_NOTES = listOf(
-    NoteInfo("C", "Do"),
-    NoteInfo("C#", "Do#"),
-    NoteInfo("D", "Re"),
-    NoteInfo("D#", "Re#"),
-    NoteInfo("E", "Mi"),
-    NoteInfo("F", "Fa"),
-    NoteInfo("F#", "Fa#"),
-    NoteInfo("G", "Sol"),
-    NoteInfo("G#", "Sol#"),
-    NoteInfo("A", "La"),
-    NoteInfo("A#", "La#"),
-    NoteInfo("B", "Si"),
+    NoteInfo("C", "Do", noteIndex = 0),
+    NoteInfo("C#", "Do#", altName = "Db", altSpanishName = "Reb", noteIndex = 1),
+    NoteInfo("D", "Re", noteIndex = 2),
+    NoteInfo("D#", "Re#", altName = "Eb", altSpanishName = "Mib", noteIndex = 3),
+    NoteInfo("E", "Mi", noteIndex = 4),
+    NoteInfo("F", "Fa", noteIndex = 5),
+    NoteInfo("F#", "Fa#", altName = "Gb", altSpanishName = "Solb", noteIndex = 6),
+    NoteInfo("G", "Sol", noteIndex = 7),
+    NoteInfo("G#", "Sol#", altName = "Ab", altSpanishName = "Lab", noteIndex = 8),
+    NoteInfo("A", "La", noteIndex = 9),
+    NoteInfo("A#", "La#", altName = "Bb", altSpanishName = "Sib", noteIndex = 10),
+    NoteInfo("B", "Si", noteIndex = 11),
 )
+
+fun findNoteByIndex(noteIndex: Int): NoteInfo =
+    ALL_NOTES.find { it.noteIndex == noteIndex } ?: ALL_NOTES[0]
 
 data class GuitarString(
     val number: Int,

@@ -36,6 +36,24 @@ data class ChordShape(
                 "sus2" -> "sus2"
                 "sus4" -> "sus4"
                 "m7b5" -> "m7b5"
+                "aug" -> "aug"
+                "add9" -> "add9"
+                "9" -> "9"
+                "maj9" -> "maj9"
+                "m9" -> "m9"
+                "mMaj7" -> "mMaj7"
+                "mMaj9" -> "mMaj9"
+                "6" -> "6"
+                "6/9" -> "6/9"
+                "m6" -> "m6"
+                "m6/9" -> "m6/9"
+                "5" -> "5"
+                "7sus4" -> "7sus4"
+                "9sus4" -> "9sus4"
+                "madd9" -> "madd9"
+                "m11" -> "m11"
+                "m13" -> "m13"
+                "m7b9" -> "m7b9"
                 else -> qualityLabel
             }
             return "$rootDisplay$qualDisplay"
@@ -93,7 +111,25 @@ enum class ChordQuality(val displayName: String, val csvValue: String) {
     SUS4("Sus4", "sus4"),
     DIMINISHED("Dim", "diminished"),
     DIMINISHED7("Dim7", "diminished7"),
-    HALF_DIM7("m7b5", "half_diminished7")
+    HALF_DIM7("m7b5", "half_diminished7"),
+    AUGMENTED("Aug", "augmented"),
+    ADD9("add9", "add9"),
+    DOMINANT9("9\u00aa", "dominant9"),
+    MAJ9("Maj9", "maj9"),
+    MINOR9("m9", "minor9"),
+    MINOR_MAJOR7("mMaj7", "minor_major7"),
+    MINOR_MAJOR9("mMaj9", "minor_major9"),
+    SIXTH("6\u00aa", "sixth"),
+    SIX_NINE("6/9", "six_nine"),
+    MINOR6("m6", "minor6"),
+    MINOR_SIX_NINE("m6/9", "minor_six_nine"),
+    POWER5("5 (Power)", "power5"),
+    DOM7SUS4("7sus4", "dominant7sus4"),
+    NINE_SUS4("9sus4", "nine_sus4"),
+    MINOR_ADD9("madd9", "minor_add9"),
+    MINOR11("m11", "minor11"),
+    MINOR13("m13", "minor13"),
+    MINOR7_FLAT9("m7b9", "minor7_flat9")
 }
 
 object ChordRepository {
@@ -158,9 +194,10 @@ object ChordRepository {
             val maxFret = parts[14].toIntOrNull() ?: 0
 
             val fingeringStr = if (parts.size > 19) parts[19] else ""
-            val fingeringList = if (fingeringStr.isNotBlank()) {
+            val fingeringRaw = if (fingeringStr.isNotBlank()) {
                 fingeringStr.split("-").map { it.trim() }
             } else emptyList()
+            val fingeringList = validateFingering(fingeringRaw, frets)
 
             return ChordShape(
                 id = parts[0],
@@ -182,6 +219,21 @@ object ChordRepository {
         } catch (_: Exception) {
             return null
         }
+    }
+
+    private fun validateFingering(fingering: List<String>, frets: List<Int?>): List<String> {
+        if (fingering.isEmpty()) return emptyList()
+        if (fingering.size != 6) return emptyList()
+        for (i in 0 until 6) {
+            val fret = frets.getOrNull(i)
+            val finger = fingering[i]
+            when {
+                fret == null && finger != "x" -> return emptyList()
+                fret == 0 && finger != "0" && finger != "x" -> return emptyList()
+                fret != null && fret > 0 && finger !in listOf("1", "2", "3", "4", "T") -> return emptyList()
+            }
+        }
+        return fingering
     }
 
     private fun smartSplit(line: String): List<String> {
