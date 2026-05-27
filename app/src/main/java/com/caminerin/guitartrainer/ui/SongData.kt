@@ -102,6 +102,15 @@ object SongRepository {
         return parts.getOrElse(idx) { "" }.trim()
     }
 
+    private val KEY_REGEX = Regex("^[A-G][#b]?m?$")
+
+    private fun normalizeKey(raw: String): String {
+        val trimmed = raw.trim()
+        if (KEY_REGEX.matches(trimmed)) return trimmed
+        val match = Regex("[A-G][#b]?m?").find(trimmed)
+        return match?.value ?: trimmed
+    }
+
     private fun parseSongLine(line: String): Song? {
         try {
             val parts = smartSplit(line)
@@ -116,7 +125,8 @@ object SongRepository {
             val bpmStart = col(parts, "bpm_practica_inicio").toIntOrNull() ?: 60
             val bpmTarget = col(parts, "bpm_practica_objetivo").toIntOrNull() ?: 80
             val meter = col(parts, "metro_adaptado")
-            val key = col(parts, "tonalidad_sugerida")
+            val rawKey = col(parts, "tonalidad_sugerida")
+            val key = normalizeKey(rawKey)
             val capo = col(parts, "capo_traste").toIntOrNull() ?: 0
             val tuning = col(parts, "afinacion")
             val chordsUsed = col(parts, "acordes_sugeridos")
