@@ -33,7 +33,9 @@ jobs:
           validate-wrappers: false
 
       - name: Build debug APK
-        run: gradle assembleDebug 2>&1 | tee build_output.log
+        run: |
+          set -o pipefail
+          gradle assembleDebug 2>&1 | tee build_output.log
 
       - name: Upload build log on failure
         if: failure()
@@ -43,25 +45,17 @@ jobs:
           path: build_output.log
           retention-days: 7
 
-      - name: Prepare APK
+      - name: Verify and upload APK
         run: |
-          echo "=== Searching for APK files ==="
-          find . -name "*.apk" -type f -ls 2>/dev/null || true
-          find /home -name "*.apk" -type f -ls 2>/dev/null || true
-          echo "=== Copying APK ==="
-          mkdir -p artifact
-          find . -name "app-debug.apk" -type f -exec cp {} artifact/ \; 2>/dev/null || true
-          find /home -name "app-debug.apk" -type f -exec cp {} artifact/ \; 2>/dev/null || true
-          if [ ! -f artifact/app-debug.apk ]; then
-            echo "app-debug.apk not found, trying any .apk"
-            find . /home -name "*.apk" -type f -exec cp {} artifact/ \; 2>/dev/null || true
-          fi
-          echo "=== Artifact contents ==="
-          ls -la artifact/ || echo "artifact dir empty"
+          echo "=== All APK files ==="
+          find / -name "*.apk" -type f 2>/dev/null || true
+          echo "=== Expected path ==="
+          ls -la app/build/outputs/apk/debug/ 2>/dev/null || echo "Expected dir does not exist"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: guitar-trainer-debug
-          path: artifact/
+          path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
+          if-no-files-found: error
