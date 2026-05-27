@@ -293,15 +293,25 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                     Text("Posiciones", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
-                if (positionsEnabled && positions.isNotEmpty()) {
+                Spacer(modifier = Modifier.weight(1f))
+            }
+
+            // Position bar (separate row)
+            if (positionsEnabled && positions.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(COLOR_TOOLBAR)
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     CagedPositionBar(
                         positions = positions,
                         currentIndex = currentPositionIndex,
                         onSelect = { currentPositionIndex = it; currentNoteIndex = 0 }
                     )
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
             }
 
             // Fretboard
