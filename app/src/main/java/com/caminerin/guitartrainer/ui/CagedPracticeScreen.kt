@@ -282,18 +282,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                     Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
-            }
-
-            // CAGED selector row (same style as scale visualizer)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFF252525))
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
+                // CAGED toggle
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
@@ -311,6 +300,8 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                         onSelect = { currentPositionIndex = it; currentNoteIndex = 0 }
                     )
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
             }
 
             // Fretboard
