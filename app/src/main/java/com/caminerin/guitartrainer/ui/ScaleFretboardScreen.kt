@@ -180,7 +180,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                     .clickable { positionsEnabled = !positionsEnabled }
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
-                Text("CAGED", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Posiciones", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
             if (positionsEnabled && positions.isNotEmpty()) {

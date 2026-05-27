@@ -480,13 +480,13 @@ fun UnifiedScaleSelectorOverlay(
     }
 }
 
-// ===== UNIFIED CAGED POSITION SELECTOR =====
-val SHARED_CAGED_COLORS = mapOf(
-    'C' to Color(0xFFE53935),
-    'A' to Color(0xFFFF9800),
-    'G' to Color(0xFF4CAF50),
-    'E' to Color(0xFF2196F3),
-    'D' to Color(0xFF9C27B0)
+// ===== UNIFIED POSITION SELECTOR =====
+val SHARED_POSITION_COLORS = listOf(
+    Color(0xFFE53935),
+    Color(0xFFFF9800),
+    Color(0xFF4CAF50),
+    Color(0xFF2196F3),
+    Color(0xFF9C27B0)
 )
 
 @Composable
@@ -503,7 +503,8 @@ fun CagedPositionBar(
     ) {
         positions.forEachIndexed { i, pos ->
             val isCurrent = i == currentIndex
-            val color = SHARED_CAGED_COLORS[pos.cagedLetter] ?: Color.Gray
+            val color = SHARED_POSITION_COLORS.getOrElse(i) { Color.Gray }
+            val label = "Pos ${i + 1} (${pos.startFret}-${pos.endFret})"
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -512,9 +513,9 @@ fun CagedPositionBar(
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Text(
-                    "${pos.cagedLetter}",
+                    label,
                     color = if (isCurrent) Color.White else color,
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
