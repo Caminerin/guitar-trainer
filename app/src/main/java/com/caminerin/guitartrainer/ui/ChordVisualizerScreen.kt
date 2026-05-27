@@ -72,7 +72,25 @@ private val QUALITY_COLORS = mapOf(
     "sus4" to Color(0xFFAB47BC),
     "diminished" to Color(0xFF78909C),
     "diminished7" to Color(0xFF546E7A),
-    "half_diminished7" to Color(0xFF455A64)
+    "half_diminished7" to Color(0xFF455A64),
+    "augmented" to Color(0xFFD81B60),
+    "add9" to Color(0xFF1565C0),
+    "dominant9" to Color(0xFFEF6C00),
+    "maj9" to Color(0xFF2E7D32),
+    "minor9" to Color(0xFF00838F),
+    "minor_major7" to Color(0xFFC62828),
+    "minor_major9" to Color(0xFFAD1457),
+    "sixth" to Color(0xFF6A1B9A),
+    "six_nine" to Color(0xFF4A148C),
+    "minor6" to Color(0xFF880E4F),
+    "minor_six_nine" to Color(0xFF4E342E),
+    "power5" to Color(0xFF37474F),
+    "dominant7sus4" to Color(0xFFE65100),
+    "nine_sus4" to Color(0xFFBF360C),
+    "minor_add9" to Color(0xFF00695C),
+    "minor11" to Color(0xFF004D40),
+    "minor13" to Color(0xFF006064),
+    "minor7_flat9" to Color(0xFF3E2723)
 )
 
 private val LEVEL_COLORS = mapOf(
