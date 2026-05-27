@@ -3,6 +3,7 @@ package com.caminerin.guitartrainer.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -97,6 +98,10 @@ fun SongPickerOverlay(
     var selectedKey by remember { mutableStateOf<String?>(null) }
     var selectedCapo by remember { mutableStateOf<Boolean?>(null) }
     var sortStack by remember { mutableStateOf(listOf<SortEntry>()) }
+    var showDifficultyFilter by remember { mutableStateOf(false) }
+    var showKeyFilter by remember { mutableStateOf(false) }
+    var showCapoFilter by remember { mutableStateOf(false) }
+    var showSearchFieldFilter by remember { mutableStateOf(false) }
 
     val allKeys = remember(songs) { songs.map { it.key }.distinct().sorted() }
 
@@ -183,25 +188,55 @@ fun SongPickerOverlay(
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            // Search field selector
+            // Filter buttons row (above search bar)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Buscar en:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-                SearchField.entries.forEach { field ->
-                    val sel = searchField == field
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (sel) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
-                            .clickable { searchField = field }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(field.label, color = if (sel) Color.White else Color.White.copy(alpha = 0.5f),
-                            fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
+                // Search field button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF7B1FA2).copy(alpha = 0.3f))
+                        .clickable { showSearchFieldFilter = true }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text("Buscar: ${searchField.label}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Difficulty button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selectedLevel != null) LEVEL_COLORS.getOrElse((selectedLevel ?: 1) - 1) { Color.Gray }.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
+                        .clickable { showDifficultyFilter = true }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text(if (selectedLevel != null) "Dif: $selectedLevel" else "Dificultad", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Key button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selectedKey != null) Color(0xFFFFD600).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
+                        .clickable { showKeyFilter = true }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text(if (selectedKey != null) "Ton: $selectedKey" else "Tonalidad", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Capo button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selectedCapo != null) Color(0xFFFFC107).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
+                        .clickable { showCapoFilter = true }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    val capoLabel = when (selectedCapo) { true -> "Capo: S\u00ed"; false -> "Capo: No"; else -> "Capo" }
+                    Text(capoLabel, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -239,95 +274,6 @@ fun SongPickerOverlay(
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Filters row: difficulty, key, capo
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Difficulty filter
-                Text("Dif:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (selectedLevel == null) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
-                        .clickable { selectedLevel = null }
-                        .padding(horizontal = 5.dp, vertical = 4.dp)
-                ) {
-                    Text("All", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                (1..5).forEach { lvl ->
-                    val sel = selectedLevel == lvl
-                    val color = LEVEL_COLORS.getOrElse(lvl - 1) { Color.Gray }
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(if (sel) color else color.copy(alpha = 0.2f))
-                            .clickable { selectedLevel = if (sel) null else lvl },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("$lvl", color = if (sel) Color.White else color,
-                            fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
-                // Capo filter
-                Text("Capo:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-                listOf(null to "All", true to "S\u00ed", false to "No").forEach { (capoVal, label) ->
-                    val sel = selectedCapo == capoVal
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (sel) Color(0xFFFFC107).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.06f))
-                            .clickable { selectedCapo = capoVal }
-                            .padding(horizontal = 5.dp, vertical = 4.dp)
-                    ) {
-                        Text(label, color = if (sel) Color.White else Color.White.copy(alpha = 0.5f),
-                            fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            // Key filter row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Ton:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (selectedKey == null) Color(0xFFFFD600).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.06f))
-                        .clickable { selectedKey = null }
-                        .padding(horizontal = 5.dp, vertical = 3.dp)
-                ) {
-                    Text("All", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                allKeys.forEach { key ->
-                    val sel = selectedKey == key
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (sel) Color(0xFFFFD600).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.06f))
-                            .clickable { selectedKey = if (sel) null else key }
-                            .padding(horizontal = 5.dp, vertical = 3.dp)
-                    ) {
-                        Text(key, color = if (sel) Color.White else Color.White.copy(alpha = 0.5f),
-                            fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
 
             Spacer(modifier = Modifier.height(6.dp))
 
@@ -411,6 +357,54 @@ fun SongPickerOverlay(
                 }
             }
         }
+
+        // Filter overlay dialogs (on top of everything)
+        if (showSearchFieldFilter) {
+            FilterOverlayDialog(
+                title = "Buscar en",
+                onDismiss = { showSearchFieldFilter = false }
+            ) {
+                SearchField.entries.forEach { field ->
+                    val sel = searchField == field
+                    FilterOptionRow(field.label, sel) { searchField = field; showSearchFieldFilter = false }
+                }
+            }
+        }
+
+        if (showDifficultyFilter) {
+            FilterOverlayDialog(
+                title = "Dificultad",
+                onDismiss = { showDifficultyFilter = false }
+            ) {
+                FilterOptionRow("Todas", selectedLevel == null) { selectedLevel = null; showDifficultyFilter = false }
+                (1..5).forEach { lvl ->
+                    FilterOptionRow("Nivel $lvl", selectedLevel == lvl) { selectedLevel = lvl; showDifficultyFilter = false }
+                }
+            }
+        }
+
+        if (showKeyFilter) {
+            FilterOverlayDialog(
+                title = "Tonalidad",
+                onDismiss = { showKeyFilter = false }
+            ) {
+                FilterOptionRow("Todas", selectedKey == null) { selectedKey = null; showKeyFilter = false }
+                allKeys.forEach { key ->
+                    FilterOptionRow(key, selectedKey == key) { selectedKey = key; showKeyFilter = false }
+                }
+            }
+        }
+
+        if (showCapoFilter) {
+            FilterOverlayDialog(
+                title = "Capo",
+                onDismiss = { showCapoFilter = false }
+            ) {
+                FilterOptionRow("Todos", selectedCapo == null) { selectedCapo = null; showCapoFilter = false }
+                FilterOptionRow("Con capo", selectedCapo == true) { selectedCapo = true; showCapoFilter = false }
+                FilterOptionRow("Sin capo", selectedCapo == false) { selectedCapo = false; showCapoFilter = false }
+            }
+        }
     }
 }
 
@@ -460,4 +454,73 @@ private fun SongTableRow(song: Song, onClick: () -> Unit) {
         }
         Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.06f)))
     }
+}
+
+@Composable
+private fun FilterOverlayDialog(
+    title: String,
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.75f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .fillMaxHeight(0.7f)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF2A2A2A))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = true
+                ) {}
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterOptionRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) Color(0xFF7B1FA2).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.06f))
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(label, color = if (selected) Color.White else Color.White.copy(alpha = 0.7f),
+            fontSize = 15.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+    }
+    Spacer(modifier = Modifier.height(4.dp))
 }
