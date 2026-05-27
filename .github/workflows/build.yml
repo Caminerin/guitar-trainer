@@ -29,10 +29,10 @@ jobs:
           validate-wrappers: false
 
       - name: Build debug APK
-        run: gradle assembleDebug
+        run: gradle assembleDebug 2>&1 | tee build_output.log; echo "EXIT_CODE=$?" >> build_output.log
 
-      - name: Upload build log on failure
-        if: failure()
+      - name: Upload build log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-log
