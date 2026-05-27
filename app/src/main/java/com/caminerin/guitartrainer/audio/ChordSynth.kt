@@ -25,8 +25,8 @@ object ChordSynth {
 
     private val lock = Object()
 
-    fun playChord(frets: List<Int?>, durationMs: Int = 1200) {
-        val newSamples = generateGuitarChord(frets, durationMs) ?: return
+    fun playChord(frets: List<Int?>, durationMs: Int = 1200, upStrum: Boolean = false) {
+        val newSamples = generateGuitarChord(frets, durationMs, upStrum) ?: return
 
         synchronized(lock) {
             if (!running) {
@@ -138,20 +138,24 @@ object ChordSynth {
         }
     }
 
-    private fun generateGuitarChord(frets: List<Int?>, durationMs: Int): FloatArray? {
+    private fun generateGuitarChord(frets: List<Int?>, durationMs: Int, upStrum: Boolean = false): FloatArray? {
         data class StringInfo(val freq: Double, val stringIndex: Int, val strumOffset: Int)
 
-        val strings = mutableListOf<StringInfo>()
-        var strIdx = 0
+        val activeStrings = mutableListOf<Pair<Int, Double>>() // (stringIndex, freq)
         for (s in 0 until 6) {
             val fret = frets.getOrNull(s) ?: continue
             if (fret < 0) continue
             val freq = STANDARD_TUNING_HZ[s] * Math.pow(2.0, fret / 12.0)
-            val offset = STRUM_DELAYS.getOrElse(strIdx) { strIdx * 150 }
-            strings.add(StringInfo(freq, s, offset))
-            strIdx++
+            activeStrings.add(s to freq)
         }
-        if (strings.isEmpty()) return null
+        if (activeStrings.isEmpty()) return null
+
+        // For up-strum: reverse the strum order (treble first)
+        val ordered = if (upStrum) activeStrings.reversed() else activeStrings
+        val strings = ordered.mapIndexed { strIdx, (s, freq) ->
+            val offset = STRUM_DELAYS.getOrElse(strIdx) { strIdx * 150 }
+            StringInfo(freq, s, offset)
+        }
 
         val totalOffset = if (strings.isNotEmpty()) strings.maxOf { it.strumOffset } else 0
         val numSamples = SAMPLE_RATE * durationMs / 1000 + totalOffset
