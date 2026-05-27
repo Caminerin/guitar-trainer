@@ -120,6 +120,17 @@ data class Scale(
     val relativeMajorOffset: Int = 0
 )
 
+fun getRelativeMajorOffset(scaleName: String): Int {
+    val normalized = scaleName.lowercase()
+        .replace("á", "a").replace("é", "e").replace("í", "i")
+        .replace("ó", "o").replace("ú", "u")
+    return ALL_SCALES.find { s ->
+        s.name.lowercase()
+            .replace("á", "a").replace("é", "e").replace("í", "i")
+            .replace("ó", "o").replace("ú", "u") == normalized
+    }?.relativeMajorOffset ?: 0
+}
+
 data class ScalePosition(
     val name: String,
     val startFret: Int,
@@ -404,8 +415,11 @@ data class ScaleChordInfo(
     val degree: Int,
     val noteName: String,
     val chordType: String,
-    val intervalName: String
+    val intervalName: String,
+    val romanDegree: String = ""
 )
+
+private val MAJOR_INTERVALS = listOf(0, 2, 4, 5, 7, 9, 11)
 
 fun getScaleChords(rootNote: Int, scaleIntervals: List<Int>, relativeMajorOffset: Int = 0): List<ScaleChordInfo> {
     val result = mutableListOf<ScaleChordInfo>()
@@ -444,7 +458,26 @@ fun getScaleChords(rootNote: Int, scaleIntervals: List<Int>, relativeMajorOffset
             else -> ""
         }
 
-        result.add(ScaleChordInfo(degree, noteName, chordType, intervalName))
+        val baseRoman = when (degree) {
+            1 -> "I"; 2 -> "II"; 3 -> "III"; 4 -> "IV"
+            5 -> "V"; 6 -> "VI"; 7 -> "VII"; else -> "$degree"
+        }
+        val majorRef = if (degree <= MAJOR_INTERVALS.size) MAJOR_INTERVALS[degree - 1] else -1
+        val isFlat = majorRef >= 0 && interval < majorRef
+        val isSharp = majorRef >= 0 && interval > majorRef
+        val prefix = when {
+            isFlat -> "b"
+            isSharp -> "#"
+            else -> ""
+        }
+        val romanDegree = when (chordType) {
+            "menor" -> "$prefix${baseRoman.lowercase()}"
+            "dim" -> "$prefix${baseRoman.lowercase()}°"
+            "aug" -> "$prefix$baseRoman+"
+            else -> "$prefix$baseRoman"
+        }
+
+        result.add(ScaleChordInfo(degree, noteName, chordType, intervalName, romanDegree))
     }
     return result
 }

@@ -32,6 +32,9 @@ object ScaleChordRepository {
         entries = result
     }
 
+    fun getAvailableScaleNames(): List<String> =
+        entries.map { it.scaleName }.distinct().filter { it != "Cromatica" }
+
     fun getChordsForScale(scaleName: String, rootNote: Int, relativeMajorOffset: Int = 0): List<TransposedScaleChord> {
         val scaleKey = normalizeScaleName(scaleName)
         return entries

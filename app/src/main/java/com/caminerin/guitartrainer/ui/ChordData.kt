@@ -194,9 +194,10 @@ object ChordRepository {
             val maxFret = parts[14].toIntOrNull() ?: 0
 
             val fingeringStr = if (parts.size > 19) parts[19] else ""
-            val fingeringList = if (fingeringStr.isNotBlank()) {
+            val fingeringRaw = if (fingeringStr.isNotBlank()) {
                 fingeringStr.split("-").map { it.trim() }
             } else emptyList()
+            val fingeringList = validateFingering(fingeringRaw, frets)
 
             return ChordShape(
                 id = parts[0],
@@ -218,6 +219,21 @@ object ChordRepository {
         } catch (_: Exception) {
             return null
         }
+    }
+
+    private fun validateFingering(fingering: List<String>, frets: List<Int?>): List<String> {
+        if (fingering.isEmpty()) return emptyList()
+        if (fingering.size != 6) return emptyList()
+        for (i in 0 until 6) {
+            val fret = frets.getOrNull(i)
+            val finger = fingering[i]
+            when {
+                fret == null && finger != "x" -> return emptyList()
+                fret == 0 && finger != "0" && finger != "x" -> return emptyList()
+                fret != null && fret > 0 && finger !in listOf("1", "2", "3", "4", "T") -> return emptyList()
+            }
+        }
+        return fingering
     }
 
     private fun smartSplit(line: String): List<String> {

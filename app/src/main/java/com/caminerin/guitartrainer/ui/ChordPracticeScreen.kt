@@ -89,6 +89,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
 
     var modeKey by rememberSaveable { mutableStateOf(true) } // true = by tonality, false = free
     var selectedKey by rememberSaveable { mutableIntStateOf(0) }
+    var selectedScaleName by rememberSaveable { mutableStateOf("Mayor (Jónica)") }
     var bpm by rememberSaveable { mutableIntStateOf(60) }
     var measureCount by rememberSaveable { mutableIntStateOf(4) }
 
@@ -104,6 +105,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     }
 
     var showKeyCircle by remember { mutableStateOf(false) }
+    var showScaleSelector by remember { mutableStateOf(false) }
     var showChordPicker by remember { mutableStateOf<Pair<Int, Int>?>(null) } // measureIdx, subIdx
     var showSongPicker by remember { mutableStateOf(false) }
     var currentSong by remember { mutableStateOf<Song?>(null) }
@@ -166,9 +168,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     }
 
     // Filter chords by tonality if needed — match root AND quality (diatonic harmony)
-    val availableChords = remember(modeKey, selectedKey) {
+    val availableChords = remember(modeKey, selectedKey, selectedScaleName) {
         if (modeKey) {
-            val scaleChords = ScaleChordRepository.getChordsForScale("Mayor (J\u00f3nica)", selectedKey)
+            val offset = getRelativeMajorOffset(selectedScaleName)
+            val scaleChords = ScaleChordRepository.getChordsForScale(selectedScaleName, selectedKey, offset)
             val allowedKeys = scaleChords.map { sc ->
                 sc.rootSemitone to normalizeScaleQuality(sc.quality)
             }.toSet()
@@ -207,7 +210,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         .clickable { showModeSelector = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(if (modeKey) "Por tonalidad mayor" else "Todos",
+                    Text(if (modeKey) "Por tonalidad" else "Todos",
                         color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
@@ -221,6 +224,18 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Scale selector
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
+                            .clickable { showScaleSelector = true }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        val shortName = selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
+                        Text(shortName, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -372,6 +387,48 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 onNoteSelected = { selectedKey = it; showKeyCircle = false },
                 onDismiss = { showKeyCircle = false }
             )
+        }
+
+        // Scale selector overlay
+        if (showScaleSelector) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable { showScaleSelector = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF2A2A2A))
+                        .clickable(enabled = false) {}
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Escala", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    val scaleNames = ScaleChordRepository.getAvailableScaleNames()
+                    scaleNames.forEach { name ->
+                        val isSelected = name == selectedScaleName ||
+                            name.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u") ==
+                            selectedScaleName.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) CP_PRIMARY.copy(alpha = 0.5f) else Color.Transparent)
+                                .clickable { selectedScaleName = name; showScaleSelector = false }
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            Text(name, color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+                                fontSize = 15.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            }
         }
 
         // Chord picker overlay
@@ -619,7 +676,7 @@ private fun ChordPickerOverlay(
     onDismiss: () -> Unit
 ) {
     var selectedQuality by remember { mutableStateOf<String?>(null) }
-    var selectedLevel by remember { mutableStateOf<String?>(null) }
+    var selectedLevel by remember { mutableStateOf<String?>(ChordLevel.BEGINNER.csvValue) }
 
     val filtered = chords.filter { chord ->
         (selectedQuality == null || chord.quality == selectedQuality) &&
