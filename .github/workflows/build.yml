@@ -36,18 +36,17 @@ jobs:
           path: build_output.log
           retention-days: 7
 
-      - name: Find APK
-        id: find_apk
+      - name: Collect APK
         run: |
-          APK_PATH=$(find . -name "*.apk" -type f | head -1)
-          echo "Found APK at: $APK_PATH"
-          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-          ls -la $APK_PATH
+          mkdir -p apk-output
+          find . -name "*.apk" -type f -exec cp {} apk-output/ \;
+          ls -la apk-output/
+          echo "APK files found: $(ls apk-output/*.apk 2>/dev/null | wc -l)"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: guitar-trainer-debug
-          path: ${{ steps.find_apk.outputs.apk_path }}
+          path: apk-output/
           retention-days: 30
           if-no-files-found: error
