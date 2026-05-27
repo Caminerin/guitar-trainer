@@ -22,11 +22,14 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+          validate-wrappers: false
 
       - name: Build debug APK
-        run: ./gradlew assembleDebug 2>&1 | tee build_output.log
+        run: gradle assembleDebug 2>&1 | tee build_output.log
 
       - name: Upload build log on failure
         if: failure()
@@ -36,17 +39,13 @@ jobs:
           path: build_output.log
           retention-days: 7
 
-      - name: Collect APK
-        run: |
-          mkdir -p apk-output
-          find . -name "*.apk" -type f -exec cp {} apk-output/ \;
-          ls -la apk-output/
-          echo "APK files found: $(ls apk-output/*.apk 2>/dev/null | wc -l)"
+      - name: List APK files
+        run: find . -name "*.apk" -type f -ls
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: guitar-trainer-debug
-          path: apk-output/
+          path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
           if-no-files-found: error
