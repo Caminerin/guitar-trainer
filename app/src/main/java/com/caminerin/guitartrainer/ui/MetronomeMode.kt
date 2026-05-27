@@ -130,15 +130,14 @@ fun MetronomeMode(
         Row(
             modifier = modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .padding(horizontal = 12.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left: Play + BPM + beats
+            // Left: Play + BPM + beats (compact, no scroll)
             Column(
                 modifier = Modifier
                     .weight(0.4f)
-                    .fillMaxHeight()
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -146,14 +145,14 @@ fun MetronomeMode(
                     beatsPerMeasure = beatsPerMeasure,
                     currentBeat = if (isPlaying) currentBeat else -1
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     FilledIconButton(
                         onClick = { if (isPlaying) engine.stop() else playTrigger++ },
-                        modifier = Modifier.size(56.dp),
+                        modifier = Modifier.size(48.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = if (isPlaying) Color(0xFFF44336) else Color(0xFF4CAF50)
                         )
@@ -161,22 +160,22 @@ fun MetronomeMode(
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(28.dp),
+                            modifier = Modifier.size(24.dp),
                             tint = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "$bpm", fontSize = 42.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground)
-                        Text("BPM", fontSize = 11.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                        Text(text = "$bpm", fontSize = 36.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.onBackground)
+                        Text("BPM", fontSize = 10.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
                 Row(horizontalArrangement = Arrangement.Center) {
                     PillButton("-5") { bpm = (bpm - 5).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
                     Spacer(modifier = Modifier.width(4.dp))
                     PillButton("-1") { bpm = (bpm - 1).coerceAtLeast(20); bpmSlider = bpm.toFloat() }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     PillButton("+1") { bpm = (bpm + 1).coerceAtMost(300); bpmSlider = bpm.toFloat() }
                     Spacer(modifier = Modifier.width(4.dp))
                     PillButton("+5") { bpm = (bpm + 5).coerceAtMost(300); bpmSlider = bpm.toFloat() }
@@ -185,7 +184,7 @@ fun MetronomeMode(
                     value = bpmSlider,
                     onValueChange = { bpmSlider = it; bpm = it.toInt() },
                     valueRange = 20f..300f,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
                 )
             }
 
