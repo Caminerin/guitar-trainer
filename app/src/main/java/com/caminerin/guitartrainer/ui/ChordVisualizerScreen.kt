@@ -669,16 +669,23 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
         drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], fbRight + 8f, y + 12f, openStringPaint)
     }
 
-    // Notes annotation at bottom
-    val notesParts = chord.notesSharp.split(" ").filter { it != "None" }
-    if (notesParts.isNotEmpty()) {
+    // Notes annotation at bottom (context-aware: use flats when appropriate)
+    val chordNoteNames = mutableListOf<String>()
+    for (s in 0 until 6) {
+        val fretVal = frets.getOrNull(s)
+        if (fretVal != null) {
+            val noteIdx = (STANDARD_TUNING_MIDI[s] + fretVal) % 12
+            chordNoteNames.add(getNoteName(noteIdx, rootNoteIdx))
+        }
+    }
+    if (chordNoteNames.isNotEmpty()) {
         val notePaint = android.graphics.Paint().apply {
             color = android.graphics.Color.argb(180, 200, 200, 200)
             textSize = 36f
             textAlign = android.graphics.Paint.Align.CENTER
             isAntiAlias = true
         }
-        val notesText = notesParts.joinToString(" - ")
+        val notesText = chordNoteNames.joinToString(" - ")
         drawContext.canvas.nativeCanvas.drawText(notesText, w / 2f, h - bottomPad * 0.15f, notePaint)
     }
 

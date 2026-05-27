@@ -46,7 +46,7 @@ fun VerifyMode(
     var selectedNote by remember { mutableStateOf<NoteInfo?>(null) }
 
     val isCorrect = selectedNote != null && pitchResult != null &&
-        pitchResult.noteName == selectedNote!!.name &&
+        pitchResult.noteIndex == selectedNote!!.noteIndex &&
         kotlin.math.abs(pitchResult.centsOff) < CENTS_TOLERANCE
 
     Column(
@@ -82,8 +82,13 @@ fun VerifyMode(
         Spacer(modifier = Modifier.height(32.dp))
 
         if (selectedNote != null) {
+            val targetNote = selectedNote!!
+            val targetLabel = if (targetNote.name != targetNote.altName)
+                "${targetNote.spanishName} / ${targetNote.altSpanishName} (${targetNote.name} / ${targetNote.altName})"
+            else
+                "${targetNote.spanishName} (${targetNote.name})"
             Text(
-                text = "Objetivo: ${selectedNote!!.spanishName} (${selectedNote!!.name})",
+                text = "Objetivo: $targetLabel",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold
@@ -96,8 +101,10 @@ fun VerifyMode(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                val detectedNote = findNoteByIndex(pitchResult.noteIndex)
+                val detectedLabel = getNoteName(pitchResult.noteIndex)
                 Text(
-                    text = "Detectado: ${pitchResult.noteName}${pitchResult.octave}",
+                    text = "Detectado: $detectedLabel${pitchResult.octave}",
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -150,6 +157,7 @@ private fun NoteButton(
         MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
     }
 
+    val hasAlt = note.name != note.altName
     Box(
         modifier = Modifier
             .padding(4.dp)
@@ -162,8 +170,8 @@ private fun NoteButton(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = note.name,
-                fontSize = 18.sp,
+                text = if (hasAlt) "${note.name}/${note.altName}" else note.name,
+                fontSize = if (hasAlt) 14.sp else 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor
             )
