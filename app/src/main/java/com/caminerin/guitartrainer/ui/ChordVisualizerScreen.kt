@@ -438,9 +438,11 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                             }
                             .padding(horizontal = 20.dp, vertical = 14.dp)
                     ) {
-                        val count = ChordRepository.getChordsByLevelAndQuality(l,
-                            ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
-                        ).count { it.root == SCALE_NOTE_NAMES[selectedRoot] }
+                        val count = if (hasSelectedRoot) {
+                            ChordRepository.getChordsByLevelAndQuality(l,
+                                ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
+                            ).count { it.root == SCALE_NOTE_NAMES[selectedRoot] }
+                        } else 0
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween

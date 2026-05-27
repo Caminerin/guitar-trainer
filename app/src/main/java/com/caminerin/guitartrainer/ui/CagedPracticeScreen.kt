@@ -3,7 +3,8 @@ package com.caminerin.guitartrainer.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -321,8 +322,25 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                     .weight(1f)
                     .fillMaxWidth()
                     .pointerInput(Unit) {
-                        detectTransformGestures { _, _, gestureZoom, _ ->
-                            zoom = (zoom * gestureZoom).coerceIn(0.5f, 3f)
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            var prevSpan = 0f
+                            do {
+                                val event = awaitPointerEvent()
+                                val pressed = event.changes.filter { it.pressed }
+                                if (pressed.size >= 2) {
+                                    val dx = pressed[0].position.x - pressed[1].position.x
+                                    val dy = pressed[0].position.y - pressed[1].position.y
+                                    val span = kotlin.math.sqrt(dx * dx + dy * dy)
+                                    if (prevSpan > 10f && span > 10f) {
+                                        zoom = (zoom * (span / prevSpan)).coerceIn(0.5f, 3f)
+                                    }
+                                    prevSpan = span
+                                    pressed.forEach { it.consume() }
+                                } else {
+                                    prevSpan = 0f
+                                }
+                            } while (event.changes.any { it.pressed })
                         }
                     }
             ) {
