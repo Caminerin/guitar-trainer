@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -101,6 +102,9 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
     var showQualitySelector by remember { mutableStateOf(false) }
     var showLevelSelector by remember { mutableStateOf(false) }
     var showDisplaySelector by remember { mutableStateOf(false) }
+
+    // Interval color filter: "1"=root, "3"=thirds, "5"=fifths, "other"=other
+    var intervalFilter by remember { mutableStateOf(setOf("1", "3", "5", "other")) }
 
     val quality = ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
     val level = ChordLevel.entries.find { it.csvValue == selectedLevel } ?: ChordLevel.BEGINNER
@@ -230,6 +234,32 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
             }
         }
 
+        // ===== INTERVAL COLOR LEGEND =====
+        if (currentChord != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF252525))
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Color:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
+                IntervalChip("Fundamental", CHORD_COLOR_ROOT, "1" in intervalFilter) {
+                    intervalFilter = if ("1" in intervalFilter) intervalFilter - "1" else intervalFilter + "1"
+                }
+                IntervalChip("3\u00aa", CHORD_COLOR_THIRD, "3" in intervalFilter) {
+                    intervalFilter = if ("3" in intervalFilter) intervalFilter - "3" else intervalFilter + "3"
+                }
+                IntervalChip("5\u00aa", CHORD_COLOR_FIFTH, "5" in intervalFilter) {
+                    intervalFilter = if ("5" in intervalFilter) intervalFilter - "5" else intervalFilter + "5"
+                }
+                IntervalChip("Otros", CHORD_COLOR_OTHER, "other" in intervalFilter) {
+                    intervalFilter = if ("other" in intervalFilter) intervalFilter - "other" else intervalFilter + "other"
+                }
+            }
+        }
+
         // Chord diagram
         if (currentChord != null) {
             // Info row
@@ -279,7 +309,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                         .fillMaxSize()
                         .padding(8.dp)
                 ) {
-                    drawChordDiagram(currentChord, noteDisplay, selectedRoot)
+                    drawChordDiagram(currentChord, noteDisplay, selectedRoot, intervalFilter)
                 }
             }
         } else {
@@ -448,7 +478,7 @@ private fun getChordNoteColor(interval: String): Color {
     }
 }
 
-private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDisplay, rootNoteIdx: Int) {
+private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDisplay, rootNoteIdx: Int, intervalFilter: Set<String> = setOf("1", "3", "5", "other")) {
     val w = size.width
     val h = size.height
     val frets = chord.frets
@@ -561,14 +591,21 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
             fretVal == 0 -> {
                 val noteIdx = STANDARD_TUNING_MIDI[s] % 12
                 val noteName = getNoteName(noteIdx, rootNoteIdx)
-                val noteColor = if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else Color(0xFF43A047)
+                val intervalCat = getIntervalCategory(interval)
+                val isFiltered = intervalCat in intervalFilter
+                val noteColor = if (isFiltered) {
+                    if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else Color(0xFF43A047)
+                } else {
+                    Color(0xFF78909C).copy(alpha = 0.35f)
+                }
 
                 val cx = fbLeft * 0.5f
-                drawCircle(Color(0x55000000), noteRadius + 2f, Offset(cx + 1f, y + 1.5f))
-                drawCircle(noteColor, noteRadius, Offset(cx, y))
-                drawCircle(Color(0x44000000), noteRadius, Offset(cx, y), style = Stroke(2f))
+                val r = if (isFiltered) noteRadius else noteRadius * 0.7f
+                drawCircle(Color(0x55000000), r + 2f, Offset(cx + 1f, y + 1.5f))
+                drawCircle(noteColor, r, Offset(cx, y))
+                drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
 
-                if (noteDisplay != NoteDisplay.NONE) {
+                if (noteDisplay != NoteDisplay.NONE && isFiltered) {
                     val lbl = buildChordNoteLabel(noteName, interval, noteDisplay)
                     val paint = if (lbl.length > 3) notePaintSmall else notePaintBig
                     drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + paint.textSize * 0.35f, paint)
@@ -580,14 +617,20 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
                     val cx = fbLeft + (displayPos - 0.5f) * fretWidth
                     val noteIdx = (STANDARD_TUNING_MIDI[s] + fretVal) % 12
                     val noteName = getNoteName(noteIdx, rootNoteIdx)
-                    val noteColor = if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else CHORD_COLOR_OTHER
-                    val r = if (interval == "1") noteRadius * 1.1f else noteRadius
+                    val intervalCat2 = getIntervalCategory(interval)
+                    val isFiltered2 = intervalCat2 in intervalFilter
+                    val noteColor = if (isFiltered2) {
+                        if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else CHORD_COLOR_OTHER
+                    } else {
+                        Color(0xFF78909C).copy(alpha = 0.35f)
+                    }
+                    val r = if (interval == "1" && isFiltered2) noteRadius * 1.1f else if (!isFiltered2) noteRadius * 0.7f else noteRadius
 
                     drawCircle(Color(0x55000000), r + 3f, Offset(cx + 1.5f, y + 2f))
                     drawCircle(noteColor, r, Offset(cx, y))
                     drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
 
-                    if (noteDisplay != NoteDisplay.NONE) {
+                    if (noteDisplay != NoteDisplay.NONE && isFiltered2) {
                         val lbl = buildChordNoteLabel(noteName, interval, noteDisplay)
                         val paint = if (lbl.length > 3) notePaintSmall else notePaintBig
                         drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + paint.textSize * 0.35f, paint)
@@ -645,5 +688,40 @@ private fun buildChordNoteLabel(noteName: String, interval: String, display: Not
         NoteDisplay.DEGREE -> intervalClean
         NoteDisplay.BOTH -> if (intervalClean.isNotEmpty()) "$intervalClean $noteName" else noteName
         NoteDisplay.NONE -> ""
+    }
+}
+
+private fun getIntervalCategory(interval: String): String {
+    return when (interval) {
+        "1" -> "1"
+        "3", "b3" -> "3"
+        "5", "b5", "#5" -> "5"
+        else -> "other"
+    }
+}
+
+@Composable
+private fun IntervalChip(label: String, color: Color, active: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (active) color.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.05f))
+            .clickable { onClick() }
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(if (active) color else Color.Gray.copy(alpha = 0.3f))
+        )
+        Text(
+            label,
+            color = if (active) Color.White else Color.White.copy(alpha = 0.3f),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
