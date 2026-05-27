@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ main ]
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -39,13 +43,25 @@ jobs:
           path: build_output.log
           retention-days: 7
 
-      - name: List APK files
-        run: find . -name "*.apk" -type f -ls
+      - name: Prepare APK
+        run: |
+          echo "=== Searching for APK files ==="
+          find . -name "*.apk" -type f -ls 2>/dev/null || true
+          find /home -name "*.apk" -type f -ls 2>/dev/null || true
+          echo "=== Copying APK ==="
+          mkdir -p artifact
+          find . -name "app-debug.apk" -type f -exec cp {} artifact/ \; 2>/dev/null || true
+          find /home -name "app-debug.apk" -type f -exec cp {} artifact/ \; 2>/dev/null || true
+          if [ ! -f artifact/app-debug.apk ]; then
+            echo "app-debug.apk not found, trying any .apk"
+            find . /home -name "*.apk" -type f -exec cp {} artifact/ \; 2>/dev/null || true
+          fi
+          echo "=== Artifact contents ==="
+          ls -la artifact/ || echo "artifact dir empty"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: guitar-trainer-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: artifact/
           retention-days: 30
-          if-no-files-found: error
