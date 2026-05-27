@@ -6,47 +6,49 @@ import android.media.AudioTrack
 
 /**
  * Guitar chord synthesizer using enhanced Karplus-Strong plucked string algorithm.
- * Uses a single persistent streaming AudioTrack with smooth crossfade for seamless transitions.
- *
- * Improvements over basic KS:
- * - String-dependent decay (bass strings ring longer)
- * - Realistic strum timing with variable delay per string
- * - Body resonance simulation via low-pass filtering
- * - Extended crossfade (100ms) with equal-power curve for seamless chord changes
- * - Pre-attack warmth: soft onset per string to avoid pick noise
+ * Crossfade is baked into the buffer itself for glitch-free transitions.
  */
 object ChordSynth {
     private const val SAMPLE_RATE = 44100
-    private const val CROSSFADE_SAMPLES = 4410 // 100ms crossfade for very smooth transitions
+    private const val CROSSFADE_SAMPLES = 4410 // 100ms
     private val STANDARD_TUNING_HZ = doubleArrayOf(82.41, 110.0, 146.83, 196.0, 246.94, 329.63)
-
-    // Strum delay per string (samples) — varies to simulate natural strumming
-    // Bass strings are hit first, with increasing delay toward treble
-    private val STRUM_DELAYS = intArrayOf(0, 180, 340, 480, 600, 700) // ~0-16ms spread
+    private val STRUM_DELAYS = intArrayOf(0, 180, 340, 480, 600, 700)
 
     private var streamTrack: AudioTrack? = null
     @Volatile private var running = false
     private var writerThread: Thread? = null
 
+    // Simple model: one buffer playing, one buffer queued
     @Volatile private var currentBuffer: FloatArray? = null
     @Volatile private var currentPos = 0
-    @Volatile private var pendingBuffer: FloatArray? = null
+    @Volatile private var pendingSwap: FloatArray? = null
 
     private val lock = Object()
 
     fun playChord(frets: List<Int?>, durationMs: Int = 1200) {
-        val samples = generateGuitarChord(frets, durationMs)
-        if (samples == null) return
+        val newSamples = generateGuitarChord(frets, durationMs) ?: return
 
         synchronized(lock) {
             if (!running) {
-                currentBuffer = samples
+                currentBuffer = newSamples
                 currentPos = 0
                 startStream()
             } else {
-                // Reset crossfade position for smooth blend
-                currentPos = 0
-                pendingBuffer = samples
+                // Bake the crossfade: blend tail of current into head of new
+                val cur = currentBuffer
+                val pos = currentPos
+                if (cur != null && pos < cur.size) {
+                    val remaining = cur.size - pos
+                    val fadeLen = CROSSFADE_SAMPLES.coerceAtMost(remaining).coerceAtMost(newSamples.size)
+                    for (i in 0 until fadeLen) {
+                        val progress = i.toFloat() / fadeLen
+                        val fadeOut = kotlin.math.sqrt(1f - progress)
+                        val fadeIn = kotlin.math.sqrt(progress)
+                        newSamples[i] = cur[pos + i] * fadeOut + newSamples[i] * fadeIn
+                    }
+                }
+                // Swap: the writer thread will pick this up seamlessly
+                pendingSwap = newSamples
             }
         }
     }
@@ -54,12 +56,10 @@ object ChordSynth {
     fun stop() {
         synchronized(lock) {
             running = false
-            pendingBuffer = null
+            pendingSwap = null
             currentBuffer = null
         }
-        try {
-            writerThread?.join(500)
-        } catch (_: Exception) {}
+        try { writerThread?.join(500) } catch (_: Exception) {}
         try {
             streamTrack?.stop()
             streamTrack?.release()
@@ -72,9 +72,7 @@ object ChordSynth {
         if (running) return
 
         val minBuf = AudioTrack.getMinBufferSize(
-            SAMPLE_RATE,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_FLOAT
+            SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_FLOAT
         )
 
         val track = AudioTrack.Builder()
@@ -102,84 +100,44 @@ object ChordSynth {
         writerThread = Thread {
             val chunkSize = 1024
             val chunk = FloatArray(chunkSize)
-            var crossfadeIdx = 0
 
             while (running) {
                 synchronized(lock) {
-                    // If current finished but a new chord is pending, switch immediately
-                    if (currentBuffer == null && pendingBuffer != null) {
-                        currentBuffer = pendingBuffer
-                        pendingBuffer = null
+                    // Check if a new buffer is ready (crossfade already baked in)
+                    val swap = pendingSwap
+                    if (swap != null) {
+                        currentBuffer = swap
                         currentPos = 0
-                        crossfadeIdx = 0
+                        pendingSwap = null
                     }
 
                     val cur = currentBuffer
                     if (cur == null) {
                         chunk.fill(0f)
                     } else {
-                        val pending = pendingBuffer
-                        if (pending != null) {
-                            // Equal-power crossfade for smooth perceptual transition
-                            for (i in 0 until chunkSize) {
-                                val progress = (crossfadeIdx + i).toFloat() / CROSSFADE_SAMPLES
-                                if (progress >= 1f) {
-                                    val newPos = crossfadeIdx + i - CROSSFADE_SAMPLES
-                                    chunk[i] = if (newPos < pending.size) pending[newPos] else 0f
-                                } else {
-                                    // Equal-power: use sqrt-based curve
-                                    val fadeOut = kotlin.math.sqrt(1f - progress)
-                                    val fadeIn = kotlin.math.sqrt(progress)
-                                    val oldVal = if (currentPos + i < cur.size) cur[currentPos + i] else 0f
-                                    val newVal = if (i < pending.size) pending[i] else 0f
-                                    chunk[i] = oldVal * fadeOut + newVal * fadeIn
-                                }
-                            }
-                            crossfadeIdx += chunkSize
-                            if (crossfadeIdx >= CROSSFADE_SAMPLES) {
-                                // Transition complete
-                                currentBuffer = pending
-                                currentPos = crossfadeIdx - CROSSFADE_SAMPLES + chunkSize
-                                pendingBuffer = null
-                                crossfadeIdx = 0
-                            } else {
-                                currentPos += chunkSize
-                            }
-                        } else {
-                            // Normal playback
-                            for (i in 0 until chunkSize) {
-                                val pos = currentPos + i
-                                chunk[i] = if (pos < cur.size) cur[pos] else 0f
-                            }
-                            currentPos += chunkSize
-                            if (currentPos >= cur.size) {
-                                currentBuffer = null
-                            }
+                        for (i in 0 until chunkSize) {
+                            val pos = currentPos + i
+                            chunk[i] = if (pos < cur.size) cur[pos] else 0f
+                        }
+                        currentPos += chunkSize
+                        if (currentPos >= cur.size) {
+                            currentBuffer = null
                         }
                     }
                 }
 
                 try {
                     track.write(chunk, 0, chunkSize, AudioTrack.WRITE_BLOCKING)
-                } catch (_: Exception) {
-                    break
-                }
+                } catch (_: Exception) { break }
             }
 
-            try {
-                track.stop()
-                track.release()
-            } catch (_: Exception) {}
+            try { track.stop(); track.release() } catch (_: Exception) {}
         }.apply {
             priority = Thread.MAX_PRIORITY
             start()
         }
     }
 
-    /**
-     * Generate realistic guitar chord using enhanced Karplus-Strong.
-     * Each string has individual characteristics based on its position.
-     */
     private fun generateGuitarChord(frets: List<Int?>, durationMs: Int): FloatArray? {
         data class StringInfo(val freq: Double, val stringIndex: Int, val strumOffset: Int)
 
@@ -200,19 +158,13 @@ object ChordSynth {
         val output = FloatArray(numSamples)
 
         for (str in strings) {
-            karplusStrongEnhanced(
-                output = output,
-                freq = str.freq,
-                length = numSamples - str.strumOffset,
-                offset = str.strumOffset,
-                stringIndex = str.stringIndex
-            )
+            karplusStrongEnhanced(output, str.freq, numSamples - str.strumOffset, str.strumOffset, str.stringIndex)
         }
 
-        // Body resonance: gentle low-pass filter simulating guitar body
+        // Body resonance
         applyBodyResonance(output)
 
-        // Soft master attack to prevent any initial click (5ms ramp)
+        // Soft master attack (5ms)
         val attackSamples = (SAMPLE_RATE * 0.005).toInt()
         for (i in 0 until attackSamples.coerceAtMost(output.size)) {
             output[i] *= i.toFloat() / attackSamples
@@ -228,74 +180,44 @@ object ChordSynth {
         return output
     }
 
-    /**
-     * Enhanced Karplus-Strong with string-dependent characteristics.
-     * - Bass strings: longer decay, warmer tone (more filtering)
-     * - Treble strings: shorter decay, brighter tone
-     * - All strings: soft onset to avoid pick click
-     */
     private fun karplusStrongEnhanced(
-        output: FloatArray,
-        freq: Double,
-        length: Int,
-        offset: Int,
-        stringIndex: Int
+        output: FloatArray, freq: Double, length: Int, offset: Int, stringIndex: Int
     ) {
         val period = (SAMPLE_RATE / freq).toInt().coerceAtLeast(2)
         val ring = FloatArray(period)
 
-        // Initialize with shaped noise — different character per string
         val random = java.util.Random((freq * 1000).toLong())
-
-        // Bass strings get more low-frequency content, treble strings more brightness
         val brightnessPassCount = when (stringIndex) {
-            0, 1 -> 3    // E, A: warm (more filtering)
-            2, 3 -> 2    // D, G: medium
-            else -> 1    // B, e: bright (less filtering)
+            0, 1 -> 3; 2, 3 -> 2; else -> 1
         }
 
         for (i in ring.indices) {
             ring[i] = (random.nextFloat() * 2f - 1f) * 0.85f
         }
-
-        // Shape the noise excitation
         for (pass in 0 until brightnessPassCount) {
             for (i in 1 until ring.size) {
                 ring[i] = ring[i] * 0.5f + ring[i - 1] * 0.5f
             }
         }
 
-        // String-dependent decay: bass strings ring much longer
         val decay = when (stringIndex) {
-            0 -> 0.9985f   // Low E: very long sustain
-            1 -> 0.9982f   // A
-            2 -> 0.9978f   // D
-            3 -> 0.9975f   // G
-            4 -> 0.9970f   // B
-            else -> 0.9965f // High e: shorter sustain
+            0 -> 0.9985f; 1 -> 0.9982f; 2 -> 0.9978f
+            3 -> 0.9975f; 4 -> 0.9970f; else -> 0.9965f
         }
-
-        // Damping blend: bass strings warmer (lower blend), treble brighter
         val blend = when (stringIndex) {
-            0, 1 -> 0.42f
-            2, 3 -> 0.47f
-            else -> 0.52f
+            0, 1 -> 0.42f; 2, 3 -> 0.47f; else -> 0.52f
         }
 
-        // Soft onset: ramp up the first few cycles to avoid pick click
         val onsetSamples = (period * 2.5).toInt()
-
         var readIdx = 0
+
         for (i in 0 until length) {
             val sample = ring[readIdx]
             val nextIdx = (readIdx + 1) % period
-
-            // Two-point averaging filter with decay
             ring[readIdx] = (sample * blend + ring[nextIdx] * (1f - blend)) * decay
 
             val outIdx = offset + i
             if (outIdx < output.size) {
-                // Apply soft onset envelope per string
                 val onset = if (i < onsetSamples) i.toFloat() / onsetSamples else 1f
                 output[outIdx] += sample * onset
             }
@@ -303,16 +225,10 @@ object ChordSynth {
         }
     }
 
-    /**
-     * Simulates guitar body resonance with a simple one-pole low-pass filter.
-     * This adds warmth and blends the strings together more naturally.
-     */
     private fun applyBodyResonance(output: FloatArray) {
-        // Mix dry signal with a filtered (body) version
-        val bodyMix = 0.15f // 15% body resonance
+        val bodyMix = 0.15f
         var prev = 0f
-        val filterCoeff = 0.85f // Low-pass cutoff ~ 700Hz equivalent
-
+        val filterCoeff = 0.85f
         for (i in output.indices) {
             val dry = output[i]
             val filtered = prev + filterCoeff * (dry - prev)
