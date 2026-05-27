@@ -141,12 +141,13 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         currentMeasure = mi
                         currentSub = si
                         val beatMs = 60000L / bpmState.value
-                        val subMs = beatMs // each subdivision = one full beat
+                        val beatsPerMeasure = 4L
+                        val measureMs = beatMs * beatsPerMeasure
+                        val subMs = measureMs / m.subdivisions.size.coerceAtLeast(1)
                         if (slot.strumDirection != "-") {
                             slot.chordId?.let { id ->
                                 val chord = ChordRepository.getChords().firstOrNull { it.id == id }
                                 val isUpStrum = slot.strumDirection == "U"
-                                // Generate chord long enough to ring through any silent subdivisions that follow
                                 val remainingSlots = m.subdivisions.size - si
                                 val durationMs = (subMs * remainingSlots + 200).toInt().coerceAtLeast(400)
                                 chord?.let { ChordSynth.playChord(it.frets, durationMs, isUpStrum) }
