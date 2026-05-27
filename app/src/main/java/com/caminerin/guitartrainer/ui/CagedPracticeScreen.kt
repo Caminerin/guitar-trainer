@@ -269,8 +269,17 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
+            }
 
-                // CAGED toggle + position bar
+            // CAGED selector row (same style as scale visualizer)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF252525))
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))

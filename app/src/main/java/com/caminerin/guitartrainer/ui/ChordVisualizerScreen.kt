@@ -102,9 +102,10 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
     var showQualitySelector by remember { mutableStateOf(false) }
     var showLevelSelector by remember { mutableStateOf(false) }
     var showDisplaySelector by remember { mutableStateOf(false) }
+    var showColorSelector by remember { mutableStateOf(false) }
 
-    // Interval color filter: "1"=root, "3"=thirds, "5"=fifths, "other"=other
-    var intervalFilter by remember { mutableStateOf(setOf("1", "3", "5", "other")) }
+    // Load color preferences
+    LaunchedEffect(Unit) { DegreeColorPrefs.load(context) }
 
     val quality = ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
     val level = ChordLevel.entries.find { it.csvValue == selectedLevel } ?: ChordLevel.BEGINNER
@@ -245,18 +246,10 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Color:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-                IntervalChip("Fundamental", CHORD_COLOR_ROOT, "1" in intervalFilter) {
-                    intervalFilter = if ("1" in intervalFilter) intervalFilter - "1" else intervalFilter + "1"
-                }
-                IntervalChip("3\u00aa", CHORD_COLOR_THIRD, "3" in intervalFilter) {
-                    intervalFilter = if ("3" in intervalFilter) intervalFilter - "3" else intervalFilter + "3"
-                }
-                IntervalChip("5\u00aa", CHORD_COLOR_FIFTH, "5" in intervalFilter) {
-                    intervalFilter = if ("5" in intervalFilter) intervalFilter - "5" else intervalFilter + "5"
-                }
-                IntervalChip("Otros", CHORD_COLOR_OTHER, "other" in intervalFilter) {
-                    intervalFilter = if ("other" in intervalFilter) intervalFilter - "other" else intervalFilter + "other"
-                }
+                ChordColorPreviewChip("Fundamental", DegreeColorPrefs.chordRootColor, DegreeColorPrefs.chordRootEnabled) { showColorSelector = true }
+                ChordColorPreviewChip("3\u00aa", DegreeColorPrefs.chordThirdColor, DegreeColorPrefs.chordThirdEnabled) { showColorSelector = true }
+                ChordColorPreviewChip("5\u00aa", DegreeColorPrefs.chordFifthColor, DegreeColorPrefs.chordFifthEnabled) { showColorSelector = true }
+                ChordColorPreviewChip("Otros", DegreeColorPrefs.chordOtherColor, DegreeColorPrefs.chordOtherEnabled) { showColorSelector = true }
             }
         }
 
@@ -309,7 +302,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
                         .fillMaxSize()
                         .padding(8.dp)
                 ) {
-                    drawChordDiagram(currentChord, noteDisplay, selectedRoot, intervalFilter)
+                    drawChordDiagram(currentChord, noteDisplay, selectedRoot)
                 }
             }
         } else {
@@ -464,6 +457,14 @@ fun ChordVisualizerScreen(onBack: () -> Unit) {
             onDismiss = { showDisplaySelector = false }
         )
     }
+
+    // Color selector overlay
+    if (showColorSelector) {
+        ChordColorSelectorOverlay(
+            context = context,
+            onDismiss = { showColorSelector = false }
+        )
+    }
 }
 
 private val CHORD_COLOR_ROOT = Color(0xFFE53935)
@@ -472,15 +473,16 @@ private val CHORD_COLOR_FIFTH = Color(0xFF43A047)
 private val CHORD_COLOR_OTHER = Color(0xFF26A69A)
 
 private fun getChordNoteColor(interval: String): Color {
+    return DegreeColorPrefs.getChordColor(interval)
+}
+
+private fun getIntervalCategory(interval: String): String {
     return when (interval) {
-        "1" -> CHORD_COLOR_ROOT
-        "3", "b3" -> CHORD_COLOR_THIRD
-        "5", "b5", "#5" -> CHORD_COLOR_FIFTH
-        else -> CHORD_COLOR_OTHER
+        "1" -> "1"; "3", "b3" -> "3"; "5", "b5", "#5" -> "5"; else -> "other"
     }
 }
 
-private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDisplay, rootNoteIdx: Int, intervalFilter: Set<String> = setOf("1", "3", "5", "other")) {
+private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDisplay, rootNoteIdx: Int) {
     val w = size.width
     val h = size.height
     val frets = chord.frets
@@ -593,12 +595,11 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
             fretVal == 0 -> {
                 val noteIdx = STANDARD_TUNING_MIDI[s] % 12
                 val noteName = getNoteName(noteIdx, rootNoteIdx)
-                val intervalCat = getIntervalCategory(interval)
-                val isFiltered = intervalCat in intervalFilter
+                val isFiltered = DegreeColorPrefs.isChordEnabled(interval)
                 val noteColor = if (isFiltered) {
-                    if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else Color(0xFF43A047)
+                    if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else DegreeColorPrefs.chordOtherColor
                 } else {
-                    Color(0xFF78909C).copy(alpha = 0.35f)
+                    COLOR_OFF.copy(alpha = 0.35f)
                 }
 
                 val cx = fbLeft * 0.5f
@@ -619,12 +620,11 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
                     val cx = fbLeft + (displayPos - 0.5f) * fretWidth
                     val noteIdx = (STANDARD_TUNING_MIDI[s] + fretVal) % 12
                     val noteName = getNoteName(noteIdx, rootNoteIdx)
-                    val intervalCat2 = getIntervalCategory(interval)
-                    val isFiltered2 = intervalCat2 in intervalFilter
+                    val isFiltered2 = DegreeColorPrefs.isChordEnabled(interval)
                     val noteColor = if (isFiltered2) {
-                        if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else CHORD_COLOR_OTHER
+                        if (interval != "None" && interval.isNotEmpty()) getChordNoteColor(interval) else DegreeColorPrefs.chordOtherColor
                     } else {
-                        Color(0xFF78909C).copy(alpha = 0.35f)
+                        COLOR_OFF.copy(alpha = 0.35f)
                     }
                     val r = if (interval == "1" && isFiltered2) noteRadius * 1.1f else if (!isFiltered2) noteRadius * 0.7f else noteRadius
 
@@ -693,17 +693,8 @@ private fun buildChordNoteLabel(noteName: String, interval: String, display: Not
     }
 }
 
-private fun getIntervalCategory(interval: String): String {
-    return when (interval) {
-        "1" -> "1"
-        "3", "b3" -> "3"
-        "5", "b5", "#5" -> "5"
-        else -> "other"
-    }
-}
-
 @Composable
-private fun IntervalChip(label: String, color: Color, active: Boolean, onClick: () -> Unit) {
+private fun ChordColorPreviewChip(label: String, color: Color, active: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))

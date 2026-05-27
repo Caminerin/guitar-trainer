@@ -770,9 +770,11 @@ private fun DrawScope.drawSmallChord(chord: ChordShape) {
                 labelPaint.color = android.graphics.Color.WHITE
             }
             fretVal == 0 -> {
-                labelPaint.color = android.graphics.Color.argb(220, 100, 220, 100)
-                drawContext.canvas.nativeCanvas.drawText("O", fbLeft * 0.5f, y + 8f, labelPaint)
-                labelPaint.color = android.graphics.Color.WHITE
+                val cx = fbLeft * 0.5f
+                val noteColor = Color(0xFF43A047)
+                drawCircle(Color(0x55000000), noteRadius + 2f, Offset(cx + 1f, y + 1.5f))
+                drawCircle(noteColor, noteRadius, Offset(cx, y))
+                drawCircle(Color(0x44000000), noteRadius, Offset(cx, y), style = Stroke(1.5f))
             }
             else -> {
                 val displayPos = fretVal - startFret

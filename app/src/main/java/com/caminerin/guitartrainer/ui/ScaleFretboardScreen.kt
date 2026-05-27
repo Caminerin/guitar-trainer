@@ -27,6 +27,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -91,12 +92,13 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
 
     var showScaleSelector by remember { mutableStateOf(false) }
     var showDisplaySelector by remember { mutableStateOf(false) }
+    var showColorSelector by remember { mutableStateOf(false) }
 
     // State for chromatic circle overlay on key selection
     var showChromaticCircle by remember { mutableStateOf(false) }
 
-    // Degree color filter: which degrees to highlight (1=tonic, 3=third, 5=fifth, 0=other)
-    var degreeFilter by remember { mutableStateOf(setOf(1, 3, 5, 0)) }
+    // Load color preferences
+    LaunchedEffect(Unit) { DegreeColorPrefs.load(context) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
     val positions = if (scale.hasCaged) computeCagedPositions(selectedKey) else scale.positions
@@ -184,18 +186,10 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Color:", color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp)
-            DegreeChip("Tónica", COLOR_TONIC, 1 in degreeFilter) {
-                degreeFilter = if (1 in degreeFilter) degreeFilter - 1 else degreeFilter + 1
-            }
-            DegreeChip("3ª", COLOR_THIRD, 3 in degreeFilter) {
-                degreeFilter = if (3 in degreeFilter) degreeFilter - 3 else degreeFilter + 3
-            }
-            DegreeChip("5ª", COLOR_FIFTH, 5 in degreeFilter) {
-                degreeFilter = if (5 in degreeFilter) degreeFilter - 5 else degreeFilter + 5
-            }
-            DegreeChip("Otros", COLOR_OTHER, 0 in degreeFilter) {
-                degreeFilter = if (0 in degreeFilter) degreeFilter - 0 else degreeFilter + 0
-            }
+            ColorPreviewChip("T\u00f3nica", DegreeColorPrefs.tonicColor, DegreeColorPrefs.tonicEnabled) { showColorSelector = true }
+            ColorPreviewChip("3\u00aa", DegreeColorPrefs.thirdColor, DegreeColorPrefs.thirdEnabled) { showColorSelector = true }
+            ColorPreviewChip("5\u00aa", DegreeColorPrefs.fifthColor, DegreeColorPrefs.fifthEnabled) { showColorSelector = true }
+            ColorPreviewChip("Otros", DegreeColorPrefs.otherColor, DegreeColorPrefs.otherEnabled) { showColorSelector = true }
             Spacer(modifier = Modifier.weight(1f))
 
             // Zoom controls
@@ -255,8 +249,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                         positionsEnabled = positionsEnabled,
                         currentPosition = currentPosition,
                         fretWidthPx = with(density) { fretWidthDp.toPx() },
-                        openStringWidthPx = with(density) { openStringWidth.toPx() },
-                        degreeFilter = degreeFilter
+                        openStringWidthPx = with(density) { openStringWidth.toPx() }
                     )
                 }
             }
@@ -292,6 +285,14 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             onDismiss = { showDisplaySelector = false }
         )
     }
+
+    // Color selector overlay
+    if (showColorSelector) {
+        ScaleColorSelectorOverlay(
+            context = context,
+            onDismiss = { showColorSelector = false }
+        )
+    }
 }
 
 private fun DrawScope.drawGuitarFretboard(
@@ -302,8 +303,7 @@ private fun DrawScope.drawGuitarFretboard(
     positionsEnabled: Boolean,
     currentPosition: Int,
     fretWidthPx: Float,
-    openStringWidthPx: Float,
-    degreeFilter: Set<Int> = setOf(1, 3, 5, 0)
+    openStringWidthPx: Float
 ) {
     val h = size.height
     val topPad = h * 0.08f
@@ -466,21 +466,8 @@ private fun DrawScope.drawGuitarFretboard(
                 continue
             }
 
-            val degreeCategory = when (degree) {
-                1 -> 1; 3 -> 3; 5 -> 5; else -> 0
-            }
-            val isFiltered = degreeCategory in degreeFilter
-
-            val noteColor = if (isFiltered) {
-                when (degree) {
-                    1 -> COLOR_TONIC
-                    3 -> COLOR_THIRD
-                    5 -> COLOR_FIFTH
-                    else -> COLOR_OTHER
-                }
-            } else {
-                COLOR_DIM.copy(alpha = 0.35f)
-            }
+            val isFiltered = DegreeColorPrefs.isScaleEnabled(degree)
+            val noteColor = DegreeColorPrefs.getScaleColor(degree)
             val r = if (degree == 1 && isFiltered) noteRadius * 1.1f else if (!isFiltered) noteRadius * 0.7f else noteRadius
 
             drawCircle(Color(0x55000000), r + 3f, Offset(cx + 1.5f, y + 2f))
@@ -508,7 +495,7 @@ private fun buildNoteLabel(noteIdx: Int, degree: Int, display: NoteDisplay, root
 }
 
 @Composable
-private fun DegreeChip(label: String, color: Color, active: Boolean, onClick: () -> Unit) {
+private fun ColorPreviewChip(label: String, color: Color, active: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
