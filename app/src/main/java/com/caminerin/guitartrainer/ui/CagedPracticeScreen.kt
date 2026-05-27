@@ -182,7 +182,7 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                         .clickable { showKeyCircle = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Scale selector -> overlay
@@ -366,7 +366,8 @@ fun CagedPracticeScreen(onBack: () -> Unit) {
                     selectedKey = it; showKeyCircle = false
                     currentNoteIndex = 0; currentPositionIndex = 0
                 },
-                onDismiss = { showKeyCircle = false }
+                onDismiss = { showKeyCircle = false },
+                relativeMajorOffset = scale.relativeMajorOffset
             )
         }
         if (showScaleSelector) {
@@ -534,7 +535,7 @@ private fun DrawScope.drawCagedFretboard(
             if (positionsEnabled && !isInPos) {
                 val dimR = noteRadius * 0.65f
                 drawCircle(COLOR_DIM.copy(alpha = 0.35f), dimR, Offset(cx, y))
-                val lbl = getSpanishNoteName(noteIdx, rootNote)
+                val lbl = getSpanishNoteName(noteIdx, rootNote, scale.relativeMajorOffset)
                 notePaintDim.color = android.graphics.Color.argb(100, 255, 255, 255)
                 drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + 10f, notePaintDim)
                 continue
@@ -557,7 +558,7 @@ private fun DrawScope.drawCagedFretboard(
 
             if (isFiltered) {
                 val degreeStr = getDegreeLabel(degree)
-                val noteName = getSpanishNoteName(noteIdx, rootNote)
+                val noteName = getSpanishNoteName(noteIdx, rootNote, scale.relativeMajorOffset)
                 val label = "$degreeStr $noteName"
                 val paint = if (label.length > 3) notePaint else notePaintBig
                 paint.color = if (isCurrentNote) android.graphics.Color.WHITE

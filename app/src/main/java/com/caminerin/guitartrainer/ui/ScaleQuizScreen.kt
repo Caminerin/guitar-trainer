@@ -160,7 +160,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                         .clickable { showKeyCircle = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Scale selector -> overlay
@@ -296,7 +296,8 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                     selectedKey = it; showKeyCircle = false
                     revealedNotes.clear(); correctCount = 0; errorCount = 0
                 },
-                onDismiss = { showKeyCircle = false }
+                onDismiss = { showKeyCircle = false },
+                relativeMajorOffset = scale.relativeMajorOffset
             )
         }
         if (showScaleSelector) {
@@ -448,7 +449,7 @@ private fun DrawScope.drawQuizFretboard(
                 drawCircle(Color(0x55000000), noteRadius + 3f, Offset(cx + 1.5f, y + 2f))
                 drawCircle(noteColor, noteRadius, Offset(cx, y))
                 drawCircle(Color(0x44000000), noteRadius, Offset(cx, y), style = Stroke(2f))
-                val label = getSpanishNoteName(noteIdx, rootNote)
+                val label = getSpanishNoteName(noteIdx, rootNote, scale.relativeMajorOffset)
                 drawContext.canvas.nativeCanvas.drawText(label, cx, y + notePaint.textSize * 0.35f, notePaint)
             } else {
                 if (fret <= maxFret && fret > 0) {

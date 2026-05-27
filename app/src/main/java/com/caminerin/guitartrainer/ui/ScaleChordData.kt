@@ -32,13 +32,13 @@ object ScaleChordRepository {
         entries = result
     }
 
-    fun getChordsForScale(scaleName: String, rootNote: Int): List<TransposedScaleChord> {
+    fun getChordsForScale(scaleName: String, rootNote: Int, relativeMajorOffset: Int = 0): List<TransposedScaleChord> {
         val scaleKey = normalizeScaleName(scaleName)
         return entries
             .filter { normalizeScaleName(it.scaleName) == scaleKey }
             .map { entry ->
                 val newRootSemitone = (rootNote + entry.rootSemitoneFromTonic) % 12
-                val rootName = getNoteName(newRootSemitone, rootNote)
+                val rootName = getNoteName(newRootSemitone, rootNote, relativeMajorOffset)
                 val chordName = "$rootName${entry.quality}"
                 TransposedScaleChord(
                     degree = entry.degree,

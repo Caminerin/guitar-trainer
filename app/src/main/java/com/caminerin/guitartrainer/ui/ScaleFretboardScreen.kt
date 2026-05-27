@@ -135,7 +135,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(
-                    getChromaticNames(selectedKey)[selectedKey],
+                    getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey],
                     color = Color.White,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
@@ -277,7 +277,8 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             rootNote = selectedKey,
             scaleIntervals = scale.intervals,
             onNoteSelected = { selectedKey = it; AppPreferences.saveKey(it, context); showChromaticCircle = false },
-            onDismiss = { showChromaticCircle = false }
+            onDismiss = { showChromaticCircle = false },
+            relativeMajorOffset = scale.relativeMajorOffset
         )
     }
 
@@ -477,7 +478,7 @@ private fun DrawScope.drawGuitarFretboard(
                 val dimR = noteRadius * 0.65f
                 drawCircle(COLOR_DIM.copy(alpha = 0.35f), dimR, Offset(cx, y))
                 if (noteDisplay != NoteDisplay.NONE) {
-                    val lbl = buildNoteLabel(noteIdx, degree, noteDisplay, rootNote)
+                    val lbl = buildNoteLabel(noteIdx, degree, noteDisplay, rootNote, scale.relativeMajorOffset)
                     notePaintSmall.color = android.graphics.Color.argb(100, 255, 255, 255)
                     notePaintSmall.textSize = 28f
                     drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + 10f, notePaintSmall)
@@ -496,7 +497,7 @@ private fun DrawScope.drawGuitarFretboard(
             drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
 
             if (noteDisplay != NoteDisplay.NONE && isFiltered) {
-                val label = buildNoteLabel(noteIdx, degree, noteDisplay, rootNote)
+                val label = buildNoteLabel(noteIdx, degree, noteDisplay, rootNote, scale.relativeMajorOffset)
                 val paint = if (label.length > 4) notePaintSmall else notePaintBig
                 drawContext.canvas.nativeCanvas.drawText(label, cx, y + paint.textSize * 0.35f, paint)
             }
@@ -504,8 +505,8 @@ private fun DrawScope.drawGuitarFretboard(
     }
 }
 
-private fun buildNoteLabel(noteIdx: Int, degree: Int, display: NoteDisplay, rootNote: Int = -1): String {
-    val noteName = getSpanishNoteName(noteIdx, rootNote)
+private fun buildNoteLabel(noteIdx: Int, degree: Int, display: NoteDisplay, rootNote: Int = -1, relativeMajorOffset: Int = 0): String {
+    val noteName = getSpanishNoteName(noteIdx, rootNote, relativeMajorOffset)
     val degreeStr = getDegreeLabel(degree)
     return when (display) {
         NoteDisplay.NOTE -> noteName

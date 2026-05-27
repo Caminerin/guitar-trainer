@@ -79,20 +79,26 @@ val EUROPEAN_NOTE_NAMES_FLAT = listOf("Do", "Reb", "Re", "Mib", "Mi", "Fa", "Sol
 val OPEN_STRING_NAMES_AMERICAN = listOf("E", "A", "D", "G", "B", "E")
 val OPEN_STRING_NAMES_EUROPEAN = listOf("Mi", "La", "Re", "Sol", "Si", "Mi")
 
-private val FLAT_KEYS = setOf(1, 3, 5, 8, 10)
+private val FLAT_MAJOR_KEYS = setOf(1, 3, 5, 8, 10)
 
-fun keyUsesFlats(rootNote: Int): Boolean = rootNote in FLAT_KEYS
+fun keyUsesFlats(rootNote: Int): Boolean = rootNote in FLAT_MAJOR_KEYS
 
-fun getNoteName(noteIndex: Int, rootNote: Int = -1): String {
-    val useFlats = rootNote >= 0 && keyUsesFlats(rootNote)
+fun effectiveMajorRoot(rootNote: Int, relativeMajorOffset: Int): Int =
+    (rootNote + relativeMajorOffset) % 12
+
+fun keyUsesFlatsForScale(rootNote: Int, relativeMajorOffset: Int = 0): Boolean =
+    effectiveMajorRoot(rootNote, relativeMajorOffset) in FLAT_MAJOR_KEYS
+
+fun getNoteName(noteIndex: Int, rootNote: Int = -1, relativeMajorOffset: Int = 0): String {
+    val useFlats = rootNote >= 0 && keyUsesFlatsForScale(rootNote, relativeMajorOffset)
     return when (NoteFormatPreference.current) {
         NoteFormat.AMERICAN -> if (useFlats) AMERICAN_NOTE_NAMES_FLAT[noteIndex % 12] else AMERICAN_NOTE_NAMES[noteIndex % 12]
         NoteFormat.EUROPEAN -> if (useFlats) EUROPEAN_NOTE_NAMES_FLAT[noteIndex % 12] else EUROPEAN_NOTE_NAMES[noteIndex % 12]
     }
 }
 
-fun getChromaticNames(rootNote: Int = -1): List<String> {
-    val useFlats = rootNote >= 0 && keyUsesFlats(rootNote)
+fun getChromaticNames(rootNote: Int = -1, relativeMajorOffset: Int = 0): List<String> {
+    val useFlats = rootNote >= 0 && keyUsesFlatsForScale(rootNote, relativeMajorOffset)
     return when (NoteFormatPreference.current) {
         NoteFormat.AMERICAN -> if (useFlats) AMERICAN_NOTE_NAMES_FLAT else AMERICAN_NOTE_NAMES
         NoteFormat.EUROPEAN -> if (useFlats) EUROPEAN_NOTE_NAMES_FLAT else EUROPEAN_NOTE_NAMES
@@ -110,7 +116,8 @@ data class Scale(
     val name: String,
     val intervals: List<Int>,
     val positions: List<ScalePosition>,
-    val hasCaged: Boolean = true
+    val hasCaged: Boolean = true,
+    val relativeMajorOffset: Int = 0
 )
 
 data class ScalePosition(
@@ -168,7 +175,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 5, 9, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 10, 14, 'D')
-        )
+        ),
+        relativeMajorOffset = 3
     ),
     Scale(
         name = "Pentatónica mayor",
@@ -190,7 +198,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 5, 9, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 10, 14, 'D')
-        )
+        ),
+        relativeMajorOffset = 3
     ),
     Scale(
         name = "Blues menor",
@@ -201,7 +210,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 5, 9, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 10, 14, 'D')
-        )
+        ),
+        relativeMajorOffset = 3
     ),
     Scale(
         name = "Blues mayor",
@@ -223,7 +233,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 5, 9, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 9, 13, 'D')
-        )
+        ),
+        relativeMajorOffset = 10
     ),
     Scale(
         name = "Frigia",
@@ -234,7 +245,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 5, 9, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 8, 12, 'D')
-        )
+        ),
+        relativeMajorOffset = 8
     ),
     Scale(
         name = "Lidia",
@@ -245,7 +257,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 4, 8, 'G'),
             ScalePosition("E", 6, 10, 'E'),
             ScalePosition("D", 9, 13, 'D')
-        )
+        ),
+        relativeMajorOffset = 7
     ),
     Scale(
         name = "Mixolidia",
@@ -256,7 +269,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 5, 9, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 9, 13, 'D')
-        )
+        ),
+        relativeMajorOffset = 5
     ),
     Scale(
         name = "Locria",
@@ -267,7 +281,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 3, 7, 'G'),
             ScalePosition("E", 6, 10, 'E'),
             ScalePosition("D", 8, 12, 'D')
-        )
+        ),
+        relativeMajorOffset = 1
     ),
     Scale(
         name = "Menor armónica",
@@ -278,7 +293,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 5, 9, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 8, 13, 'D')
-        )
+        ),
+        relativeMajorOffset = 3
     ),
     Scale(
         name = "Menor melódica",
@@ -289,7 +305,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 5, 9, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 9, 13, 'D')
-        )
+        ),
+        relativeMajorOffset = 3
     ),
     Scale(
         name = "Frigia española",
@@ -300,7 +317,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 4, 8, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 8, 12, 'D')
-        )
+        ),
+        relativeMajorOffset = 8
     ),
     Scale(
         name = "Húngara menor",
@@ -311,7 +329,8 @@ val ALL_SCALES = listOf(
             ScalePosition("G", 3, 7, 'G'),
             ScalePosition("E", 7, 11, 'E'),
             ScalePosition("D", 8, 13, 'D')
-        )
+        ),
+        relativeMajorOffset = 3
     ),
     Scale(
         name = "Tonos enteros",
@@ -371,13 +390,13 @@ fun getDegreeLabel(degree: Int): String {
 
 private val SPANISH_NOTE_NAMES = listOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
 
-fun getSpanishNoteName(midiNote: Int, rootNote: Int = -1): String {
-    return getNoteName(midiNote, rootNote)
+fun getSpanishNoteName(midiNote: Int, rootNote: Int = -1, relativeMajorOffset: Int = 0): String {
+    return getNoteName(midiNote, rootNote, relativeMajorOffset)
 }
 
 val OPEN_STRING_NAMES: List<String> get() = getOpenStringNames()
 
-fun getSpanishChromaticNames(rootNote: Int = -1): List<String> = getChromaticNames(rootNote)
+fun getSpanishChromaticNames(rootNote: Int = -1, relativeMajorOffset: Int = 0): List<String> = getChromaticNames(rootNote, relativeMajorOffset)
 
 val SPANISH_CHROMATIC_NAMES: List<String> get() = getChromaticNames()
 

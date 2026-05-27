@@ -38,7 +38,8 @@ fun ChromaticCircleOverlay(
     rootNote: Int,
     scaleIntervals: List<Int>,
     onNoteSelected: (Int) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    relativeMajorOffset: Int = 0
 ) {
     Box(
         modifier = Modifier
@@ -81,7 +82,8 @@ fun ChromaticCircleOverlay(
                 selectedNote = selectedNote,
                 alpha = 1f,
                 rootNote = rootNote,
-                scaleIntervals = scaleIntervals
+                scaleIntervals = scaleIntervals,
+                relativeMajorOffset = relativeMajorOffset
             )
         }
     }
@@ -93,7 +95,8 @@ fun DrawScope.drawChromaticCircleShared(
     selectedNote: Int,
     alpha: Float,
     rootNote: Int,
-    scaleIntervals: List<Int>
+    scaleIntervals: List<Int>,
+    relativeMajorOffset: Int = 0
 ) {
     val outerRadius = maxRadius * 0.95f
     val innerRadius = maxRadius * 0.35f
@@ -151,7 +154,7 @@ fun DrawScope.drawChromaticCircleShared(
             isAntiAlias = true
             setShadowLayer(4f, 1f, 1f, android.graphics.Color.argb(180, 0, 0, 0))
         }
-        drawContext.canvas.nativeCanvas.drawText(getChromaticNames(rootNote)[i], labelX, labelY + textSize * 0.35f, labelPaint)
+        drawContext.canvas.nativeCanvas.drawText(getChromaticNames(rootNote, relativeMajorOffset)[i], labelX, labelY + textSize * 0.35f, labelPaint)
     }
 
     drawCircle(Color(0xFF111111).copy(alpha = alpha), innerRadius, center)
@@ -164,7 +167,7 @@ fun DrawScope.drawChromaticCircleShared(
         isFakeBoldText = true
         isAntiAlias = true
     }
-    drawContext.canvas.nativeCanvas.drawText(getChromaticNames(rootNote)[selectedNote], center.x, center.y + 60f, centerPaint)
+    drawContext.canvas.nativeCanvas.drawText(getChromaticNames(rootNote, relativeMajorOffset)[selectedNote], center.x, center.y + 60f, centerPaint)
 }
 
 @Composable
