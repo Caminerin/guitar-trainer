@@ -230,8 +230,9 @@ fun MainScreen(
                         text = {
                             Text(
                                 mode.title,
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 maxLines = 1,
+                                softWrap = false,
                                 color = if (selectedTab == index) Color(0xFFFFC107) else Color.White.copy(alpha = 0.6f)
                             )
                         },
