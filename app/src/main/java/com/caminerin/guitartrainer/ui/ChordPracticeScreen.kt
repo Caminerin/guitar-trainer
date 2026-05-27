@@ -73,7 +73,8 @@ data class ChordSlot(
 )
 
 data class Measure(
-    val subdivisions: List<ChordSlot> = listOf(ChordSlot())
+    val subdivisions: List<ChordSlot> = listOf(ChordSlot()),
+    val strumPattern: String? = null
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -137,13 +138,13 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     for ((si, slot) in m.subdivisions.withIndex()) {
                         currentMeasure = mi
                         currentSub = si
-                        slot.chordId?.let { id ->
-                            val chord = ChordRepository.getChords().firstOrNull { it.id == id }
-                            chord?.let { ChordSynth.playChord(it.frets, 800) }
-                        }
-                        tickPlayer.tick()
                         val beatMs = 60000L / bpmState.value
                         val subMs = beatMs / m.subdivisions.size.coerceAtLeast(1)
+                        slot.chordId?.let { id ->
+                            val chord = ChordRepository.getChords().firstOrNull { it.id == id }
+                            chord?.let { ChordSynth.playChord(it.frets, subMs.toInt().coerceAtLeast(200)) }
+                        }
+                        tickPlayer.tick()
                         delay(subMs.coerceAtLeast(50L))
                     }
                 }
@@ -287,7 +288,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     Column(modifier = Modifier.weight(1f)) {
                         Text("${song.title} \u2022 ${song.artist}",
                             color = Color(0xFFFFC107), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                        Text("Rasgueo: ${song.strumPattern} \u2022 Cejilla: traste ${song.capo} \u2022 ${song.key}",
+                        Text("Cejilla: traste ${song.capo} \u2022 ${song.key}",
                             color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, maxLines = 1)
                     }
                     Box(
@@ -394,7 +395,8 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     val allChords = ChordRepository.getChords()
                     song.measures.forEach { measure ->
                         val chordId = findChordIdByName(measure.chordSymbol, allChords)
-                        measures.add(Measure(listOf(ChordSlot(chordId))))
+                        val pattern = measure.strumPattern ?: song.strumPattern
+                        measures.add(Measure(listOf(ChordSlot(chordId)), strumPattern = pattern.takeIf { it.isNotBlank() }))
                     }
                     // Fill remaining measures if needed
                     while (measures.size < measureCount) measures.add(Measure())
@@ -534,7 +536,7 @@ private fun MeasureCell(
                     .clickable { onSubdivide() }
                     .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
-                Text("\u00f7${measure.subdivisions.size}",
+                Text("Subdiv. ${measure.subdivisions.size}",
                     color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
@@ -565,6 +567,17 @@ private fun MeasureCell(
                     )
                 }
             }
+        }
+        // Strum pattern per measure
+        measure.strumPattern?.let { pattern ->
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                pattern,
+                color = Color(0xFFCE93D8),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
         }
     }
 }

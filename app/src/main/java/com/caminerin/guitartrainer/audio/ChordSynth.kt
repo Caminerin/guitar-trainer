@@ -11,8 +11,14 @@ object ChordSynth {
     private const val SAMPLE_RATE = 44100
     private val STANDARD_TUNING_HZ = doubleArrayOf(82.41, 110.0, 146.83, 196.0, 246.94, 329.63)
 
+    private var currentTrack: AudioTrack? = null
+    private var playThread: Thread? = null
+
     fun playChord(frets: List<Int?>, durationMs: Int = 1200) {
-        Thread {
+        // Stop previous chord immediately for clean transition
+        stopCurrent()
+
+        val thread = Thread {
             try {
                 val numSamples = SAMPLE_RATE * durationMs / 1000
                 val samples = FloatArray(numSamples)
@@ -27,20 +33,29 @@ object ChordSynth {
 
                 if (activeStrings.isEmpty()) return@Thread
 
+                val attackSamples = (SAMPLE_RATE * 0.008).toInt()
+                val fadeOutSamples = (SAMPLE_RATE * 0.015).toInt()
+                val fadeOutStart = numSamples - fadeOutSamples
+
                 for (i in 0 until numSamples) {
                     val t = i.toDouble() / SAMPLE_RATE
                     var sample = 0.0
-                    val envelope = exp(-t * 2.5)
+                    val decay = exp(-t * 1.2)
+
+                    // Quick attack ramp to avoid pop
+                    val attack = if (i < attackSamples) i.toFloat() / attackSamples else 1f
+                    // Fade out at end for smooth transition to next chord
+                    val fadeOut = if (i > fadeOutStart) (numSamples - i).toFloat() / fadeOutSamples else 1f
 
                     for (freq in activeStrings) {
                         val fundamental = sin(2.0 * PI * freq * t)
                         val harmonic2 = 0.5 * sin(2.0 * PI * freq * 2 * t)
                         val harmonic3 = 0.25 * sin(2.0 * PI * freq * 3 * t)
                         val harmonic4 = 0.12 * sin(2.0 * PI * freq * 4 * t)
-                        sample += (fundamental + harmonic2 + harmonic3 + harmonic4) * envelope
+                        sample += (fundamental + harmonic2 + harmonic3 + harmonic4) * decay
                     }
 
-                    samples[i] = (sample / activeStrings.size * 0.8).toFloat()
+                    samples[i] = (sample / activeStrings.size * 0.8 * attack * fadeOut).toFloat()
                         .coerceIn(-1f, 1f)
                 }
 
@@ -68,13 +83,30 @@ object ChordSynth {
                     .setTransferMode(AudioTrack.MODE_STATIC)
                     .build()
 
+                synchronized(this) { currentTrack = track }
+
                 track.write(samples, 0, numSamples, AudioTrack.WRITE_BLOCKING)
                 track.play()
 
-                Thread.sleep(durationMs.toLong() + 100)
+                Thread.sleep(durationMs.toLong() + 50)
                 track.stop()
                 track.release()
+                synchronized(this) { if (currentTrack == track) currentTrack = null }
             } catch (_: Exception) { }
-        }.start()
+        }
+        synchronized(this) { playThread = thread }
+        thread.start()
+    }
+
+    private fun stopCurrent() {
+        synchronized(this) {
+            try {
+                currentTrack?.stop()
+                currentTrack?.release()
+            } catch (_: Exception) { }
+            currentTrack = null
+            playThread?.interrupt()
+            playThread = null
+        }
     }
 }
