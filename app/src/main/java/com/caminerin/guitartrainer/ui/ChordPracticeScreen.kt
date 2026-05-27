@@ -146,7 +146,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             slot.chordId?.let { id ->
                                 val chord = ChordRepository.getChords().firstOrNull { it.id == id }
                                 val isUpStrum = slot.strumDirection == "U"
-                                chord?.let { ChordSynth.playChord(it.frets, (subMs.toInt() + 200).coerceAtLeast(400), isUpStrum) }
+                                // Generate chord long enough to ring through any silent subdivisions that follow
+                                val remainingSlots = m.subdivisions.size - si
+                                val durationMs = (subMs * remainingSlots + 200).toInt().coerceAtLeast(400)
+                                chord?.let { ChordSynth.playChord(it.frets, durationMs, isUpStrum) }
                             }
                         }
                         tickPlayer.tick()
