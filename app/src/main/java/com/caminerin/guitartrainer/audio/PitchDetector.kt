@@ -19,6 +19,7 @@ class PitchDetector(
     data class PitchResult(
         val frequency: Float,
         val noteName: String,
+        val noteIndex: Int,
         val octave: Int,
         val centsOff: Float,
         val confidence: Float
@@ -130,6 +131,7 @@ class PitchDetector(
             return PitchResult(
                 frequency = frequency,
                 noteName = NOTE_NAMES[noteIndex],
+                noteIndex = noteIndex,
                 octave = octave,
                 centsOff = centsOff,
                 confidence = confidence

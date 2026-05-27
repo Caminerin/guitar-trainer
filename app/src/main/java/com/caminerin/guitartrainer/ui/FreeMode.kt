@@ -29,19 +29,20 @@ fun FreeMode(
         verticalArrangement = Arrangement.Center
     ) {
         if (pitchResult != null) {
-            val spanishName = ALL_NOTES
-                .find { it.name == pitchResult.noteName }
-                ?.spanishName ?: pitchResult.noteName
+            val displayName = getNoteName(pitchResult.noteIndex)
 
             Text(
-                text = spanishName,
+                text = displayName,
                 fontSize = 64.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
 
+            val noteInfo = findNoteByIndex(pitchResult.noteIndex)
+            val hasAlt = noteInfo.name != noteInfo.altName
+            val subtitle = if (hasAlt) "${noteInfo.name}/${noteInfo.altName}${pitchResult.octave}" else "${pitchResult.noteName}${pitchResult.octave}"
             Text(
-                text = "${pitchResult.noteName}${pitchResult.octave}",
+                text = subtitle,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onBackground
