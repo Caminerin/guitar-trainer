@@ -2,7 +2,7 @@ package com.caminerin.guitartrainer.ui
 
 import android.app.Activity
 import android.content.Context
-import android.content.res.Configuration
+import android.content.pm.ActivityInfo
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.RemoveRedEye
-import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
@@ -42,6 +41,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,7 +53,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -97,8 +96,6 @@ fun MainScreen(
     var showExitDialog by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     val modes = AppMode.entries
-    val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val currentMode = try { FullscreenMode.valueOf(fullscreenMode) } catch (_: Exception) { FullscreenMode.NONE }
 
@@ -113,29 +110,30 @@ fun MainScreen(
 
     when (currentMode) {
         FullscreenMode.SCALES -> {
-            if (isLandscape) ScaleFretboardScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
-            else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            ForceLandscape()
+            ScaleFretboardScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
             return
         }
         FullscreenMode.CHORDS -> {
-            if (isLandscape) ChordVisualizerScreen(
+            ForceLandscape()
+            ChordVisualizerScreen(
                 onBack = { fullscreenMode = FullscreenMode.NONE.name },
                 onGoToPractice = { fullscreenMode = FullscreenMode.CHORD_PRACTICE.name }
             )
-            else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
             return
         }
         FullscreenMode.CAGED -> {
-            if (isLandscape) CagedPracticeScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name }, pitchResult = pitchResult)
-            else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            ForceLandscape()
+            CagedPracticeScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name }, pitchResult = pitchResult)
             return
         }
         FullscreenMode.QUIZ -> {
-            if (isLandscape) ScaleQuizScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name }, pitchResult = pitchResult)
-            else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            ForceLandscape()
+            ScaleQuizScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name }, pitchResult = pitchResult)
             return
         }
         FullscreenMode.CHORD_PRACTICE -> {
+            ForceLandscape()
             ChordPracticeScreen(
                 onBack = { fullscreenMode = FullscreenMode.NONE.name },
                 onGoToVisualizer = { fullscreenMode = FullscreenMode.CHORDS.name }
@@ -421,40 +419,13 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun RotatePhoneMessage(onBack: () -> Unit) {
-    BackHandler { onBack() }
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF1A1A1A))
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = Icons.Default.ScreenRotation,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = Color(0xFFFFC107).copy(alpha = 0.7f)
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-        Text(
-            text = "Gira el m\u00f3vil en horizontal",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text(
-            text = "Esta vista necesita la pantalla en horizontal para mostrar el m\u00e1stil completo",
-            fontSize = 15.sp,
-            color = Color.White.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center
-        )
-        Spacer(modifier = Modifier.height(32.dp))
-        TextButton(onClick = onBack) {
-            Text("Volver", fontSize = 16.sp, color = Color(0xFFFFC107))
+private fun ForceLandscape() {
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 }
