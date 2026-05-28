@@ -78,7 +78,18 @@ fun TunerMode(
     } else if (pitchResult == null) {
         null
     } else {
-        currentTuning.strings.minByOrNull { abs(centsFromTarget(pitchResult.frequency, it.frequency)) }
+        val freq = pitchResult.frequency
+        val closest = currentTuning.strings.minByOrNull { abs(centsFromTarget(freq, it.frequency)) }
+        if (stableString != null && closest != null && closest != stableString) {
+            val closestCents = abs(centsFromTarget(freq, closest.frequency))
+            if (closestCents < 30f) {
+                closest
+            } else {
+                stableString
+            }
+        } else {
+            closest
+        }
     }
 
     val activeString = if (!isAutoMode) {
@@ -91,7 +102,7 @@ fun TunerMode(
         stableString
     } else if (rawClosest == candidateString) {
         candidateCount++
-        if (candidateCount >= 3) {
+        if (candidateCount >= 6) {
             stableString = rawClosest
             candidateString = null
             candidateCount = 0
@@ -575,6 +586,17 @@ private fun statusColor(cents: Float): Color {
 private fun centsFromTarget(freq: Float, target: Float): Float {
     if (freq <= 0f || target <= 0f) return 0f
     return (1200f * kotlin.math.log2(freq / target))
+}
+
+private fun isHarmonicRelated(detectedFreq: Float, fundamentalFreq: Float): Boolean {
+    val harmonics = floatArrayOf(0.5f, 1f, 2f, 3f, 4f, 5f, 6f)
+    val toleranceCents = 250f
+    for (mult in harmonics) {
+        val harmonicFreq = fundamentalFreq * mult
+        val cents = abs(1200f * kotlin.math.log2(detectedFreq / harmonicFreq))
+        if (cents < toleranceCents) return true
+    }
+    return false
 }
 
 private fun playReferenceTone(frequency: Float, durationMs: Int = 2000) {
