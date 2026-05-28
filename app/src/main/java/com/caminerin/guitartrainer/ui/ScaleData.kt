@@ -255,23 +255,21 @@ val ALL_SCALES = listOf(
         name = "Pentatónica mayor",
         intervals = listOf(0, 2, 4, 7, 9),
         positions = listOf(
-            ScalePosition("C", 0, 4, 'C'),
-            ScalePosition("A", 2, 6, 'A'),
-            ScalePosition("G", 4, 8, 'G'),
-            ScalePosition("E", 7, 11, 'E'),
-            ScalePosition("D", 9, 13, 'D')
-        )
+            ScalePosition("1", 0, 4, '1'),
+            ScalePosition("2", 4, 8, '2'),
+            ScalePosition("3", 8, 12, '3')
+        ),
+        hasCaged = false
     ),
     Scale(
         name = "Pentatónica menor",
         intervals = listOf(0, 3, 5, 7, 10),
         positions = listOf(
-            ScalePosition("C", 0, 4, 'C'),
-            ScalePosition("A", 3, 6, 'A'),
-            ScalePosition("G", 5, 9, 'G'),
-            ScalePosition("E", 7, 11, 'E'),
-            ScalePosition("D", 10, 14, 'D')
+            ScalePosition("1", 0, 4, '1'),
+            ScalePosition("2", 4, 8, '2'),
+            ScalePosition("3", 8, 12, '3')
         ),
+        hasCaged = false,
         relativeMajorOffset = 3
     ),
     Scale(

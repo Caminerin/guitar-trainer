@@ -142,11 +142,6 @@ fun MainScreen(
         FullscreenMode.NONE -> { /* show normal UI below */ }
     }
 
-    // Exit confirmation dialog
-    if (showSettings) {
-        SettingsOverlay(context = context, onDismiss = { showSettings = false })
-    }
-
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
@@ -167,6 +162,7 @@ fun MainScreen(
         )
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -264,6 +260,11 @@ fun MainScreen(
                 )
             }
         }
+    }
+
+    if (showSettings) {
+        SettingsOverlay(context = context, onDismiss = { showSettings = false })
+    }
     }
 }
 

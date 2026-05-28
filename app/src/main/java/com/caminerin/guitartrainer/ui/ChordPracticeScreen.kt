@@ -304,52 +304,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     }
                 }
 
-                // Save progression
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .clickable {
-                            val data = measures.joinToString("|") { m ->
-                                m.subdivisions.joinToString(",") { it.chordId ?: "_" }
-                            }
-                            prefs.edit().putString("last_progression", data)
-                                .putInt("last_key", selectedKey)
-                                .putString("last_scale", selectedScaleName)
-                                .putInt("last_bpm", bpm)
-                                .putInt("last_beats", beatsPerMeasure)
-                                .apply()
-                        }
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                ) {
-                    Text("Guardar", color = Color(0xFF4CAF50), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // Load progression
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .clickable {
-                            val data = prefs.getString("last_progression", null)
-                            if (data != null) {
-                                val loadedMeasures = data.split("|").map { mStr ->
-                                    Measure(mStr.split(",").map { ChordSlot(if (it == "_") null else it) })
-                                }
-                                measures.clear()
-                                measures.addAll(loadedMeasures)
-                                measureCount = measures.size
-                                selectedKey = prefs.getInt("last_key", 0)
-                                selectedScaleName = prefs.getString("last_scale", "Mayor (Jónica)") ?: "Mayor (Jónica)"
-                                bpm = prefs.getInt("last_bpm", 60)
-                                beatsPerMeasure = prefs.getInt("last_beats", 4)
-                            }
-                        }
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                ) {
-                    Text("Cargar", color = Color(0xFF2196F3), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-
                 // Play / Stop button
                 IconButton(
                     onClick = { isPlaying = !isPlaying },
