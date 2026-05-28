@@ -24,6 +24,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
@@ -87,6 +88,8 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     LaunchedEffect(Unit) { ScaleChordRepository.load(context) }
     LaunchedEffect(Unit) { SongRepository.load(context) }
 
+    val prefs = remember { context.getSharedPreferences("chord_progressions", android.content.Context.MODE_PRIVATE) }
+
     var modeKey by rememberSaveable { mutableStateOf(true) } // true = by tonality, false = free
     var selectedKey by rememberSaveable { mutableIntStateOf(0) }
     var selectedScaleName by rememberSaveable { mutableStateOf("Mayor (Jónica)") }
@@ -106,6 +109,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
 
     var showKeyCircle by remember { mutableStateOf(false) }
     var showScaleSelector by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
     var showChordPicker by remember { mutableStateOf<Pair<Int, Int>?>(null) } // measureIdx, subIdx
     var showSongPicker by remember { mutableStateOf(false) }
     var currentSong by remember { mutableStateOf<Song?>(null) }
@@ -113,6 +117,8 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     var showMeasuresSelector by remember { mutableStateOf(false) }
     var showModeSelector by remember { mutableStateOf(false) }
     var showMeasureSubSelector by remember { mutableStateOf<Int?>(null) }
+    var showBeatsSelector by remember { mutableStateOf(false) }
+    var selectedSlotChordId by remember { mutableStateOf<String?>(null) }
 
 
     var isPlaying by remember { mutableStateOf(false) }
@@ -237,6 +243,11 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         val shortName = selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
                         Text(shortName, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
+
+                    // Info button
+                    IconButton(onClick = { showInfo = true }, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(18.dp))
+                    }
                 }
 
                 // BPM
@@ -283,6 +294,52 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
+
+                // Save progression
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable {
+                            val data = measures.joinToString("|") { m ->
+                                m.subdivisions.joinToString(",") { it.chordId ?: "_" }
+                            }
+                            prefs.edit().putString("last_progression", data)
+                                .putInt("last_key", selectedKey)
+                                .putString("last_scale", selectedScaleName)
+                                .putInt("last_bpm", bpm)
+                                .putInt("last_beats", beatsPerMeasure)
+                                .apply()
+                        }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text("Guardar", color = Color(0xFF4CAF50), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Load progression
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable {
+                            val data = prefs.getString("last_progression", null)
+                            if (data != null) {
+                                val loadedMeasures = data.split("|").map { mStr ->
+                                    Measure(mStr.split(",").map { ChordSlot(if (it == "_") null else it) })
+                                }
+                                measures.clear()
+                                measures.addAll(loadedMeasures)
+                                measureCount = measures.size
+                                selectedKey = prefs.getInt("last_key", 0)
+                                selectedScaleName = prefs.getString("last_scale", "Mayor (Jónica)") ?: "Mayor (Jónica)"
+                                bpm = prefs.getInt("last_bpm", 60)
+                                beatsPerMeasure = prefs.getInt("last_beats", 4)
+                            }
+                        }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text("Cargar", color = Color(0xFF2196F3), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
 
                 // Play / Stop button
                 IconButton(
@@ -347,7 +404,11 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             measure = measure,
                             isActiveMeasure = mi == currentMeasure,
                             currentSub = if (mi == currentMeasure) currentSub else -1,
-                            onSlotClick = { si -> showChordPicker = mi to si },
+                            onSlotClick = { si ->
+                                val chordId = measure.subdivisions.getOrNull(si)?.chordId
+                                if (chordId != null) selectedSlotChordId = chordId
+                                showChordPicker = mi to si
+                            },
                             onSubdivide = { showMeasureSubSelector = mi },
                             getChordLabel = { id ->
                                 if (id == null) "—"
@@ -358,12 +419,16 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 }
             }
 
-            // Active chord diagram
+            // Active chord diagram (playing chord or selected chord)
             val activeChord = if (currentMeasure >= 0 && currentSub >= 0) {
                 measures.getOrNull(currentMeasure)?.subdivisions?.getOrNull(currentSub)?.chordId?.let { id ->
                     ChordRepository.getChords().firstOrNull { it.id == id }
                 }
-            } else null
+            } else {
+                selectedSlotChordId?.let { id ->
+                    ChordRepository.getChords().firstOrNull { it.id == id }
+                }
+            }
 
             if (activeChord != null) {
                 Box(
@@ -410,8 +475,8 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 ) {
                     Text("Escala", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(12.dp))
-                    val scaleNames = ScaleChordRepository.getAvailableScaleNames()
-                    scaleNames.forEach { name ->
+                    ALL_SCALES.forEach { scaleEntry ->
+                        val name = scaleEntry.name
                         val isSelected = name == selectedScaleName ||
                             name.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u") ==
                             selectedScaleName.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
@@ -523,6 +588,23 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     },
                     onDismiss = { showMeasureSubSelector = null }
                 )
+            }
+        }
+
+        // Scale info sheet overlay
+        if (showInfo && modeKey) {
+            val infoScale = ALL_SCALES.find {
+                it.name.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u") ==
+                selectedScaleName.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
+            }
+            if (infoScale != null) {
+                ScaleInfoSheet(
+                    rootNote = selectedKey,
+                    scale = infoScale,
+                    onDismiss = { showInfo = false }
+                )
+            } else {
+                showInfo = false
             }
         }
     }

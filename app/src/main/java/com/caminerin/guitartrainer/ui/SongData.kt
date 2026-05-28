@@ -100,12 +100,23 @@ object SongRepository {
             headerIndex = headerParts.withIndex().associate { (i, v) -> v.trim() to i }
 
             var line = reader.readLine()
+            var lineNum = 1
+            var skipped = 0
             while (line != null) {
-                parseSongLine(line)?.let { result.add(it) }
+                lineNum++
+                val song = parseSongLine(line)
+                if (song != null) result.add(song)
+                else {
+                    skipped++
+                    android.util.Log.w("SongData", "Skipped invalid row at line $lineNum")
+                }
                 line = reader.readLine()
             }
             reader.close()
-        } catch (_: Exception) {}
+            android.util.Log.i("SongData", "Loaded ${result.size} songs, skipped $skipped rows")
+        } catch (e: Exception) {
+            android.util.Log.e("SongData", "Error loading songs.csv", e)
+        }
         songs = result
         allStyles = songs.map { it.style }.distinct().sorted()
         allLanguages = songs.map { it.language }.distinct().sorted()
@@ -219,21 +230,5 @@ object SongRepository {
         }
     }
 
-    private fun smartSplit(line: String): List<String> {
-        val parts = mutableListOf<String>()
-        val current = StringBuilder()
-        var inQuotes = false
-        for (ch in line) {
-            when {
-                ch == '"' -> inQuotes = !inQuotes
-                ch == ',' && !inQuotes -> {
-                    parts.add(current.toString())
-                    current.clear()
-                }
-                else -> current.append(ch)
-            }
-        }
-        parts.add(current.toString())
-        return parts
-    }
+    private fun smartSplit(line: String): List<String> = com.caminerin.guitartrainer.ui.smartSplit(line)
 }

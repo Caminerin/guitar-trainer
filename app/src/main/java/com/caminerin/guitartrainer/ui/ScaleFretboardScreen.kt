@@ -66,8 +66,8 @@ private val COLOR_OTHER = Color(0xFF26A69A)       // teal - other degrees
 private val COLOR_DIM = Color(0xFF78909C)         // muted for out-of-position
 
 // Fretboard aesthetic
-private val COLOR_BG = Color(0xFF1A1A1A)
-private val COLOR_TOOLBAR = Color(0xFF1E1E1E)
+private val COLOR_BG = SHARED_BG
+private val COLOR_TOOLBAR = SHARED_TOOLBAR
 private val COLOR_WOOD = Color(0xFF3E2415)
 private val COLOR_NUT = Color(0xFFF0EAD6)
 private val COLOR_FRET_WIRE = Color(0xFFBBBBBB)

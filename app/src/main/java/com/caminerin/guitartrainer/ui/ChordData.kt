@@ -143,13 +143,23 @@ object ChordRepository {
             val reader = BufferedReader(InputStreamReader(inputStream))
             reader.readLine() // skip header
             var line = reader.readLine()
+            var lineNum = 1
+            var skipped = 0
             while (line != null) {
+                lineNum++
                 val chord = parseCsvLine(line)
                 if (chord != null) chords.add(chord)
+                else {
+                    skipped++
+                    android.util.Log.w("ChordData", "Skipped invalid row at line $lineNum")
+                }
                 line = reader.readLine()
             }
             reader.close()
-        } catch (_: Exception) { }
+            android.util.Log.i("ChordData", "Loaded ${chords.size} chords, skipped $skipped rows")
+        } catch (e: Exception) {
+            android.util.Log.e("ChordData", "Error loading chords CSV", e)
+        }
         allChords = chords
     }
 
@@ -175,7 +185,7 @@ object ChordRepository {
 
     fun getAvailableRoots(): List<String> =
         allChords.map { it.root }.distinct().sortedBy {
-            SCALE_NOTE_NAMES.indexOf(it)
+            AMERICAN_NOTE_NAMES.indexOf(it)
         }
 
     fun getAvailableQualities(): List<ChordQuality> =
@@ -236,23 +246,7 @@ object ChordRepository {
         return fingering
     }
 
-    private fun smartSplit(line: String): List<String> {
-        val parts = mutableListOf<String>()
-        val current = StringBuilder()
-        var inQuotes = false
-        for (ch in line) {
-            when {
-                ch == '"' -> inQuotes = !inQuotes
-                ch == ',' && !inQuotes -> {
-                    parts.add(current.toString())
-                    current.clear()
-                }
-                else -> current.append(ch)
-            }
-        }
-        parts.add(current.toString())
-        return parts
-    }
+    private fun smartSplit(line: String): List<String> = com.caminerin.guitartrainer.ui.smartSplit(line)
 
     private fun parseFrets(fretsStr: String): List<Int?> {
         val cleaned = fretsStr.replace("[", "").replace("]", "").trim()

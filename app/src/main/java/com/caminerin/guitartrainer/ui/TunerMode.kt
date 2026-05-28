@@ -333,18 +333,34 @@ private fun TunerInfo(
         Spacer(modifier = Modifier.height(12.dp))
 
         val status = tuningStatus(centsFromTarget)
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(16.dp))
-                .background(status.color.copy(alpha = 0.15f))
-                .padding(horizontal = 24.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = status.text,
-                color = status.color,
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp
-            )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(status.color.copy(alpha = 0.15f))
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = status.text,
+                    color = status.color,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2196F3).copy(alpha = 0.15f))
+                    .clickable { playReferenceTone(activeString.frequency) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "\uD83D\uDD0A Referencia",
+                    color = Color(0xFF2196F3),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
         }
     } else {
         Text(
@@ -569,4 +585,27 @@ private fun statusColor(cents: Float): Color {
 private fun centsFromTarget(freq: Float, target: Float): Float {
     if (freq <= 0f || target <= 0f) return 0f
     return (1200f * kotlin.math.log2(freq / target))
+}
+
+private fun playReferenceTone(frequency: Float, durationMs: Int = 2000) {
+    val sampleRate = 44100
+    val numSamples = sampleRate * durationMs / 1000
+    val fadeLen = (sampleRate * 0.05).toInt()
+    val buffer = ShortArray(numSamples)
+    for (i in 0 until numSamples) {
+        var sample = sin(2.0 * PI * frequency * i / sampleRate)
+        if (i < fadeLen) sample *= i.toDouble() / fadeLen
+        if (i > numSamples - fadeLen) sample *= (numSamples - i).toDouble() / fadeLen
+        buffer[i] = (sample * Short.MAX_VALUE * 0.5).toInt().toShort()
+    }
+    val track = android.media.AudioTrack(
+        android.media.AudioManager.STREAM_MUSIC,
+        sampleRate,
+        android.media.AudioFormat.CHANNEL_OUT_MONO,
+        android.media.AudioFormat.ENCODING_PCM_16BIT,
+        buffer.size * 2,
+        android.media.AudioTrack.MODE_STATIC
+    )
+    track.write(buffer, 0, buffer.size)
+    track.play()
 }

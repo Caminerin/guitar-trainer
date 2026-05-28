@@ -33,15 +33,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val DEGREE_COLORS = listOf(
-    Color(0xFFE53935), // 1
-    Color(0xFFFF9800), // 2
-    Color(0xFF1E88E5), // 3
-    Color(0xFF4CAF50), // 4
-    Color(0xFF9C27B0), // 5
-    Color(0xFF00BCD4), // 6
-    Color(0xFFFF5722), // 7
-)
+private fun getDegreeColor(degree: Int): Color {
+    return when (degree) {
+        1 -> if (DegreeColorPrefs.tonicEnabled) DegreeColorPrefs.tonicColor else Color(0xFF78909C)
+        3 -> if (DegreeColorPrefs.thirdEnabled) DegreeColorPrefs.thirdColor else Color(0xFF78909C)
+        5 -> if (DegreeColorPrefs.fifthEnabled) DegreeColorPrefs.fifthColor else Color(0xFF78909C)
+        else -> if (DegreeColorPrefs.otherEnabled) DegreeColorPrefs.otherColor else Color(0xFF78909C)
+    }
+}
 
 @Composable
 fun ScaleInfoSheet(
@@ -107,12 +106,11 @@ fun ScaleInfoSheet(
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 chords.forEach { chord ->
-                    val colorIdx = (chord.degree - 1).coerceIn(0, DEGREE_COLORS.size - 1)
                     Box(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(CircleShape)
-                            .background(DEGREE_COLORS[colorIdx]),
+                            .background(getDegreeColor(chord.degree)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -149,15 +147,15 @@ fun ScaleInfoSheet(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 triads.forEachIndexed { idx, chord ->
-                    val colorIdx = idx.coerceIn(0, DEGREE_COLORS.size - 1)
+                    val degreeColor = getDegreeColor(idx + 1)
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(DEGREE_COLORS[colorIdx].copy(alpha = 0.1f))
+                            .background(degreeColor.copy(alpha = 0.1f))
                             .padding(horizontal = 8.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(chord.degree, color = DEGREE_COLORS[colorIdx], fontSize = 15.sp,
+                        Text(chord.degree, color = degreeColor, fontSize = 15.sp,
                             fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.25f), textAlign = TextAlign.Center)
                         Text(chord.chordName, color = Color.White, fontSize = 15.sp,
                             fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.75f), textAlign = TextAlign.Center)
@@ -182,15 +180,15 @@ fun ScaleInfoSheet(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     tetrads.forEachIndexed { idx, chord ->
-                        val colorIdx = idx.coerceIn(0, DEGREE_COLORS.size - 1)
+                        val degreeColor = getDegreeColor(idx + 1)
                         Row(
                             modifier = Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(DEGREE_COLORS[colorIdx].copy(alpha = 0.1f))
+                                .background(degreeColor.copy(alpha = 0.1f))
                                 .padding(horizontal = 8.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(chord.degree, color = DEGREE_COLORS[colorIdx], fontSize = 15.sp,
+                            Text(chord.degree, color = degreeColor, fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.25f), textAlign = TextAlign.Center)
                             Text(chord.chordName, color = Color.White, fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.75f), textAlign = TextAlign.Center)
@@ -217,7 +215,7 @@ fun ScaleInfoSheet(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 chords.forEach { chord ->
-                    val colorIdx = (chord.degree - 1).coerceIn(0, DEGREE_COLORS.size - 1)
+                    val degreeColor = getDegreeColor(chord.degree)
                     val displayDegree = chord.romanDegree.ifEmpty {
                         val base = when (chord.degree) {
                             1 -> "I"; 2 -> "II"; 3 -> "III"; 4 -> "IV"
@@ -233,12 +231,12 @@ fun ScaleInfoSheet(
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(DEGREE_COLORS[colorIdx].copy(alpha = 0.1f))
+                            .background(degreeColor.copy(alpha = 0.1f))
                             .padding(horizontal = 8.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(displayDegree, color = DEGREE_COLORS[colorIdx], fontSize = 16.sp,
+                        Text(displayDegree, color = degreeColor, fontSize = 16.sp,
                             fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.15f), textAlign = TextAlign.Center)
                         Text(chord.noteName, color = Color.White, fontSize = 15.sp,
                             fontWeight = FontWeight.Bold, modifier = Modifier.weight(0.2f), textAlign = TextAlign.Center)
