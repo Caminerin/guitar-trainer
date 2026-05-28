@@ -644,7 +644,7 @@ fun ChordModeSelectorOverlay(
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 Column {
-                    Text("Por tonalidad", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text("Catálogo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     Text("Solo acordes de la escala seleccionada", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
                 }
             }

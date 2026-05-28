@@ -83,10 +83,13 @@ data class Measure(
 @Composable
 fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = null) {
     val context = LocalContext.current
-    LaunchedEffect(Unit) { ChordRepository.loadChords(context) }
-
-    LaunchedEffect(Unit) { ScaleChordRepository.load(context) }
-    LaunchedEffect(Unit) { SongRepository.load(context) }
+    var dataLoaded by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        ChordRepository.loadChords(context)
+        ScaleChordRepository.load(context)
+        SongRepository.load(context)
+        dataLoaded = true
+    }
 
     val prefs = remember { context.getSharedPreferences("chord_progressions", android.content.Context.MODE_PRIVATE) }
 
@@ -174,7 +177,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     }
 
     // Filter chords by tonality if needed — match root AND quality (diatonic harmony)
-    val availableChords = remember(modeKey, selectedKey, selectedScaleName) {
+    val availableChords = remember(modeKey, selectedKey, selectedScaleName, dataLoaded) {
         if (modeKey) {
             val offset = getRelativeMajorOffset(selectedScaleName)
             val scaleChords = ScaleChordRepository.getChordsForScale(selectedScaleName, selectedKey, offset)
@@ -211,10 +214,12 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Key selector (Raíz) — always visible
                 Box(
                     modifier = Modifier
+                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
                         .clickable { showKeyCircle = true }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
@@ -222,10 +227,12 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Catálogo selector
                 Box(
                     modifier = Modifier
+                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(if (modeKey) CP_PRIMARY.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.15f))
                         .clickable { showModeSelector = true }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(if (modeKey) "Catálogo" else "Todos",
                         color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -235,17 +242,19 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     // Scale selector
                     Box(
                         modifier = Modifier
+                            .height(36.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
                             .clickable { showScaleSelector = true }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         val shortName = selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
                         Text(shortName, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
 
                     // Info button
-                    IconButton(onClick = { showInfo = true }, modifier = Modifier.size(32.dp)) {
+                    IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
                         Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(18.dp))
                     }
                 }
@@ -256,10 +265,12 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Beats per measure
                 Box(
                     modifier = Modifier
+                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFF7C4DFF).copy(alpha = 0.25f))
                         .clickable { showBeatsSelector = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text("$beatsPerMeasure/4", color = Color(0xFFB388FF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
@@ -267,10 +278,12 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Measures count
                 Box(
                     modifier = Modifier
+                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFF00BCD4).copy(alpha = 0.25f))
                         .clickable { showMeasuresSelector = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text("$measureCount comp.", color = Color(0xFF80DEEA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
@@ -278,10 +291,12 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Song picker button (more visible)
                 Box(
                     modifier = Modifier
+                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(if (currentSong != null) Color(0xFFFFC107).copy(alpha = 0.4f) else Color(0xFFFFC107).copy(alpha = 0.15f))
                         .clickable { showSongPicker = true }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         currentSong?.let { "\u266A ${it.title}" } ?: "\u266A Canciones",
@@ -295,10 +310,12 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 if (onGoToVisualizer != null) {
                     Box(
                         modifier = Modifier
+                            .height(36.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xFF5C6BC0).copy(alpha = 0.3f))
                             .clickable { onGoToVisualizer() }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text("Visualizar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
@@ -308,7 +325,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 IconButton(
                     onClick = { isPlaying = !isPlaying },
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .background(if (isPlaying) Color(0xFFE53935) else Color(0xFF43A047))
                 ) {
@@ -316,7 +333,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
                         if (isPlaying) "Parar" else "Probar",
                         tint = Color.White,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -496,16 +513,17 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     measureCount = song.measuresUsed
                     val songBeats = song.meter.split("/").firstOrNull()?.trim()?.toIntOrNull() ?: 4
                     beatsPerMeasure = songBeats
+                    val subdivs = song.subdivisionsPerMeasure.coerceIn(1, 8)
                     // Auto-fill measures with song chords
                     measures.clear()
                     val allChords = ChordRepository.getChords()
                     song.measures.forEach { measure ->
                         val slots = mutableListOf<ChordSlot>()
                         val strums = measure.strumPattern
-                        for (beat in 1..songBeats) {
-                            val chord = measure.chords.firstOrNull { beat in it.startBeat..it.endBeat }
-                            val chordId = chord?.let { findChordIdByName(it.symbol, allChords) }
-                            val direction = strums.getOrElse(beat - 1) { "D" }
+                        val mainChord = measure.chords.firstOrNull()
+                        val chordId = mainChord?.let { findChordIdByName(it.symbol, allChords) }
+                        for (s in 0 until subdivs) {
+                            val direction = strums.getOrElse(s) { "D" }
                             slots.add(ChordSlot(chordId, direction))
                         }
                         val patternStr = strums.joinToString(" ")
@@ -766,12 +784,15 @@ private fun ChordPickerOverlay(
     onPlay: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var selectedQuality by remember { mutableStateOf<String?>(null) }
-    var selectedLevel by remember { mutableStateOf<String?>(ChordLevel.BEGINNER.csvValue) }
+    var selectedGroup by remember { mutableStateOf<QualityGroup?>(null) }
+    var selectedLevel by remember { mutableStateOf<String?>(null) }
 
     val filtered = chords.filter { chord ->
-        (selectedQuality == null || chord.quality == selectedQuality) &&
-        (selectedLevel == null || chord.level == selectedLevel)
+        val groupMatch = selectedGroup == null || ChordQuality.entries.any { q ->
+            q.csvValue == chord.quality && q.group == selectedGroup
+        }
+        val levelMatch = selectedLevel == null || chord.level == selectedLevel
+        groupMatch && levelMatch
     }
 
     val grouped = filtered.groupBy { it.displayName }
@@ -806,37 +827,7 @@ private fun ChordPickerOverlay(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Quality filter chips
-            Text("Tipo:", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selectedQuality == null) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
-                        .clickable { selectedQuality = null }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text("Todos", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-                ChordQuality.entries.forEach { q ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (selectedQuality == q.csvValue) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
-                            .clickable { selectedQuality = if (selectedQuality == q.csvValue) null else q.csvValue }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(q.displayName, color = Color.White, fontSize = 12.sp)
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Level filter chips
+            // Level filter chips (FIRST)
             Text("Nivel:", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
             Spacer(modifier = Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -858,6 +849,33 @@ private fun ChordPickerOverlay(
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(lvl.displayName, color = Color.White, fontSize = 12.sp)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Type filter chips grouped (Tríadas, Cuatríadas, Extensiones)
+            Text("Tipo de acorde:", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selectedGroup == null) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
+                        .clickable { selectedGroup = null }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("Todos", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                QualityGroup.entries.forEach { grp ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selectedGroup == grp) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
+                            .clickable { selectedGroup = if (selectedGroup == grp) null else grp }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(grp.displayName, color = Color.White, fontSize = 12.sp)
                     }
                 }
             }
