@@ -201,14 +201,25 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     .fillMaxWidth()
                     .background(CP_TOOLBAR)
                     .padding(horizontal = 6.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
-                // Mode selector
+                // Key selector (Raíz) — always visible
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
+                        .clickable { showKeyCircle = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Catálogo selector
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
@@ -216,22 +227,11 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         .clickable { showModeSelector = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text(if (modeKey) "Por tonalidad" else "Todos",
+                    Text(if (modeKey) "Catálogo" else "Todos",
                         color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
-                // Key selector (only if modeKey)
                 if (modeKey) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
-                            .clickable { showKeyCircle = true }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
-
                     // Scale selector
                     Box(
                         modifier = Modifier
@@ -567,7 +567,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text("Compás", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    listOf(2, 3, 4, 5, 6, 7).forEach { beats ->
+                    listOf(2, 3, 4, 5, 6, 7, 8).forEach { beats ->
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(0.6f)

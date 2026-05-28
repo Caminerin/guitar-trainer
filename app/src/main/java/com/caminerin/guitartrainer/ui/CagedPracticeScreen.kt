@@ -27,8 +27,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.ZoomIn
-import androidx.compose.material.icons.filled.ZoomOut
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -163,15 +162,22 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
         }
     }
 
+    var lastEvalNoteIdx by remember { mutableIntStateOf(-1) }
+    var lastWrongNote by remember { mutableIntStateOf(-1) }
+
     // Guitar evaluation mode: detect pitch and compare to expected note
-    LaunchedEffect(isPlaying, isPaused, guitarMode, pitchResult) {
-        if (!isPlaying || isPaused || !guitarMode) return@LaunchedEffect
+    LaunchedEffect(guitarMode, pitchResult) {
+        if (!guitarMode) return@LaunchedEffect
         val pr = pitchResult ?: return@LaunchedEffect
         if (pr.confidence < 0.7f || pr.frequency <= 0f) return@LaunchedEffect
         val detectedNote = pr.noteIndex % 12
         val expected = currentNote?.noteIndex ?: return@LaunchedEffect
         if (detectedNote == expected) {
-            correctCount++
+            if (lastEvalNoteIdx != currentNoteIndex) {
+                correctCount++
+                lastEvalNoteIdx = currentNoteIndex
+                lastWrongNote = -1
+            }
             evalFeedback = "✓"
             evalFeedbackColor = Color(0xFF4CAF50)
             val seq = getPositionNoteSequence(
@@ -183,11 +189,16 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
                 val nextPos = (currentPositionIndex + 1) % positions.size
                 currentPositionIndex = nextPos
                 currentNoteIndex = 0
+                lastEvalNoteIdx = -1
             } else {
                 currentNoteIndex = nextIdx
+                lastEvalNoteIdx = -1
             }
         } else {
-            wrongCount++
+            if (detectedNote != lastWrongNote) {
+                wrongCount++
+                lastWrongNote = detectedNote
+            }
             val detectedName = getNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
             val expectedName = getNoteName(expected, selectedKey, scale.relativeMajorOffset)
             evalFeedback = "✗ $detectedName (esperada: $expectedName)"
@@ -198,7 +209,7 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
     // Clear eval feedback after a short delay
     LaunchedEffect(evalFeedback) {
         if (evalFeedback != null) {
-            kotlinx.coroutines.delay(400L)
+            kotlinx.coroutines.delay(1200L)
             evalFeedback = null
         }
     }
@@ -322,14 +333,6 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
                     Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(20.dp))
                 }
 
-                // Zoom controls
-                IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(0.5f) }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.ZoomOut, "Alejar", tint = Color.White, modifier = Modifier.size(20.dp))
-                }
-                IconButton(onClick = { zoom = (zoom + 0.3f).coerceAtMost(3f) }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White, modifier = Modifier.size(20.dp))
-                }
-
                 // Positions toggle
                 Box(
                     modifier = Modifier
@@ -381,33 +384,26 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .height(32.dp)
                         .background(Color(0xFF263238))
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        "\uD83C\uDFB8 Toca la nota resaltada",
-                        color = Color(0xFF80CBC4), fontSize = 12.sp, fontWeight = FontWeight.Bold
+                        evalFeedback ?: "\uD83C\uDFB8 Toca la nota resaltada",
+                        color = if (evalFeedback != null) evalFeedbackColor else Color(0xFF80CBC4),
+                        fontSize = 13.sp, fontWeight = FontWeight.Bold,
+                        maxLines = 1
                     )
-                    if (correctCount > 0 || wrongCount > 0) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text(
-                                "\u2714 $correctCount",
-                                color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "\u2718 $wrongCount",
-                                color = Color(0xFFF44336), fontSize = 13.sp, fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                    if (evalFeedback != null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            evalFeedback ?: "",
-                            color = evalFeedbackColor,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
+                            "\u2714 $correctCount",
+                            color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "\u2718 $wrongCount",
+                            color = Color(0xFFF44336), fontSize = 13.sp, fontWeight = FontWeight.Bold
                         )
                     }
                 }
