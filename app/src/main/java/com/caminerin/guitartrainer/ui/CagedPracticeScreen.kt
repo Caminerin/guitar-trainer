@@ -164,6 +164,7 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
 
     var lastEvalNoteIdx by remember { mutableIntStateOf(-1) }
     var lastWrongNote by remember { mutableIntStateOf(-1) }
+    var lastWrongTime by remember { mutableStateOf(0L) }
 
     // Guitar evaluation mode: detect pitch and compare to expected note
     LaunchedEffect(guitarMode, pitchResult) {
@@ -172,6 +173,7 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
         if (pr.confidence < 0.7f || pr.frequency <= 0f) return@LaunchedEffect
         val detectedNote = pr.noteIndex % 12
         val expected = currentNote?.noteIndex ?: return@LaunchedEffect
+        val now = System.currentTimeMillis()
         if (detectedNote == expected) {
             if (lastEvalNoteIdx != currentNoteIndex) {
                 correctCount++
@@ -195,9 +197,10 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
                 lastEvalNoteIdx = -1
             }
         } else {
-            if (detectedNote != lastWrongNote) {
+            if (detectedNote != lastWrongNote || (now - lastWrongTime) > 1500L) {
                 wrongCount++
                 lastWrongNote = detectedNote
+                lastWrongTime = now
             }
             val detectedName = getNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
             val expectedName = getNoteName(expected, selectedKey, scale.relativeMajorOffset)
