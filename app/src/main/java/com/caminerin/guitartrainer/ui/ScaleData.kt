@@ -134,6 +134,8 @@ val AMERICAN_NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"
 val EUROPEAN_NOTE_NAMES = listOf("Do", "Do#", "Re", "Re#", "Mi", "Fa", "Fa#", "Sol", "Sol#", "La", "La#", "Si")
 val AMERICAN_NOTE_NAMES_FLAT = listOf("C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B")
 val EUROPEAN_NOTE_NAMES_FLAT = listOf("Do", "Reb", "Re", "Mib", "Mi", "Fa", "Solb", "Sol", "Lab", "La", "Sib", "Si")
+val AMERICAN_NOTE_NAMES_BOTH = listOf("C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B")
+val EUROPEAN_NOTE_NAMES_BOTH = listOf("Do", "Do#/Reb", "Re", "Re#/Mib", "Mi", "Fa", "Fa#/Solb", "Sol", "Sol#/Lab", "La", "La#/Sib", "Si")
 val OPEN_STRING_NAMES_AMERICAN = listOf("E", "A", "D", "G", "B", "E")
 val OPEN_STRING_NAMES_EUROPEAN = listOf("Mi", "La", "Re", "Sol", "Si", "Mi")
 
@@ -156,13 +158,9 @@ fun getNoteName(noteIndex: Int, rootNote: Int = -1, relativeMajorOffset: Int = 0
 }
 
 fun getChromaticNames(rootNote: Int = -1, relativeMajorOffset: Int = 0): List<String> {
-    val useFlats = when (AccidentalPreference.current) {
-        AccidentalStyle.FLAT -> true
-        AccidentalStyle.SHARP -> if (rootNote >= 0) keyUsesFlatsForScale(rootNote, relativeMajorOffset) else false
-    }
     return when (NoteFormatPreference.current) {
-        NoteFormat.AMERICAN -> if (useFlats) AMERICAN_NOTE_NAMES_FLAT else AMERICAN_NOTE_NAMES
-        NoteFormat.EUROPEAN -> if (useFlats) EUROPEAN_NOTE_NAMES_FLAT else EUROPEAN_NOTE_NAMES
+        NoteFormat.AMERICAN -> AMERICAN_NOTE_NAMES_BOTH
+        NoteFormat.EUROPEAN -> EUROPEAN_NOTE_NAMES_BOTH
     }
 }
 
@@ -255,9 +253,11 @@ val ALL_SCALES = listOf(
         name = "Pentatónica mayor",
         intervals = listOf(0, 2, 4, 7, 9),
         positions = listOf(
-            ScalePosition("1", 0, 4, '1'),
-            ScalePosition("2", 4, 8, '2'),
-            ScalePosition("3", 8, 12, '3')
+            ScalePosition("1", 0, 3, '1'),
+            ScalePosition("2", 2, 5, '2'),
+            ScalePosition("3", 4, 8, '3'),
+            ScalePosition("4", 7, 10, '4'),
+            ScalePosition("5", 9, 12, '5')
         ),
         hasCaged = false
     ),
@@ -265,9 +265,11 @@ val ALL_SCALES = listOf(
         name = "Pentatónica menor",
         intervals = listOf(0, 3, 5, 7, 10),
         positions = listOf(
-            ScalePosition("1", 0, 4, '1'),
-            ScalePosition("2", 4, 8, '2'),
-            ScalePosition("3", 8, 12, '3')
+            ScalePosition("1", 0, 3, '1'),
+            ScalePosition("2", 3, 6, '2'),
+            ScalePosition("3", 5, 9, '3'),
+            ScalePosition("4", 7, 10, '4'),
+            ScalePosition("5", 10, 13, '5')
         ),
         hasCaged = false,
         relativeMajorOffset = 3
