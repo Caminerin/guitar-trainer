@@ -171,7 +171,7 @@ object SongRepository {
             val level = col(parts, "nivel_1_5").toIntOrNull() ?: 1
             val bpmStart = col(parts, "bpm_practica_inicio").toIntOrNull() ?: 60
             val bpmTarget = col(parts, "bpm_practica_objetivo").toIntOrNull() ?: 80
-            val meter = col(parts, "metro_adaptado")
+            val meter = col(parts, "metrica").ifBlank { col(parts, "metro_adaptado") }
             val rawKey = col(parts, "tonalidad_sugerida")
             val key = normalizeKey(rawKey)
             val capo = col(parts, "capo_traste").toIntOrNull() ?: 0
@@ -180,17 +180,12 @@ object SongRepository {
                 .split(";").map { it.trim() }.filter { it.isNotEmpty() }
             val measuresUsed = col(parts, "compases_usados").toIntOrNull() ?: 4
             val subdivisionsPerMeasure = col(parts, "subdivisiones_por_compas").toIntOrNull() ?: 4
-            val strumPattern = col(parts, "patron_golpes_4_subdiv")
+            val strumPattern = col(parts, "patron_golpes_8_subdiv").ifBlank { col(parts, "patron_golpes_4_subdiv") }
             val strumLegend = col(parts, "leyenda_golpes")
 
-            val defaultStrums = listOf(
-                col(parts, "golpe_1"),
-                col(parts, "golpe_2"),
-                col(parts, "golpe_3"),
-                col(parts, "golpe_4")
-            ).filter { it.isNotBlank() }
+            val defaultStrums = (1..8).map { col(parts, "golpe_$it") }.filter { it.isNotBlank() }
 
-            val measures = (1..12).mapNotNull { n ->
+            val measures = (1..16).mapNotNull { n ->
                 val raw = col(parts, "compas_%02d".format(n))
                 parseMeasureCell(raw, defaultStrums)?.copy(index = n)
             }

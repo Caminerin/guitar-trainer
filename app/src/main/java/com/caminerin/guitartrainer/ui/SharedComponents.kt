@@ -340,7 +340,7 @@ fun MeasuresSelectorOverlay(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                (1..12).forEach { v ->
+                (1..16).forEach { v ->
                     val selected = count == v
                     Box(
                         modifier = Modifier
@@ -677,7 +677,11 @@ fun MeasureSubdivisionOverlay(
         1 to "1 acorde por compás",
         2 to "2 acordes por compás",
         3 to "3 acordes por compás",
-        4 to "4 acordes por compás"
+        4 to "4 acordes por compás",
+        5 to "5 acordes por compás",
+        6 to "6 acordes por compás",
+        7 to "7 acordes por compás",
+        8 to "8 acordes por compás"
     )
     Box(
         modifier = Modifier
