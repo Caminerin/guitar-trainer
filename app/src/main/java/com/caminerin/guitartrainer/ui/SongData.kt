@@ -1,36 +1,26 @@
 package com.caminerin.guitartrainer.ui
 
 import android.content.Context
-import java.io.BufferedReader
-import java.io.InputStreamReader
+import org.json.JSONArray
+import org.json.JSONObject
 
-data class Song(
-    val ranking: Int,
-    val title: String,
-    val artist: String,
-    val language: String,
-    val style: String,
-    val level: Int,
-    val bpmStart: Int,
-    val bpmTarget: Int,
-    val meter: String,
-    val key: String,
-    val capo: Int,
-    val tuning: String,
-    val chordsUsed: List<String>,
-    val measuresUsed: Int,
-    val subdivisionsPerMeasure: Int,
-    val strumPattern: String,
-    val strumLegend: String,
-    val defaultStrums: List<String>,
-    val measures: List<SongMeasure>,
-    val arrangementType: String,
-    val practiceFocus: String,
-    val feel: String,
-    val sourceUrl: String,
-    val notes: String
+data class StrokeInfo(
+    val type: String,   // "down", "up", "rest", "mute"
+    val vel: Float
 )
 
+data class SongSection(
+    val name: String,
+    val pattern: List<StrokeInfo>,
+    val measures: List<SectionMeasure>
+)
+
+data class SectionMeasure(
+    val chords: List<String>,
+    val chordsPerSub: List<String>
+)
+
+// Legacy compat types used by the old flat-measure loader
 data class MeasureChord(
     val symbol: String,
     val startBeat: Int,
@@ -47,77 +37,59 @@ data class SongMeasure(
     val chordSymbol: String get() = chords.firstOrNull()?.symbol.orEmpty()
 }
 
-private val BRACKET_REGEX = Regex("\\[(.+?)]")
-private val MULTI_CHORD_REGEX = Regex("(\\S+?)\\((\\d+)-(\\d+)\\)")
-
-private fun parseMeasureCell(raw: String, defaultStrums: List<String>): SongMeasure? {
-    if (raw.isBlank()) return null
-
-    val bracketMatch = BRACKET_REGEX.find(raw)
-    val strumPattern = if (bracketMatch != null) {
-        bracketMatch.groupValues[1].trim().split("\\s+".toRegex())
-    } else {
-        defaultStrums.ifEmpty { listOf("D", "D", "D", "D") }
-    }
-
-    val chordPart = BRACKET_REGEX.replace(raw, "").trim()
-    if (chordPart.isBlank()) return null
-
-    val chords = if (chordPart.contains("/") && chordPart.contains("(")) {
-        chordPart.split("/").mapNotNull { segment ->
-            val m = MULTI_CHORD_REGEX.find(segment.trim())
-            if (m != null) {
-                MeasureChord(
-                    symbol = m.groupValues[1],
-                    startBeat = m.groupValues[2].toIntOrNull() ?: 1,
-                    endBeat = m.groupValues[3].toIntOrNull() ?: 4
-                )
-            } else {
-                val trimmed = segment.trim()
-                if (trimmed.isNotBlank()) MeasureChord(trimmed, 1, 4) else null
-            }
-        }
-    } else {
-        listOf(MeasureChord(chordPart, 1, 4))
-    }
-
-    if (chords.isEmpty()) return null
-    return SongMeasure(index = 0, chords = chords, strumPattern = strumPattern, raw = raw)
-}
+data class Song(
+    val id: String,
+    val ranking: Int,
+    val title: String,
+    val artist: String,
+    val language: String,
+    val style: String,
+    val level: Int,
+    val bpmStart: Int,
+    val bpmTarget: Int,
+    val meter: String,
+    val key: String,
+    val capo: Int,
+    val tuning: String,
+    val chordsUsed: List<String>,
+    val subdivisions: Int,
+    val feel: String,
+    val swing: Boolean,
+    val patternId: String,
+    val sections: List<SongSection>,
+    val arrangement: List<String>,
+    val sectionPatterns: Map<String, List<StrokeInfo>>,
+    val sourceUrl: String,
+    // Legacy fields kept for SongPickerOverlay compat
+    val practiceFocus: String = "",
+    val measuresUsed: Int = 0,
+    val strumPattern: String = "",
+    val strumLegend: String = "",
+    val defaultStrums: List<String> = emptyList(),
+    val measures: List<SongMeasure> = emptyList(),
+    val arrangementType: String = "",
+    val notes: String = ""
+)
 
 object SongRepository {
     private var songs: List<Song> = emptyList()
     private var allStyles: List<String> = emptyList()
     private var allLanguages: List<String> = emptyList()
     private var allLevels: List<Int> = emptyList()
-    private var headerIndex: Map<String, Int> = emptyMap()
 
     fun load(context: Context) {
         if (songs.isNotEmpty()) return
         val result = mutableListOf<Song>()
         try {
-            val reader = BufferedReader(InputStreamReader(context.assets.open("songs.csv")))
-            val headerLine = reader.readLine()?.removePrefix("\uFEFF") ?: return
-            val headerParts = smartSplit(headerLine)
-            headerIndex = headerParts.withIndex().associate { (i, v) -> v.trim() to i }
-
-            var line = reader.readLine()
-            var lineNum = 1
-            var skipped = 0
-            while (line != null) {
-                lineNum++
-                val song = parseSongLine(line)
+            val jsonStr = context.assets.open("songs.json").bufferedReader().use { it.readText() }
+            val arr = JSONArray(jsonStr)
+            for (i in 0 until arr.length()) {
+                val song = parseSongJson(arr.getJSONObject(i))
                 if (song != null) result.add(song)
-                else {
-                    skipped++
-                    android.util.Log.w("SongData", "Skipped invalid row at line $lineNum")
-                }
-                line = reader.readLine()
             }
-            reader.close()
-            android.util.Log.i("SongData", "Loaded ${result.size} songs, skipped $skipped rows")
+            android.util.Log.i("SongData", "Loaded ${result.size} songs from JSON")
         } catch (e: Exception) {
-            android.util.Log.e("SongData", "Error loading songs.csv", e)
+            android.util.Log.e("SongData", "Error loading songs.json", e)
         }
         songs = result
         allStyles = songs.map { it.style }.distinct().sorted()
@@ -146,101 +118,118 @@ object SongRepository {
         }
     }
 
-    private fun col(parts: List<String>, name: String): String {
-        val idx = headerIndex[name] ?: return ""
-        return parts.getOrElse(idx) { "" }.trim()
+    private fun parseStrokeArray(arr: JSONArray): List<StrokeInfo> {
+        val result = mutableListOf<StrokeInfo>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            result.add(StrokeInfo(
+                type = obj.optString("type", "rest"),
+                vel = obj.optDouble("vel", 0.0).toFloat()
+            ))
+        }
+        return result
     }
 
-    private val KEY_REGEX = Regex("^[A-G][#b]?m?$")
-
-    private fun normalizeKey(raw: String): String {
-        val trimmed = raw.trim()
-        if (KEY_REGEX.matches(trimmed)) return trimmed
-        val match = Regex("[A-G][#b]?m?").find(trimmed)
-        return match?.value ?: trimmed
-    }
-
-    private fun parseSongLine(line: String): Song? {
+    private fun parseSongJson(obj: JSONObject): Song? {
         try {
-            val parts = smartSplit(line)
-            if (parts.size < 20) return null
+            val id = obj.optString("id", "")
+            val title = obj.optString("title", "")
+            val artist = obj.optString("artist", "")
+            if (title.isBlank() || artist.isBlank()) return null
 
-            val ranking = col(parts, "ranking_aprox").toIntOrNull() ?: return null
-            val title = col(parts, "titulo")
-            val artist = col(parts, "artista")
-            val language = col(parts, "idioma")
-            val style = col(parts, "estilo")
-            val level = col(parts, "nivel_1_5").toIntOrNull() ?: 1
-            val bpmStart = col(parts, "bpm_practica_inicio").toIntOrNull() ?: 60
-            val bpmTarget = col(parts, "bpm_practica_objetivo").toIntOrNull() ?: 80
-            val meter = col(parts, "metrica").ifBlank { col(parts, "metro_adaptado") }
-            val rawKey = col(parts, "tonalidad_sugerida")
-            val key = normalizeKey(rawKey)
-            val capo = col(parts, "capo_traste").toIntOrNull() ?: 0
-            val tuning = col(parts, "afinacion")
-            val chordsUsed = col(parts, "acordes_sugeridos")
-                .split(";").map { it.trim() }.filter { it.isNotEmpty() }
-            val measuresUsed = col(parts, "compases_usados").toIntOrNull() ?: 4
-            val subdivisionsPerMeasure = col(parts, "subdivisiones_por_compas").toIntOrNull() ?: 4
-            val strumPattern = col(parts, "patron_golpes_8_subdiv").ifBlank { col(parts, "patron_golpes_4_subdiv") }
-            val strumLegend = col(parts, "leyenda_golpes")
-
-            val defaultStrums = (1..8).map { col(parts, "golpe_$it") }.filter { it.isNotBlank() }
-
-            val measures = (1..16).mapNotNull { n ->
-                val raw = col(parts, "compas_%02d".format(n))
-                val perSubAcordes = col(parts, "compas_%02d_acordes_8".format(n))
-                val perSubGolpes = col(parts, "compas_%02d_golpes_8".format(n))
-                val base = parseMeasureCell(raw, defaultStrums) ?: return@mapNotNull null
-                val perSubChords = if (perSubAcordes.isNotBlank())
-                    perSubAcordes.split("\\s+".toRegex()).filter { it.isNotBlank() }
-                else emptyList()
-                val perSubStrums = if (perSubGolpes.isNotBlank())
-                    perSubGolpes.split("\\s+".toRegex()).filter { it.isNotBlank() }
-                else emptyList()
-                base.copy(
-                    index = n,
-                    perSubdivisionChords = perSubChords,
-                    strumPattern = if (perSubStrums.isNotEmpty()) perSubStrums else base.strumPattern
-                )
+            // Parse section patterns
+            val patternsObj = obj.optJSONObject("patterns")
+            val sectionPatterns = mutableMapOf<String, List<StrokeInfo>>()
+            if (patternsObj != null) {
+                for (key in patternsObj.keys()) {
+                    sectionPatterns[key] = parseStrokeArray(patternsObj.getJSONArray(key))
+                }
             }
 
-            val feel = col(parts, "feel_ritmico")
-            val arrangementType = col(parts, "tipo_arreglo")
-            val practiceFocus = col(parts, "foco_practica")
-            val sourceUrl = col(parts, "fuente_url")
-            val notes = col(parts, "notas")
+            // Parse sections
+            val sectionsArr = obj.optJSONArray("sections")
+            val sections = mutableListOf<SongSection>()
+            if (sectionsArr != null) {
+                for (i in 0 until sectionsArr.length()) {
+                    val secObj = sectionsArr.getJSONObject(i)
+                    val secName = secObj.optString("name", "verso")
+
+                    // Parse pattern from the section's strum pattern string
+                    val patternStr = secObj.optString("pattern", "")
+                    val sectionPattern = sectionPatterns[secName]
+                        ?: parseStrumString(patternStr)
+
+                    val measArr = secObj.optJSONArray("measures") ?: continue
+                    val sectionMeasures = mutableListOf<SectionMeasure>()
+                    for (j in 0 until measArr.length()) {
+                        val mObj = measArr.getJSONObject(j)
+                        val chords = jsonArrayToStringList(mObj.optJSONArray("chords"))
+                        val chordsPerSub = jsonArrayToStringList(mObj.optJSONArray("chords_per_sub"))
+                        sectionMeasures.add(SectionMeasure(chords, chordsPerSub))
+                    }
+                    sections.add(SongSection(secName, sectionPattern, sectionMeasures))
+                }
+            }
+
+            // Parse arrangement
+            val arrangement = jsonArrayToStringList(obj.optJSONArray("arrangement"))
+
+            // Parse chords used
+            val chordsUsed = jsonArrayToStringList(obj.optJSONArray("chordsUsed"))
+
+            // Count total measures
+            val totalMeasures = sections.sumOf { it.measures.size }
 
             return Song(
-                ranking = ranking,
+                id = id,
+                ranking = obj.optInt("ranking", 999),
                 title = title,
                 artist = artist,
-                language = language,
-                style = style,
-                level = level,
-                bpmStart = bpmStart,
-                bpmTarget = bpmTarget,
-                meter = meter,
-                key = key,
-                capo = capo,
-                tuning = tuning,
+                language = obj.optString("language", ""),
+                style = obj.optString("style", ""),
+                level = obj.optInt("level", 1),
+                bpmStart = obj.optInt("bpmStart", 60),
+                bpmTarget = obj.optInt("bpmTarget", 80),
+                meter = obj.optString("meter", "4/4"),
+                key = obj.optString("key", ""),
+                capo = obj.optInt("capo", 0),
+                tuning = obj.optString("tuning", "EADGBE"),
                 chordsUsed = chordsUsed,
-                measuresUsed = measuresUsed,
-                subdivisionsPerMeasure = subdivisionsPerMeasure,
-                strumPattern = strumPattern,
-                strumLegend = strumLegend,
-                defaultStrums = defaultStrums,
-                measures = measures,
-                feel = feel,
-                arrangementType = arrangementType,
-                practiceFocus = practiceFocus,
-                sourceUrl = sourceUrl,
-                notes = notes
+                subdivisions = obj.optInt("subdivisions", 8),
+                feel = obj.optString("feel", ""),
+                swing = obj.optBoolean("swing", false),
+                patternId = obj.optString("patternId", "pop_rock"),
+                sections = sections,
+                arrangement = arrangement,
+                sectionPatterns = sectionPatterns,
+                sourceUrl = obj.optString("sourceUrl", ""),
+                measuresUsed = totalMeasures,
+                practiceFocus = obj.optString("feel", "")
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w("SongData", "Error parsing song JSON", e)
             return null
         }
     }
 
-    private fun smartSplit(line: String): List<String> = com.caminerin.guitartrainer.ui.smartSplit(line)
+    private fun jsonArrayToStringList(arr: JSONArray?): List<String> {
+        if (arr == null) return emptyList()
+        val result = mutableListOf<String>()
+        for (i in 0 until arr.length()) {
+            result.add(arr.optString(i, ""))
+        }
+        return result
+    }
+
+    private fun parseStrumString(pattern: String): List<StrokeInfo> {
+        if (pattern.isBlank()) return emptyList()
+        return pattern.trim().split("\\s+".toRegex()).mapIndexed { idx, token ->
+            when (token) {
+                "D" -> StrokeInfo("down", if (idx == 0) 1.0f else 0.8f)
+                "U" -> StrokeInfo("up", 0.5f)
+                "x" -> StrokeInfo("mute", 0.6f)
+                else -> StrokeInfo("rest", 0.0f)
+            }
+        }
+    }
 }

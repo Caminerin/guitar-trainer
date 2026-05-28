@@ -6,6 +6,7 @@ import android.media.AudioTrack
 
 /**
  * Guitar chord synthesizer using enhanced Karplus-Strong plucked string algorithm.
+ * Supports velocity-dependent tone, palm mutes, and strum variation.
  * Crossfade is baked into the buffer itself for glitch-free transitions.
  */
 object ChordSynth {
@@ -18,15 +19,31 @@ object ChordSynth {
     @Volatile private var running = false
     private var writerThread: Thread? = null
 
-    // Simple model: one buffer playing, one buffer queued
     @Volatile private var currentBuffer: FloatArray? = null
     @Volatile private var currentPos = 0
     @Volatile private var pendingSwap: FloatArray? = null
 
     private val lock = Object()
 
-    fun playChord(frets: List<Int?>, durationMs: Int = 1200, upStrum: Boolean = false, velocity: Float = 1.0f) {
-        val newSamples = generateGuitarChord(frets, durationMs, upStrum, velocity) ?: return
+    enum class StrokeType { DOWN, UP, MUTE }
+
+    fun playChord(
+        frets: List<Int?>,
+        durationMs: Int = 1200,
+        upStrum: Boolean = false,
+        velocity: Float = 1.0f
+    ) {
+        val strokeType = if (upStrum) StrokeType.UP else StrokeType.DOWN
+        playStroke(frets, durationMs, strokeType, velocity)
+    }
+
+    fun playStroke(
+        frets: List<Int?>,
+        durationMs: Int = 1200,
+        strokeType: StrokeType = StrokeType.DOWN,
+        velocity: Float = 1.0f
+    ) {
+        val newSamples = generateGuitarChord(frets, durationMs, strokeType, velocity) ?: return
 
         synchronized(lock) {
             if (!running) {
@@ -34,7 +51,6 @@ object ChordSynth {
                 currentPos = 0
                 startStream()
             } else {
-                // Bake the crossfade: blend tail of current into head of new
                 val cur = currentBuffer
                 val pos = currentPos
                 if (cur != null && pos < cur.size) {
@@ -47,7 +63,6 @@ object ChordSynth {
                         newSamples[i] = cur[pos + i] * fadeOut + newSamples[i] * fadeIn
                     }
                 }
-                // Swap: the writer thread will pick this up seamlessly
                 pendingSwap = newSamples
             }
         }
@@ -103,7 +118,6 @@ object ChordSynth {
 
             while (running) {
                 synchronized(lock) {
-                    // Check if a new buffer is ready (crossfade already baked in)
                     val swap = pendingSwap
                     if (swap != null) {
                         currentBuffer = swap
@@ -138,10 +152,15 @@ object ChordSynth {
         }
     }
 
-    private fun generateGuitarChord(frets: List<Int?>, durationMs: Int, upStrum: Boolean = false, velocity: Float = 1.0f): FloatArray? {
+    private fun generateGuitarChord(
+        frets: List<Int?>,
+        durationMs: Int,
+        strokeType: StrokeType,
+        velocity: Float
+    ): FloatArray? {
         data class StringInfo(val freq: Double, val stringIndex: Int, val strumOffset: Int)
 
-        val activeStrings = mutableListOf<Pair<Int, Double>>() // (stringIndex, freq)
+        val activeStrings = mutableListOf<Pair<Int, Double>>()
         for (s in 0 until 6) {
             val fret = frets.getOrNull(s) ?: continue
             if (fret < 0) continue
@@ -150,30 +169,51 @@ object ChordSynth {
         }
         if (activeStrings.isEmpty()) return null
 
-        // For up-strum: reverse the strum order (treble first)
-        val ordered = if (upStrum) activeStrings.reversed() else activeStrings
-        // Softer strums have wider string delays (slower, lighter strum)
-        val delayScale = if (velocity < 0.6f) 1.4f else 1.0f
+        val ordered = if (strokeType == StrokeType.UP) activeStrings.reversed() else activeStrings
+        // Velocity affects strum speed: soft = wider delays, hard = tighter
+        val delayScale = when {
+            velocity < 0.4f -> 1.6f
+            velocity < 0.6f -> 1.3f
+            velocity > 0.9f -> 0.85f
+            else -> 1.0f
+        }
         val strings = ordered.mapIndexed { strIdx, (s, freq) ->
             val baseOffset = STRUM_DELAYS.getOrElse(strIdx) { strIdx * 150 }
             StringInfo(freq, s, (baseOffset * delayScale).toInt())
         }
 
+        val isMute = strokeType == StrokeType.MUTE
+        val effectiveDuration = if (isMute) (durationMs / 4).coerceIn(50, 200) else durationMs
+
         val totalOffset = if (strings.isNotEmpty()) strings.maxOf { it.strumOffset } else 0
-        val numSamples = SAMPLE_RATE * durationMs / 1000 + totalOffset
+        val numSamples = SAMPLE_RATE * effectiveDuration / 1000 + totalOffset
         val output = FloatArray(numSamples)
 
         for (str in strings) {
-            karplusStrongEnhanced(output, str.freq, numSamples - str.strumOffset, str.strumOffset, str.stringIndex)
+            karplusStrongEnhanced(
+                output, str.freq, numSamples - str.strumOffset, str.strumOffset,
+                str.stringIndex, velocity, isMute
+            )
         }
 
-        // Body resonance
-        applyBodyResonance(output)
+        applyBodyResonance(output, velocity)
 
-        // Soft master attack (5ms)
-        val attackSamples = (SAMPLE_RATE * 0.005).toInt()
+        // Attack envelope — harder velocity = sharper attack
+        val attackMs = if (velocity > 0.8f) 0.002 else 0.005
+        val attackSamples = (SAMPLE_RATE * attackMs).toInt()
         for (i in 0 until attackSamples.coerceAtMost(output.size)) {
             output[i] *= i.toFloat() / attackSamples
+        }
+
+        // Mute: fast exponential decay
+        if (isMute) {
+            val muteDecaySamples = (SAMPLE_RATE * 0.03).toInt()
+            for (i in output.indices) {
+                if (i > muteDecaySamples) {
+                    val decay = kotlin.math.exp(-(i - muteDecaySamples).toFloat() / (SAMPLE_RATE * 0.02f))
+                    output[i] *= decay
+                }
+            }
         }
 
         // Normalize with velocity
@@ -188,29 +228,46 @@ object ChordSynth {
     }
 
     private fun karplusStrongEnhanced(
-        output: FloatArray, freq: Double, length: Int, offset: Int, stringIndex: Int
+        output: FloatArray, freq: Double, length: Int, offset: Int,
+        stringIndex: Int, velocity: Float, isMute: Boolean
     ) {
         val period = (SAMPLE_RATE / freq).toInt().coerceAtLeast(2)
         val ring = FloatArray(period)
 
         val random = java.util.Random((freq * 1000).toLong())
-        val brightnessPassCount = when (stringIndex) {
+        // Velocity-dependent brightness: harder = brighter (fewer smoothing passes)
+        val baseBrightness = when (stringIndex) {
             0, 1 -> 3; 2, 3 -> 2; else -> 1
         }
+        val brightnessPassCount = when {
+            velocity > 0.85f -> (baseBrightness - 1).coerceAtLeast(0)
+            velocity < 0.5f -> baseBrightness + 1
+            else -> baseBrightness
+        }
+
+        // Muted strings: much more dampened
+        val muteExtra = if (isMute) 2 else 0
 
         for (i in ring.indices) {
             ring[i] = (random.nextFloat() * 2f - 1f) * 0.85f
         }
-        for (pass in 0 until brightnessPassCount) {
+        for (pass in 0 until brightnessPassCount + muteExtra) {
             for (i in 1 until ring.size) {
                 ring[i] = ring[i] * 0.5f + ring[i - 1] * 0.5f
             }
         }
 
-        val decay = when (stringIndex) {
+        // Velocity-dependent decay: muted = very fast decay, soft = slightly faster
+        val baseDecay = when (stringIndex) {
             0 -> 0.9985f; 1 -> 0.9982f; 2 -> 0.9978f
             3 -> 0.9975f; 4 -> 0.9970f; else -> 0.9965f
         }
+        val decay = when {
+            isMute -> baseDecay - 0.01f
+            velocity < 0.5f -> baseDecay - 0.001f
+            else -> baseDecay
+        }
+
         val blend = when (stringIndex) {
             0, 1 -> 0.42f; 2, 3 -> 0.47f; else -> 0.52f
         }
@@ -232,8 +289,9 @@ object ChordSynth {
         }
     }
 
-    private fun applyBodyResonance(output: FloatArray) {
-        val bodyMix = 0.15f
+    private fun applyBodyResonance(output: FloatArray, velocity: Float) {
+        // More body resonance at lower velocities (softer, warmer tone)
+        val bodyMix = if (velocity < 0.5f) 0.22f else 0.15f
         var prev = 0f
         val filterCoeff = 0.85f
         for (i in output.indices) {
