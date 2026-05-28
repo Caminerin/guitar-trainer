@@ -81,17 +81,11 @@ fun TunerMode(
         val freq = pitchResult.frequency
         val closest = currentTuning.strings.minByOrNull { abs(centsFromTarget(freq, it.frequency)) }
         if (stableString != null && closest != null && closest != stableString) {
-            val stableCents = abs(centsFromTarget(freq, stableString!!.frequency))
             val closestCents = abs(centsFromTarget(freq, closest.frequency))
-            val ratio = freq / stableString!!.frequency
-            val isOctaveOfStable = (abs(ratio - 2f) < 0.15f || abs(ratio - 0.5f) < 0.08f
-                    || abs(ratio - 4f) < 0.3f || abs(ratio - 0.25f) < 0.04f)
-            if (isOctaveOfStable && stableCents < 80f) {
-                stableString
-            } else if (stableCents < closestCents + 15f) {
-                stableString
-            } else {
+            if (closestCents < 30f) {
                 closest
+            } else {
+                stableString
             }
         } else {
             closest
@@ -108,7 +102,7 @@ fun TunerMode(
         stableString
     } else if (rawClosest == candidateString) {
         candidateCount++
-        if (candidateCount >= 5) {
+        if (candidateCount >= 6) {
             stableString = rawClosest
             candidateString = null
             candidateCount = 0
@@ -592,6 +586,17 @@ private fun statusColor(cents: Float): Color {
 private fun centsFromTarget(freq: Float, target: Float): Float {
     if (freq <= 0f || target <= 0f) return 0f
     return (1200f * kotlin.math.log2(freq / target))
+}
+
+private fun isHarmonicRelated(detectedFreq: Float, fundamentalFreq: Float): Boolean {
+    val harmonics = floatArrayOf(0.5f, 1f, 2f, 3f, 4f, 5f, 6f)
+    val toleranceCents = 250f
+    for (mult in harmonics) {
+        val harmonicFreq = fundamentalFreq * mult
+        val cents = abs(1200f * kotlin.math.log2(detectedFreq / harmonicFreq))
+        if (cents < toleranceCents) return true
+    }
+    return false
 }
 
 private fun playReferenceTone(frequency: Float, durationMs: Int = 2000) {
