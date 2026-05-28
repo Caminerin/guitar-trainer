@@ -78,7 +78,24 @@ fun TunerMode(
     } else if (pitchResult == null) {
         null
     } else {
-        currentTuning.strings.minByOrNull { abs(centsFromTarget(pitchResult.frequency, it.frequency)) }
+        val freq = pitchResult.frequency
+        val closest = currentTuning.strings.minByOrNull { abs(centsFromTarget(freq, it.frequency)) }
+        if (stableString != null && closest != null && closest != stableString) {
+            val stableCents = abs(centsFromTarget(freq, stableString!!.frequency))
+            val closestCents = abs(centsFromTarget(freq, closest.frequency))
+            val ratio = freq / stableString!!.frequency
+            val isOctaveOfStable = (abs(ratio - 2f) < 0.15f || abs(ratio - 0.5f) < 0.08f
+                    || abs(ratio - 4f) < 0.3f || abs(ratio - 0.25f) < 0.04f)
+            if (isOctaveOfStable && stableCents < 80f) {
+                stableString
+            } else if (stableCents < closestCents + 15f) {
+                stableString
+            } else {
+                closest
+            }
+        } else {
+            closest
+        }
     }
 
     val activeString = if (!isAutoMode) {
@@ -91,7 +108,7 @@ fun TunerMode(
         stableString
     } else if (rawClosest == candidateString) {
         candidateCount++
-        if (candidateCount >= 3) {
+        if (candidateCount >= 5) {
             stableString = rawClosest
             candidateString = null
             candidateCount = 0
