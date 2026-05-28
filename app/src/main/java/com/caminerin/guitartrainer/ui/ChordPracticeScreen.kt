@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -126,6 +127,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
 
 
     var isPlaying by remember { mutableStateOf(false) }
+    var metronomeOn by remember { mutableStateOf(true) }
     var currentMeasure by remember { mutableIntStateOf(-1) }
     var currentSub by remember { mutableIntStateOf(-1) }
 
@@ -159,12 +161,17 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             slot.chordId?.let { id ->
                                 val chord = ChordRepository.getChords().firstOrNull { it.id == id }
                                 val isUpStrum = slot.strumDirection == "U"
-                                val remainingSlots = m.subdivisions.size - si
-                                val durationMs = (subMs * remainingSlots + 200).toInt().coerceAtLeast(400)
+                                var nextStrum = m.subdivisions.size
+                                for (ns in (si + 1) until m.subdivisions.size) {
+                                    if (m.subdivisions[ns].strumDirection != "-") {
+                                        nextStrum = ns; break
+                                    }
+                                }
+                                val durationMs = (subMs * (nextStrum - si) + 200).toInt().coerceAtLeast(400)
                                 chord?.let { ChordSynth.playChord(it.frets, durationMs, isUpStrum) }
                             }
                         }
-                        tickPlayer.tick()
+                        if (metronomeOn) tickPlayer.tick()
                         delay(subMs.coerceAtLeast(50L))
                     }
                 }
@@ -214,12 +221,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Key selector (Raíz) — always visible
                 Box(
                     modifier = Modifier
-                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
                         .clickable { showKeyCircle = true }
-                        .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                 }
@@ -227,12 +232,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Catálogo selector
                 Box(
                     modifier = Modifier
-                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(if (modeKey) CP_PRIMARY.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.15f))
                         .clickable { showModeSelector = true }
-                        .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(if (modeKey) "Catálogo" else "Todos",
                         color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -242,19 +245,17 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     // Scale selector
                     Box(
                         modifier = Modifier
-                            .height(36.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
                             .clickable { showScaleSelector = true }
-                            .padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         val shortName = selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
                         Text(shortName, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
 
                     // Info button
-                    IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
+                    IconButton(onClick = { showInfo = true }, modifier = Modifier.size(32.dp)) {
                         Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(18.dp))
                     }
                 }
@@ -265,12 +266,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Beats per measure
                 Box(
                     modifier = Modifier
-                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFF7C4DFF).copy(alpha = 0.25f))
                         .clickable { showBeatsSelector = true }
-                        .padding(horizontal = 10.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text("$beatsPerMeasure/4", color = Color(0xFFB388FF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
@@ -278,12 +277,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Measures count
                 Box(
                     modifier = Modifier
-                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFF00BCD4).copy(alpha = 0.25f))
                         .clickable { showMeasuresSelector = true }
-                        .padding(horizontal = 10.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text("$measureCount comp.", color = Color(0xFF80DEEA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
@@ -291,12 +288,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 // Song picker button (more visible)
                 Box(
                     modifier = Modifier
-                        .height(36.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(if (currentSong != null) Color(0xFFFFC107).copy(alpha = 0.4f) else Color(0xFFFFC107).copy(alpha = 0.15f))
                         .clickable { showSongPicker = true }
-                        .padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Text(
                         currentSong?.let { "\u266A ${it.title}" } ?: "\u266A Canciones",
@@ -310,15 +305,26 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 if (onGoToVisualizer != null) {
                     Box(
                         modifier = Modifier
-                            .height(36.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(Color(0xFF5C6BC0).copy(alpha = 0.3f))
                             .clickable { onGoToVisualizer() }
-                            .padding(horizontal = 10.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text("Visualizar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
+                }
+
+                // Metronome toggle
+                IconButton(
+                    onClick = { metronomeOn = !metronomeOn },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        if (metronomeOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                        if (metronomeOn) "Metrónomo ON" else "Metrónomo OFF",
+                        tint = if (metronomeOn) Color(0xFF80CBC4) else Color.White.copy(alpha = 0.3f),
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
 
                 // Play / Stop button
@@ -514,22 +520,30 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     val songBeats = song.meter.split("/").firstOrNull()?.trim()?.toIntOrNull() ?: 4
                     beatsPerMeasure = songBeats
                     val subdivs = song.subdivisionsPerMeasure.coerceIn(1, 8)
-                    // Auto-fill measures with song chords
                     measures.clear()
                     val allChords = ChordRepository.getChords()
                     song.measures.forEach { measure ->
                         val slots = mutableListOf<ChordSlot>()
                         val strums = measure.strumPattern
-                        val mainChord = measure.chords.firstOrNull()
-                        val chordId = mainChord?.let { findChordIdByName(it.symbol, allChords) }
-                        for (s in 0 until subdivs) {
-                            val direction = strums.getOrElse(s) { "D" }
-                            slots.add(ChordSlot(chordId, direction))
+                        val perSubChords = measure.perSubdivisionChords
+                        if (perSubChords.isNotEmpty()) {
+                            for (s in 0 until subdivs) {
+                                val chordName = perSubChords.getOrElse(s) { perSubChords.lastOrNull().orEmpty() }
+                                val chordId = findOpenChordIdByName(chordName, allChords)
+                                val direction = strums.getOrElse(s) { "D" }
+                                slots.add(ChordSlot(chordId, direction))
+                            }
+                        } else {
+                            val mainChord = measure.chords.firstOrNull()
+                            val chordId = mainChord?.let { findOpenChordIdByName(it.symbol, allChords) }
+                            for (s in 0 until subdivs) {
+                                val direction = strums.getOrElse(s) { "D" }
+                                slots.add(ChordSlot(chordId, direction))
+                            }
                         }
                         val patternStr = strums.joinToString(" ")
                         measures.add(Measure(slots, strumPattern = patternStr.takeIf { it.isNotBlank() }))
                     }
-                    // Fill remaining measures if needed
                     while (measures.size < measureCount) measures.add(Measure())
                     modeKey = false
                     showSongPicker = false
@@ -648,6 +662,20 @@ private fun findChordIdByName(name: String, chords: List<ChordShape>): String? {
         .minByOrNull { it.priority }
         ?.let { return it.id }
     return null
+}
+
+private fun findOpenChordIdByName(name: String, chords: List<ChordShape>): String? {
+    val normalized = name.trim()
+    if (normalized.isEmpty()) return null
+    val matches = chords.filter { matchesChordName(it, normalized) }
+    if (matches.isEmpty()) return null
+    // Prefer open-position chords: 4+ strings, lowest max_fret, most strings, then priority
+    return matches.sortedWith(compareBy(
+        { if (it.frets.count { f -> f != null } >= 4) 0 else 1 },
+        { it.maxFret },
+        { -(it.frets.count { f -> f != null }) },
+        { it.priority }
+    )).first().id
 }
 
 private fun matchesChordName(chord: ChordShape, name: String): Boolean {
@@ -786,6 +814,8 @@ private fun ChordPickerOverlay(
 ) {
     var selectedGroup by remember { mutableStateOf<QualityGroup?>(null) }
     var selectedLevel by remember { mutableStateOf<String?>(null) }
+    var showLevelPicker by remember { mutableStateOf(false) }
+    var showTypePicker by remember { mutableStateOf(false) }
 
     val filtered = chords.filter { chord ->
         val groupMatch = selectedGroup == null || ChordQuality.entries.any { q ->
@@ -827,61 +857,31 @@ private fun ChordPickerOverlay(
             }
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Level filter chips (FIRST)
-            Text("Nivel:", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selectedLevel == null) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
-                        .clickable { selectedLevel = null }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CP_PRIMARY.copy(alpha = 0.6f))
+                        .clickable { showLevelPicker = true }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
-                    Text("Todos", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    val levelLabel = if (selectedLevel == null) "Todos"
+                        else ChordLevel.entries.firstOrNull { it.csvValue == selectedLevel }?.displayName ?: "Todos"
+                    Text("Nivel: $levelLabel", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
-                ChordLevel.entries.filter { it != ChordLevel.ALL }.forEach { lvl ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (selectedLevel == lvl.csvValue) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
-                            .clickable { selectedLevel = if (selectedLevel == lvl.csvValue) null else lvl.csvValue }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(lvl.displayName, color = Color.White, fontSize = 12.sp)
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Type filter chips grouped (Tríadas, Cuatríadas, Extensiones)
-            Text("Tipo de acorde:", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (selectedGroup == null) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
-                        .clickable { selectedGroup = null }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF5C6BC0).copy(alpha = 0.6f))
+                        .clickable { showTypePicker = true }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
-                    Text("Todos", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-                QualityGroup.entries.forEach { grp ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (selectedGroup == grp) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
-                            .clickable { selectedGroup = if (selectedGroup == grp) null else grp }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(grp.displayName, color = Color.White, fontSize = 12.sp)
-                    }
+                    val typeLabel = selectedGroup?.displayName ?: "Todos"
+                    Text("Tipo: $typeLabel", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Chord grid
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -919,6 +919,98 @@ private fun ChordPickerOverlay(
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    // Level picker modal
+    if (showLevelPicker) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .clickable { showLevelPicker = false },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2A2A2A))
+                    .clickable(enabled = false) {}
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("Nivel", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selectedLevel == null) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
+                        .clickable { selectedLevel = null; showLevelPicker = false }
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Text("Todos", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                ChordLevel.entries.filter { it != ChordLevel.ALL }.forEach { lvl ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selectedLevel == lvl.csvValue) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
+                            .clickable { selectedLevel = lvl.csvValue; showLevelPicker = false }
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
+                        Text(lvl.displayName, color = Color.White, fontSize = 14.sp)
+                    }
+                }
+            }
+        }
+    }
+
+    // Type picker modal
+    if (showTypePicker) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .clickable { showTypePicker = false },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF2A2A2A))
+                    .clickable(enabled = false) {}
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("Tipo de acorde", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selectedGroup == null) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
+                        .clickable { selectedGroup = null; showTypePicker = false }
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Text("Todos", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                QualityGroup.entries.forEach { grp ->
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (selectedGroup == grp) CP_PRIMARY else Color.White.copy(alpha = 0.08f))
+                            .clickable { selectedGroup = grp; showTypePicker = false }
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                    ) {
+                        Text(grp.displayName, color = Color.White, fontSize = 14.sp)
                     }
                 }
             }
