@@ -38,7 +38,7 @@ class TickPlayer {
                     .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                     .build()
             )
-            .setBufferSizeInBytes(minBuf.coerceAtLeast(SAMPLE_RATE * 2))
+            .setBufferSizeInBytes(minBuf.coerceAtLeast(CLICK_SAMPLES * 4))
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
         track?.play()
@@ -66,10 +66,11 @@ class TickPlayer {
         t.write(buffer, 0, buffer.size)
     }
 
-    /** Simple tick for backward compatibility */
+    /** Simple tick — non-blocking so late ticks are dropped, not queued */
     fun tick() {
         val t = track ?: return
-        t.write(mainClick, 0, mainClick.size)
+        t.flush()
+        t.write(mainClick, 0, mainClick.size, AudioTrack.WRITE_NON_BLOCKING)
     }
 
     fun release() {
