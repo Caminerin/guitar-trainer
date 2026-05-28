@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Piano
 import androidx.compose.material.icons.filled.Quiz
@@ -131,6 +132,7 @@ fun VisualizerMenu(
 fun PracticeMenu(
     onOpenCagedPractice: () -> Unit,
     onOpenChordPractice: () -> Unit,
+    onOpenRiffPractice: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val configuration = LocalConfiguration.current
@@ -158,6 +160,14 @@ fun PracticeMenu(
                 title = "Acordes",
                 subtitle = "Progresiones \u2022 compases",
                 color = Color(0xFF7B1FA2),
+                modifier = Modifier.weight(1f).fillMaxHeight()
+            )
+            MenuButton(
+                onClick = onOpenRiffPractice,
+                icon = Icons.Default.Audiotrack,
+                title = "Riffs",
+                subtitle = "Aprende riffs cl\u00e1sicos",
+                color = Color(0xFFE65100),
                 modifier = Modifier.weight(1f).fillMaxHeight()
             )
         }
@@ -200,6 +210,15 @@ fun PracticeMenu(
                 title = "Acordes",
                 subtitle = "Progresiones \u2022 compases",
                 color = Color(0xFF7B1FA2),
+                modifier = Modifier.fillMaxWidth().height(80.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            MenuButton(
+                onClick = onOpenRiffPractice,
+                icon = Icons.Default.Audiotrack,
+                title = "Riffs",
+                subtitle = "Aprende riffs cl\u00e1sicos \u2022 nota a nota",
+                color = Color(0xFFE65100),
                 modifier = Modifier.fillMaxWidth().height(80.dp)
             )
         }
