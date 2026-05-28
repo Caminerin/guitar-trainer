@@ -23,12 +23,23 @@ object ScaleChordRepository {
             val reader = BufferedReader(InputStreamReader(context.assets.open("scale_chords_C.csv")))
             reader.readLine() // skip header
             var line = reader.readLine()
+            var lineNum = 1
+            var skipped = 0
             while (line != null) {
-                parseLine(line)?.let { result.add(it) }
+                lineNum++
+                val entry = parseLine(line)
+                if (entry != null) result.add(entry)
+                else {
+                    skipped++
+                    android.util.Log.w("ScaleChordData", "Skipped invalid row at line $lineNum")
+                }
                 line = reader.readLine()
             }
             reader.close()
-        } catch (_: Exception) {}
+            android.util.Log.i("ScaleChordData", "Loaded ${result.size} scale chord entries, skipped $skipped rows")
+        } catch (e: Exception) {
+            android.util.Log.e("ScaleChordData", "Error loading scale_chords_C.csv", e)
+        }
         entries = result
     }
 
@@ -138,23 +149,7 @@ object ScaleChordRepository {
         }
     }
 
-    private fun smartSplit(line: String): List<String> {
-        val parts = mutableListOf<String>()
-        val current = StringBuilder()
-        var inQuotes = false
-        for (ch in line) {
-            when {
-                ch == '"' -> inQuotes = !inQuotes
-                ch == ',' && !inQuotes -> {
-                    parts.add(current.toString())
-                    current.clear()
-                }
-                else -> current.append(ch)
-            }
-        }
-        parts.add(current.toString())
-        return parts
-    }
+    private fun smartSplit(line: String): List<String> = com.caminerin.guitartrainer.ui.smartSplit(line)
 }
 
 data class TransposedScaleChord(

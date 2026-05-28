@@ -154,7 +154,8 @@ fun computeCagedPositions(key: Int): List<ScalePosition> {
     }.sortedBy { it.startFret }
 }
 
-val SCALE_NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+@Deprecated("Use AMERICAN_NOTE_NAMES instead", replaceWith = ReplaceWith("AMERICAN_NOTE_NAMES"))
+val SCALE_NOTE_NAMES = AMERICAN_NOTE_NAMES
 
 val STANDARD_TUNING_MIDI = listOf(
     40, // E2 (6th string) - MIDI note
@@ -372,7 +373,7 @@ fun getNoteAtFret(stringMidi: Int, fret: Int): Int {
 }
 
 fun getAmericanNoteName(midiNote: Int): String {
-    return SCALE_NOTE_NAMES[midiNote % 12]
+    return AMERICAN_NOTE_NAMES[midiNote % 12]
 }
 
 fun getDegreeInScale(noteIndex: Int, rootIndex: Int, scaleIntervals: List<Int>): Int? {

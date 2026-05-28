@@ -59,8 +59,8 @@ import kotlin.math.sqrt
 
 private const val TOTAL_FRETS = 22
 
-private val COLOR_BG = Color(0xFF1A1A1A)
-private val COLOR_TOOLBAR = Color(0xFF1E1E1E)
+private val COLOR_BG = SHARED_BG
+private val COLOR_TOOLBAR = SHARED_TOOLBAR
 private val COLOR_WOOD = Color(0xFF3E2415)
 private val COLOR_NUT = Color(0xFFF0EAD6)
 private val COLOR_FRET_WIRE = Color(0xFFBBBBBB)
@@ -228,6 +228,22 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("${errorCount} err", color = COLOR_ERROR, fontSize = 13.sp)
                 }
+            }
+
+            // Progress bar
+            val progress = if (totalScaleNotes > 0) revealedNotes.size.toFloat() / totalScaleNotes else 0f
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .background(Color.White.copy(alpha = 0.1f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .height(4.dp)
+                        .background(if (progress >= 1f) Color(0xFF4CAF50) else Color(0xFF2196F3))
+                )
             }
 
             // Fretboard with tap detection

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -50,9 +51,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.caminerin.guitartrainer.audio.ChordSynth
 
-private val CHORD_BG = Color(0xFF1A1A1A)
-private val CHORD_TOOLBAR = Color(0xFF1E1E1E)
+private val CHORD_BG = SHARED_BG
+private val CHORD_TOOLBAR = SHARED_TOOLBAR
 private val CHORD_WOOD = Color(0xFF3E2415)
 private val CHORD_NUT = Color(0xFFF0EAD6)
 private val CHORD_FRET_WIRE = Color(0xFFBBBBBB)
@@ -129,7 +131,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
     val level = ChordLevel.entries.find { it.csvValue == selectedLevel } ?: ChordLevel.BEGINNER
 
     val filteredChords = if (hasSelectedRoot) {
-        val rootName = SCALE_NOTE_NAMES[selectedRoot]
+        val rootName = AMERICAN_NOTE_NAMES[selectedRoot]
         ChordRepository.getChordsByRootLevelQuality(rootName, level, quality)
             .sortedBy { it.priority }
     } else emptyList()
@@ -287,12 +289,20 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    currentChord.displayName,
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        currentChord.displayName,
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(
+                        onClick = { ChordSynth.playChord(currentChord.frets, 1500) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(Icons.Default.VolumeUp, "Escuchar", tint = Color(0xFF4CAF50), modifier = Modifier.size(22.dp))
+                    }
+                }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         "F\u00f3rmula: ${currentChord.formula}",
@@ -458,7 +468,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                         val count = if (hasSelectedRoot) {
                             ChordRepository.getChordsByLevelAndQuality(l,
                                 ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
-                            ).count { it.root == SCALE_NOTE_NAMES[selectedRoot] }
+                            ).count { it.root == AMERICAN_NOTE_NAMES[selectedRoot] }
                         } else 0
                         Row(
                             modifier = Modifier.fillMaxWidth(),

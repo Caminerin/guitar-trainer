@@ -41,6 +41,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+// ===== SHARED CSV PARSING =====
+fun smartSplit(line: String): List<String> {
+    val parts = mutableListOf<String>()
+    val current = StringBuilder()
+    var inQuotes = false
+    for (ch in line) {
+        when {
+            ch == '"' -> inQuotes = !inQuotes
+            ch == ',' && !inQuotes -> {
+                parts.add(current.toString())
+                current.clear()
+            }
+            else -> current.append(ch)
+        }
+    }
+    parts.add(current.toString())
+    return parts
+}
+
 // ===== SHARED COLORS =====
 val SHARED_BG = Color(0xFF1A1A1A)
 val SHARED_TOOLBAR = Color(0xFF1E1E1E)
