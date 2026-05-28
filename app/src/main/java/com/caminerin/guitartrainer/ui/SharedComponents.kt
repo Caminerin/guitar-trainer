@@ -523,7 +523,8 @@ fun CagedPositionBar(
         positions.forEachIndexed { i, pos ->
             val isCurrent = i == currentIndex
             val color = SHARED_POSITION_COLORS.getOrElse(i) { Color.Gray }
-            val label = "P${i + 1}"
+            val isLetter = pos.name.length == 1 && pos.name[0].isLetter()
+            val label = if (isLetter) "P${i + 1}(${pos.name})" else "P${pos.name}"
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -929,5 +930,51 @@ fun NoteDisplayToolbarButton(noteDisplay: NoteDisplay, onClick: () -> Unit) {
             .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
         Text(label, color = Color(0xFF80CBC4), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun ScaleNameSelectorOverlay(
+    currentName: String,
+    onSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.7f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.8f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF2A2A2A))
+                .clickable(enabled = false) {}
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Escala", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(12.dp))
+            ALL_SCALES.forEach { scaleEntry ->
+                val name = scaleEntry.name
+                val normalizedName = name.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
+                val normalizedCurrent = currentName.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
+                val isSelected = name == currentName || normalizedName == normalizedCurrent
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) Color(0xFF7C4DFF).copy(alpha = 0.5f) else Color.Transparent)
+                        .clickable { onSelected(name) }
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text(name, color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+                        fontSize = 15.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                }
+            }
+        }
     }
 }

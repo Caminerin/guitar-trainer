@@ -423,7 +423,13 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             onSubdivide = { showMeasureSubSelector = mi },
                             getChordLabel = { id ->
                                 if (id == null) "—"
-                                else ChordRepository.getChords().firstOrNull { it.id == id }?.displayName ?: "—"
+                                else {
+                                    val chord = ChordRepository.getChords().firstOrNull { it.id == id }
+                                    if (chord != null && modeKey) {
+                                        val offset = getRelativeMajorOffset(selectedScaleName)
+                                        chord.getDisplayName(selectedKey, offset)
+                                    } else chord?.displayName ?: "—"
+                                }
                             }
                         )
                     }
@@ -449,8 +455,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         .background(Color(0xFF222222))
                         .padding(8.dp)
                 ) {
+                    val chordTonalRoot = if (modeKey) selectedKey else -1
+                    val chordOffset = if (modeKey) getRelativeMajorOffset(selectedScaleName) else 0
                     Canvas(modifier = Modifier.fillMaxSize()) {
-                        drawSmallChord(activeChord)
+                        drawSmallChord(activeChord, chordTonalRoot, chordOffset)
                     }
                 }
             }
@@ -534,13 +542,15 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     currentSong = song
                     bpm = song.bpmStart
                     measureCount = song.measuresUsed
+                    val songBeats = song.meter.split("/").firstOrNull()?.trim()?.toIntOrNull() ?: 4
+                    beatsPerMeasure = songBeats
                     // Auto-fill measures with song chords
                     measures.clear()
                     val allChords = ChordRepository.getChords()
                     song.measures.forEach { measure ->
                         val slots = mutableListOf<ChordSlot>()
                         val strums = measure.strumPattern
-                        for (beat in 1..4) {
+                        for (beat in 1..songBeats) {
                             val chord = measure.chords.firstOrNull { beat in it.startBeat..it.endBeat }
                             val chordId = chord?.let { findChordIdByName(it.symbol, allChords) }
                             val direction = strums.getOrElse(beat - 1) { "D" }
@@ -946,7 +956,7 @@ private fun ChordPickerOverlay(
     }
 }
 
-private fun DrawScope.drawSmallChord(chord: ChordShape) {
+private fun DrawScope.drawSmallChord(chord: ChordShape, tonalRoot: Int = -1, relativeMajorOffset: Int = 0) {
     val w = size.width
     val h = size.height
     val frets = chord.frets
@@ -1034,7 +1044,7 @@ private fun DrawScope.drawSmallChord(chord: ChordShape) {
         isFakeBoldText = true
         isAntiAlias = true
     }
-    drawContext.canvas.nativeCanvas.drawText(chord.displayName, w / 2f, fbTop - 4f, namePaint)
+    drawContext.canvas.nativeCanvas.drawText(chord.getDisplayName(tonalRoot, relativeMajorOffset), w / 2f, fbTop - 4f, namePaint)
 }
 
 private fun normalizeScaleQuality(quality: String): String {

@@ -42,6 +42,15 @@ private fun getDegreeColor(degree: Int): Color {
     }
 }
 
+private fun parseDegreeNumber(romanDegree: String): Int {
+    val cleaned = romanDegree.replace("b", "").replace("#", "").replace("°", "").replace("+", "").uppercase()
+    return when (cleaned) {
+        "I" -> 1; "II" -> 2; "III" -> 3; "IV" -> 4
+        "V" -> 5; "VI" -> 6; "VII" -> 7
+        else -> cleaned.toIntOrNull() ?: 1
+    }
+}
+
 @Composable
 fun ScaleInfoSheet(
     rootNote: Int,
@@ -146,8 +155,8 @@ fun ScaleInfoSheet(
                         modifier = Modifier.weight(0.75f), textAlign = TextAlign.Center)
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                triads.forEachIndexed { idx, chord ->
-                    val degreeColor = getDegreeColor(idx + 1)
+                triads.forEachIndexed { _, chord ->
+                    val degreeColor = getDegreeColor(parseDegreeNumber(chord.degree))
                     Row(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
@@ -179,8 +188,8 @@ fun ScaleInfoSheet(
                             modifier = Modifier.weight(0.75f), textAlign = TextAlign.Center)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
-                    tetrads.forEachIndexed { idx, chord ->
-                        val degreeColor = getDegreeColor(idx + 1)
+                    tetrads.forEachIndexed { _, chord ->
+                        val degreeColor = getDegreeColor(parseDegreeNumber(chord.degree))
                         Row(
                             modifier = Modifier.fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))

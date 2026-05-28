@@ -22,42 +22,45 @@ data class ChordShape(
     val fingering: List<String> = emptyList()
 ) {
     val displayName: String
-        get() {
-            val rootIdx = AMERICAN_NOTE_NAMES.indexOf(root)
-            val rootDisplay = getNoteName(rootIdx, rootIdx)
-            val qualDisplay = when (qualityLabel) {
-                "major" -> ""
-                "minor" -> "m"
-                "7" -> "7"
-                "maj7" -> "maj7"
-                "m7" -> "m7"
-                "dim" -> "dim"
-                "dim7" -> "dim7"
-                "sus2" -> "sus2"
-                "sus4" -> "sus4"
-                "m7b5" -> "m7b5"
-                "aug" -> "aug"
-                "add9" -> "add9"
-                "9" -> "9"
-                "maj9" -> "maj9"
-                "m9" -> "m9"
-                "mMaj7" -> "mMaj7"
-                "mMaj9" -> "mMaj9"
-                "6" -> "6"
-                "6/9" -> "6/9"
-                "m6" -> "m6"
-                "m6/9" -> "m6/9"
-                "5" -> "5"
-                "7sus4" -> "7sus4"
-                "9sus4" -> "9sus4"
-                "madd9" -> "madd9"
-                "m11" -> "m11"
-                "m13" -> "m13"
-                "m7b9" -> "m7b9"
-                else -> qualityLabel
-            }
-            return "$rootDisplay$qualDisplay"
+        get() = getDisplayName()
+
+    fun getDisplayName(tonalRoot: Int = -1, relativeMajorOffset: Int = 0): String {
+        val rootIdx = AMERICAN_NOTE_NAMES.indexOf(root)
+        val effectiveRoot = if (tonalRoot >= 0) tonalRoot else rootIdx
+        val rootDisplay = getNoteName(rootIdx, effectiveRoot, relativeMajorOffset)
+        val qualDisplay = when (qualityLabel) {
+            "major" -> ""
+            "minor" -> "m"
+            "7" -> "7"
+            "maj7" -> "maj7"
+            "m7" -> "m7"
+            "dim" -> "dim"
+            "dim7" -> "dim7"
+            "sus2" -> "sus2"
+            "sus4" -> "sus4"
+            "m7b5" -> "m7b5"
+            "aug" -> "aug"
+            "add9" -> "add9"
+            "9" -> "9"
+            "maj9" -> "maj9"
+            "m9" -> "m9"
+            "mMaj7" -> "mMaj7"
+            "mMaj9" -> "mMaj9"
+            "6" -> "6"
+            "6/9" -> "6/9"
+            "m6" -> "m6"
+            "m6/9" -> "m6/9"
+            "5" -> "5"
+            "7sus4" -> "7sus4"
+            "9sus4" -> "9sus4"
+            "madd9" -> "madd9"
+            "m11" -> "m11"
+            "m13" -> "m13"
+            "m7b9" -> "m7b9"
+            else -> qualityLabel
         }
+        return "$rootDisplay$qualDisplay"
+    }
 
     val shortLabel: String
         get() {

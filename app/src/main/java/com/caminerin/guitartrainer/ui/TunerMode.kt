@@ -543,19 +543,6 @@ private fun StringChip(
     }
 }
 
-private fun resolveActiveString(
-    isAutoMode: Boolean,
-    selectedStringIndex: Int?,
-    tuningStrings: List<GuitarString>,
-    pitchResult: PitchDetector.PitchResult?
-): GuitarString? {
-    if (!isAutoMode) {
-        return selectedStringIndex?.let { tuningStrings.getOrNull(it) }
-    }
-    if (pitchResult == null) return null
-    return tuningStrings.minByOrNull { abs(centsFromTarget(pitchResult.frequency, it.frequency)) }
-}
-
 private data class TuningStatus(val text: String, val color: Color)
 
 private fun tuningStatus(cents: Float): TuningStatus {

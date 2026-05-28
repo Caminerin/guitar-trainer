@@ -90,8 +90,8 @@ private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 @Composable
 fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? = null) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var selectedKey by rememberSaveable { mutableIntStateOf(0) }
-    var selectedScaleIndex by rememberSaveable { mutableIntStateOf(0) }
+    var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
+    var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex.coerceIn(0, ALL_SCALES.size - 1)) }
     var bpm by rememberSaveable { mutableIntStateOf(60) }
     var subdivision by rememberSaveable { mutableIntStateOf(1) }
     var positionsEnabled by rememberSaveable { mutableStateOf(true) }
@@ -186,6 +186,12 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
             } else {
                 currentNoteIndex = nextIdx
             }
+        } else {
+            wrongCount++
+            val detectedName = getNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
+            val expectedName = getNoteName(expected, selectedKey, scale.relativeMajorOffset)
+            evalFeedback = "✗ $detectedName (esperada: $expectedName)"
+            evalFeedbackColor = Color(0xFFF44336)
         }
     }
 
@@ -385,10 +391,16 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
                         color = Color(0xFF80CBC4), fontSize = 12.sp, fontWeight = FontWeight.Bold
                     )
                     if (correctCount > 0 || wrongCount > 0) {
-                        Text(
-                            "\u2714 $correctCount",
-                            color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.Bold
-                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                "\u2714 $correctCount",
+                                color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "\u2718 $wrongCount",
+                                color = Color(0xFFF44336), fontSize = 13.sp, fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                     if (evalFeedback != null) {
                         Text(
@@ -461,6 +473,7 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
                 scaleIntervals = scale.intervals,
                 onNoteSelected = {
                     selectedKey = it; showKeyCircle = false
+                    AppPreferences.saveKey(it, context)
                     currentNoteIndex = 0; currentPositionIndex = 0
                 },
                 onDismiss = { showKeyCircle = false },
@@ -472,6 +485,7 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
                 currentIndex = selectedScaleIndex,
                 onSelected = {
                     selectedScaleIndex = it; showScaleSelector = false
+                    AppPreferences.saveScale(it, context)
                     currentNoteIndex = 0; currentPositionIndex = 0
                 },
                 onDismiss = { showScaleSelector = false }
