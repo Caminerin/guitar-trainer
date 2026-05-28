@@ -92,6 +92,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
         ChordRepository.loadChords(context)
         ScaleChordRepository.load(context)
         SongRepository.load(context)
+        ChordSynth.init(context)
         dataLoaded = true
     }
 
