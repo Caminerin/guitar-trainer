@@ -145,7 +145,13 @@ fun DrawScope.drawChromaticCircleShared(
         val labelX = center.x + midRadius * cos(labelAngle)
         val labelY = center.y + midRadius * sin(labelAngle)
 
-        val textSize = if (isSelected) 126f else 90f
+        val label = getChromaticNames(rootNote, relativeMajorOffset)[i]
+        val hasSlash = label.contains("/")
+        val textSize = if (hasSlash) {
+            if (isSelected) 60f else 44f
+        } else {
+            if (isSelected) 126f else 90f
+        }
         val labelPaint = android.graphics.Paint().apply {
             color = android.graphics.Color.argb((255 * alpha).toInt(), 255, 255, 255)
             this.textSize = textSize
@@ -154,20 +160,35 @@ fun DrawScope.drawChromaticCircleShared(
             isAntiAlias = true
             setShadowLayer(4f, 1f, 1f, android.graphics.Color.argb(180, 0, 0, 0))
         }
-        drawContext.canvas.nativeCanvas.drawText(getChromaticNames(rootNote, relativeMajorOffset)[i], labelX, labelY + textSize * 0.35f, labelPaint)
+        if (hasSlash) {
+            val parts = label.split("/")
+            drawContext.canvas.nativeCanvas.drawText(parts[0], labelX, labelY - textSize * 0.1f, labelPaint)
+            drawContext.canvas.nativeCanvas.drawText(parts[1], labelX, labelY + textSize * 0.9f, labelPaint)
+        } else {
+            drawContext.canvas.nativeCanvas.drawText(label, labelX, labelY + textSize * 0.35f, labelPaint)
+        }
     }
 
     drawCircle(Color(0xFF111111).copy(alpha = alpha), innerRadius, center)
     drawCircle(Color(0x33FFFFFF).copy(alpha = alpha * 0.3f), innerRadius, center, style = Stroke(2f))
 
+    val centerLabel = getChromaticNames(rootNote, relativeMajorOffset)[selectedNote]
+    val centerHasSlash = centerLabel.contains("/")
+    val centerTextSize = if (centerHasSlash) 80f else 168f
     val centerPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb((255 * alpha).toInt(), 255, 255, 255)
-        textSize = 168f
+        textSize = centerTextSize
         textAlign = android.graphics.Paint.Align.CENTER
         isFakeBoldText = true
         isAntiAlias = true
     }
-    drawContext.canvas.nativeCanvas.drawText(getChromaticNames(rootNote, relativeMajorOffset)[selectedNote], center.x, center.y + 60f, centerPaint)
+    if (centerHasSlash) {
+        val parts = centerLabel.split("/")
+        drawContext.canvas.nativeCanvas.drawText(parts[0], center.x, center.y - 10f, centerPaint)
+        drawContext.canvas.nativeCanvas.drawText(parts[1], center.x, center.y + centerTextSize, centerPaint)
+    } else {
+        drawContext.canvas.nativeCanvas.drawText(centerLabel, center.x, center.y + 60f, centerPaint)
+    }
 }
 
 @Composable

@@ -5,9 +5,12 @@ import android.content.Context
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -268,6 +271,7 @@ fun MainScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
     Box(
@@ -311,69 +315,92 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
                 }
             }
 
-            // Accidental style
-            Text("Alteraciones", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AccidentalStyle.entries.forEach { style ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (AccidentalPreference.current == style) Color(0xFF5C6BC0) else Color.White.copy(alpha = 0.1f))
-                            .clickable { AccidentalPreference.set(style, context) }
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) {
-                        Text(style.label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
+            val colorPalette = listOf(
+                Color(0xFFE53935), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF5E35B1),
+                Color(0xFF3949AB), Color(0xFF1E88E5), Color(0xFF00ACC1), Color(0xFF00897B),
+                Color(0xFF43A047), Color(0xFF7CB342), Color(0xFFFDD835), Color(0xFFFF8F00),
+                Color(0xFFFF6D00), Color(0xFF6D4C41), Color(0xFF546E7A), Color(0xFF26A69A)
+            )
 
             // Degree colors - Scale
             Text("Colores de grado (escalas)", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             val scaleDegs = listOf(
-                Triple("Tónica (I)", DegreeColorPrefs.tonicColor, DegreeColorPrefs.tonicEnabled) to "tonic",
-                Triple("Tercera (III)", DegreeColorPrefs.thirdColor, DegreeColorPrefs.thirdEnabled) to "third",
-                Triple("Quinta (V)", DegreeColorPrefs.fifthColor, DegreeColorPrefs.fifthEnabled) to "fifth",
-                Triple("Otros", DegreeColorPrefs.otherColor, DegreeColorPrefs.otherEnabled) to "other"
+                "Tónica (I)" to ("tonic" to DegreeColorPrefs.tonicColor),
+                "Tercera (III)" to ("third" to DegreeColorPrefs.thirdColor),
+                "Quinta (V)" to ("fifth" to DegreeColorPrefs.fifthColor),
+                "Otros" to ("other" to DegreeColorPrefs.otherColor)
             )
-            scaleDegs.forEach { (info, key) ->
-                val (label, color, enabled) = info
+            scaleDegs.forEach { (label, keyColor) ->
+                val (key, currentColor) = keyColor
+                var expanded by remember { mutableStateOf(false) }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(24.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(if (enabled) color else Color.Gray.copy(alpha = 0.3f))
-                            .clickable { DegreeColorPrefs.setScaleColor(key, color, !enabled, context) }
+                            .background(currentColor)
+                            .clickable { expanded = !expanded }
                     )
-                    Text(label, color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                    Text(label, color = Color.White, fontSize = 13.sp,
+                        modifier = Modifier.clickable { expanded = !expanded })
+                }
+                if (expanded) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = 32.dp, top = 4.dp, bottom = 4.dp)) {
+                        colorPalette.forEach { c ->
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(c)
+                                    .then(if (c == currentColor) Modifier.border(2.dp, Color.White, RoundedCornerShape(4.dp)) else Modifier)
+                                    .clickable { DegreeColorPrefs.setScaleColor(key, c, true, context); expanded = false }
+                            )
+                        }
+                    }
                 }
             }
 
             // Degree colors - Chords
             Text("Colores de intervalo (acordes)", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             val chordDegs = listOf(
-                Triple("Raíz (1)", DegreeColorPrefs.chordRootColor, DegreeColorPrefs.chordRootEnabled) to "root",
-                Triple("Tercera (3)", DegreeColorPrefs.chordThirdColor, DegreeColorPrefs.chordThirdEnabled) to "third",
-                Triple("Quinta (5)", DegreeColorPrefs.chordFifthColor, DegreeColorPrefs.chordFifthEnabled) to "fifth",
-                Triple("Otros", DegreeColorPrefs.chordOtherColor, DegreeColorPrefs.chordOtherEnabled) to "other"
+                "Raíz (1)" to ("root" to DegreeColorPrefs.chordRootColor),
+                "Tercera (3)" to ("third" to DegreeColorPrefs.chordThirdColor),
+                "Quinta (5)" to ("fifth" to DegreeColorPrefs.chordFifthColor),
+                "Otros" to ("other" to DegreeColorPrefs.chordOtherColor)
             )
-            chordDegs.forEach { (info, key) ->
-                val (label, color, enabled) = info
+            chordDegs.forEach { (label, keyColor) ->
+                val (key, currentColor) = keyColor
+                var expanded by remember { mutableStateOf(false) }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(24.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(if (enabled) color else Color.Gray.copy(alpha = 0.3f))
-                            .clickable { DegreeColorPrefs.setChordColor(key, color, !enabled, context) }
+                            .background(currentColor)
+                            .clickable { expanded = !expanded }
                     )
-                    Text(label, color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                    Text(label, color = Color.White, fontSize = 13.sp,
+                        modifier = Modifier.clickable { expanded = !expanded })
+                }
+                if (expanded) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = 32.dp, top = 4.dp, bottom = 4.dp)) {
+                        colorPalette.forEach { c ->
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(c)
+                                    .then(if (c == currentColor) Modifier.border(2.dp, Color.White, RoundedCornerShape(4.dp)) else Modifier)
+                                    .clickable { DegreeColorPrefs.setChordColor(key, c, true, context); expanded = false }
+                            )
+                        }
+                    }
                 }
             }
 
