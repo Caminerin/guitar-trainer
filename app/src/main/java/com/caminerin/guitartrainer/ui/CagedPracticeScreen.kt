@@ -186,6 +186,12 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
             } else {
                 currentNoteIndex = nextIdx
             }
+        } else {
+            wrongCount++
+            val detectedName = getNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
+            val expectedName = getNoteName(expected, selectedKey, scale.relativeMajorOffset)
+            evalFeedback = "✗ $detectedName (esperada: $expectedName)"
+            evalFeedbackColor = Color(0xFFE53935)
         }
     }
 
@@ -385,10 +391,16 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
                         color = Color(0xFF80CBC4), fontSize = 12.sp, fontWeight = FontWeight.Bold
                     )
                     if (correctCount > 0 || wrongCount > 0) {
-                        Text(
-                            "\u2714 $correctCount",
-                            color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.Bold
-                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                "\u2714 $correctCount",
+                                color = Color(0xFF4CAF50), fontSize = 13.sp, fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "\u2717 $wrongCount",
+                                color = Color(0xFFE53935), fontSize = 13.sp, fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                     if (evalFeedback != null) {
                         Text(

@@ -91,6 +91,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     var selectedKey by rememberSaveable { mutableIntStateOf(0) }
     var selectedScaleName by rememberSaveable { mutableStateOf("Mayor (Jónica)") }
     var bpm by rememberSaveable { mutableIntStateOf(60) }
+    var beatsPerMeasure by rememberSaveable { mutableIntStateOf(4) }
     var measureCount by rememberSaveable { mutableIntStateOf(4) }
 
     // The progression: list of measures, each with subdivisions, each with optional chordId
@@ -113,6 +114,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     var showMeasuresSelector by remember { mutableStateOf(false) }
     var showModeSelector by remember { mutableStateOf(false) }
     var showMeasureSubSelector by remember { mutableStateOf<Int?>(null) }
+    var showBeatsSelector by remember { mutableStateOf(false) }
 
 
     var isPlaying by remember { mutableStateOf(false) }
@@ -143,7 +145,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         currentMeasure = mi
                         currentSub = si
                         val beatMs = 60000L / bpmState.value
-                        val beatsPerMeasure = 4L
                         val measureMs = beatMs * beatsPerMeasure
                         val subMs = measureMs / m.subdivisions.size.coerceAtLeast(1)
                         if (slot.strumDirection != "-") {
@@ -223,7 +224,8 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             .clickable { showKeyCircle = true }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text(getChromaticNames(selectedKey)[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        val scaleOffset = getRelativeMajorOffset(selectedScaleName)
+                        Text(getChromaticNames(selectedKey, scaleOffset)[selectedKey], color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
 
                     // Scale selector
@@ -251,6 +253,17 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
                     Text("$measureCount comp.", color = Color(0xFF80DEEA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Beats per measure selector
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF009688).copy(alpha = 0.25f))
+                        .clickable { showBeatsSelector = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("$beatsPerMeasure/4", color = Color(0xFF80CBC4), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Song picker button (more visible)
@@ -382,10 +395,17 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
 
         // Key selector overlay
         if (showKeyCircle) {
+            val scaleForCircle = ALL_SCALES.find {
+                it.name.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u") ==
+                selectedScaleName.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")
+            }
             ChromaticCircleOverlay(
                 selectedNote = selectedKey,
+                rootNote = selectedKey,
+                scaleIntervals = scaleForCircle?.intervals ?: listOf(0, 2, 4, 5, 7, 9, 11),
                 onNoteSelected = { selectedKey = it; showKeyCircle = false },
-                onDismiss = { showKeyCircle = false }
+                onDismiss = { showKeyCircle = false },
+                relativeMajorOffset = scaleForCircle?.relativeMajorOffset ?: 0
             )
         }
 
@@ -458,13 +478,17 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     currentSong = song
                     bpm = song.bpmStart
                     measureCount = song.measuresUsed
+                    // Parse meter to set beats per measure (e.g. "3/4" -> 3, "4/4" -> 4, "6/8" -> 6)
+                    val meterBeats = song.meter.split("/").firstOrNull()?.trim()?.toIntOrNull()
+                    if (meterBeats != null && meterBeats in 2..8) beatsPerMeasure = meterBeats
                     // Auto-fill measures with song chords
                     measures.clear()
                     val allChords = ChordRepository.getChords()
+                    val songBeats = song.subdivisionsPerMeasure.coerceAtLeast(beatsPerMeasure)
                     song.measures.forEach { measure ->
                         val slots = mutableListOf<ChordSlot>()
                         val strums = measure.strumPattern
-                        for (beat in 1..4) {
+                        for (beat in 1..songBeats) {
                             val chord = measure.chords.firstOrNull { beat in it.startBeat..it.endBeat }
                             val chordId = chord?.let { findChordIdByName(it.symbol, allChords) }
                             val direction = strums.getOrElse(beat - 1) { "D" }
@@ -498,6 +522,47 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 onCountChange = { measureCount = it },
                 onDismiss = { showMeasuresSelector = false }
             )
+        }
+
+        // Beats per measure selector overlay
+        if (showBeatsSelector) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable { showBeatsSelector = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF2A2A2A))
+                        .clickable(enabled = false) {}
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Compás", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    listOf(2, 3, 4, 5, 6, 7).forEach { beats ->
+                        val label = "$beats/4"
+                        val isSelected = beats == beatsPerMeasure
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) Color(0xFF009688).copy(alpha = 0.5f) else Color.Transparent)
+                                .clickable {
+                                    beatsPerMeasure = beats
+                                    showBeatsSelector = false
+                                }
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            Text(label, color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+                                fontSize = 16.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            }
         }
 
         // Mode selector overlay
