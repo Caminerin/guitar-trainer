@@ -40,7 +40,8 @@ data class SongMeasure(
     val index: Int,
     val chords: List<MeasureChord>,
     val strumPattern: List<String>,
-    val raw: String
+    val raw: String,
+    val perSubdivisionChords: List<String> = emptyList()
 ) {
     val chordSymbol: String get() = chords.firstOrNull()?.symbol.orEmpty()
 }
@@ -187,7 +188,20 @@ object SongRepository {
 
             val measures = (1..16).mapNotNull { n ->
                 val raw = col(parts, "compas_%02d".format(n))
-                parseMeasureCell(raw, defaultStrums)?.copy(index = n)
+                val perSubAcordes = col(parts, "compas_%02d_acordes_8".format(n))
+                val perSubGolpes = col(parts, "compas_%02d_golpes_8".format(n))
+                val base = parseMeasureCell(raw, defaultStrums) ?: return@mapNotNull null
+                val perSubChords = if (perSubAcordes.isNotBlank())
+                    perSubAcordes.split("\\s+".toRegex()).filter { it.isNotBlank() }
+                else emptyList()
+                val perSubStrums = if (perSubGolpes.isNotBlank())
+                    perSubGolpes.split("\\s+".toRegex()).filter { it.isNotBlank() }
+                else emptyList()
+                base.copy(
+                    index = n,
+                    perSubdivisionChords = perSubChords,
+                    strumPattern = if (perSubStrums.isNotEmpty()) perSubStrums else base.strumPattern
+                )
             }
 
             val arrangementType = col(parts, "tipo_arreglo")
