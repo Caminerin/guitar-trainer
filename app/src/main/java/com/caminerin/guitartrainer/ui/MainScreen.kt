@@ -1,6 +1,7 @@
 package com.caminerin.guitartrainer.ui
 
 import android.app.Activity
+import android.content.Context
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -22,6 +23,11 @@ import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.RemoveRedEye
 import androidx.compose.material.icons.filled.ScreenRotation
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -78,6 +84,7 @@ fun MainScreen(
     val context = LocalContext.current
     LaunchedEffect(Unit) {
         NoteFormatPreference.load(context)
+        AccidentalPreference.load(context)
         AppPreferences.load(context)
         DegreeColorPrefs.load(context)
     }
@@ -85,6 +92,7 @@ fun MainScreen(
     var selectedTab by rememberSaveable { mutableStateOf(AppPreferences.lastTab) }
     var fullscreenMode by rememberSaveable { mutableStateOf(FullscreenMode.NONE.name) }
     var showExitDialog by remember { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
     val modes = AppMode.entries
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -135,6 +143,10 @@ fun MainScreen(
     }
 
     // Exit confirmation dialog
+    if (showSettings) {
+        SettingsOverlay(context = context, onDismiss = { showSettings = false })
+    }
+
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
@@ -185,24 +197,11 @@ fun MainScreen(
                     }
                 },
                 actions = {
-                    Box(
-                        modifier = Modifier
-                            .padding(end = 12.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF5C6BC0).copy(alpha = 0.3f))
-                            .clickable {
-                                val newFormat = if (NoteFormatPreference.current == NoteFormat.AMERICAN)
-                                    NoteFormat.EUROPEAN else NoteFormat.AMERICAN
-                                NoteFormatPreference.set(newFormat, context)
-                            }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    IconButton(
+                        onClick = { showSettings = true },
+                        modifier = Modifier.padding(end = 4.dp)
                     ) {
-                        Text(
-                            NoteFormatPreference.current.label,
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Icon(Icons.Default.Settings, "Ajustes", tint = Color.White, modifier = Modifier.size(24.dp))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -263,6 +262,131 @@ fun MainScreen(
                 AppMode.TOOLS -> ToolsMenu(
                     pitchResult = pitchResult
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.85f))
+            .clickable(
+                indication = null,
+                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xFF2A2A2A))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                ) {}
+                .padding(20.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Ajustes", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+
+            // Nomenclature
+            Text("Nomenclatura", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NoteFormat.entries.forEach { fmt ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (NoteFormatPreference.current == fmt) Color(0xFF5C6BC0) else Color.White.copy(alpha = 0.1f))
+                            .clickable { NoteFormatPreference.set(fmt, context) }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text(fmt.label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Accidental style
+            Text("Alteraciones", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AccidentalStyle.entries.forEach { style ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (AccidentalPreference.current == style) Color(0xFF5C6BC0) else Color.White.copy(alpha = 0.1f))
+                            .clickable { AccidentalPreference.set(style, context) }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Text(style.label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Degree colors - Scale
+            Text("Colores de grado (escalas)", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            val scaleDegs = listOf(
+                Triple("Tónica (I)", DegreeColorPrefs.tonicColor, DegreeColorPrefs.tonicEnabled) to "tonic",
+                Triple("Tercera (III)", DegreeColorPrefs.thirdColor, DegreeColorPrefs.thirdEnabled) to "third",
+                Triple("Quinta (V)", DegreeColorPrefs.fifthColor, DegreeColorPrefs.fifthEnabled) to "fifth",
+                Triple("Otros", DegreeColorPrefs.otherColor, DegreeColorPrefs.otherEnabled) to "other"
+            )
+            scaleDegs.forEach { (info, key) ->
+                val (label, color, enabled) = info
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (enabled) color else Color.Gray.copy(alpha = 0.3f))
+                            .clickable { DegreeColorPrefs.setScaleColor(key, color, !enabled, context) }
+                    )
+                    Text(label, color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                }
+            }
+
+            // Degree colors - Chords
+            Text("Colores de intervalo (acordes)", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            val chordDegs = listOf(
+                Triple("Raíz (1)", DegreeColorPrefs.chordRootColor, DegreeColorPrefs.chordRootEnabled) to "root",
+                Triple("Tercera (3)", DegreeColorPrefs.chordThirdColor, DegreeColorPrefs.chordThirdEnabled) to "third",
+                Triple("Quinta (5)", DegreeColorPrefs.chordFifthColor, DegreeColorPrefs.chordFifthEnabled) to "fifth",
+                Triple("Otros", DegreeColorPrefs.chordOtherColor, DegreeColorPrefs.chordOtherEnabled) to "other"
+            )
+            chordDegs.forEach { (info, key) ->
+                val (label, color, enabled) = info
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (enabled) color else Color.Gray.copy(alpha = 0.3f))
+                            .clickable { DegreeColorPrefs.setChordColor(key, color, !enabled, context) }
+                    )
+                    Text(label, color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f), fontSize = 13.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF5C6BC0))
+                    .clickable { onDismiss() }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Cerrar", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
