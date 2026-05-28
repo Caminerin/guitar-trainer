@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -56,6 +59,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -796,212 +800,230 @@ private fun TabNotationView(
     currentMeasureIdx: Int,
     currentSubIdx: Int
 ) {
-    val stringNames = listOf("e", "B", "G", "D", "A", "E") // 1-6
+    val density = LocalDensity.current.density
+    val stringNames = listOf("e", "B", "G", "D", "A", "E")
+    val scrollState = rememberScrollState()
 
-    Canvas(
+    // Each subdivision gets a fixed dp-width for readability
+    val subWidthDp = 40.dp
+    val totalSubs = riff.measures.sumOf { riff.subdivisionsPerMeasure }
+    val leftMarginDp = 36.dp
+    val rightMarginDp = 16.dp
+    val canvasWidthDp = leftMarginDp + subWidthDp * totalSubs + rightMarginDp
+
+    // Auto-scroll to current measure during playback
+    LaunchedEffect(currentMeasureIdx, currentSubIdx) {
+        if (currentMeasureIdx >= 0) {
+            val subsBefore = currentMeasureIdx * riff.subdivisionsPerMeasure + (currentSubIdx - 1).coerceAtLeast(0)
+            val targetPx = (leftMarginDp.value * density + subsBefore * subWidthDp.value * density).toInt()
+            val viewportCenter = scrollState.viewportSize / 2
+            scrollState.animateScrollTo((targetPx - viewportCenter).coerceAtLeast(0))
+        }
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF1E1E1E))
-            .padding(4.dp)
+            .horizontalScroll(scrollState)
     ) {
-        val w = size.width
-        val h = size.height
+        Canvas(
+            modifier = Modifier
+                .width(canvasWidthDp)
+                .fillMaxHeight()
+                .padding(vertical = 8.dp)
+        ) {
+            val w = size.width
+            val h = size.height
+            val d = density
 
-        val leftMargin = 30f
-        val rightMargin = 16f
-        val topMargin = 12f
-        val bottomMargin = 12f
+            val leftMargin = 36f * d
+            val rightMargin = 16f * d
+            val topMargin = 16f * d
+            val bottomMargin = 24f * d
+            val subWidth = 40f * d
 
-        val drawableW = w - leftMargin - rightMargin
-        val drawableH = h - topMargin - bottomMargin
+            val numStrings = 6
+            val stringSpacing = (h - topMargin - bottomMargin) / (numStrings - 1).coerceAtLeast(1)
 
-        val numStrings = 6
-        val stringSpacing = drawableH / (numStrings - 1).toFloat().coerceAtLeast(1f)
-
-        // Draw string labels
-        for (s in 0 until numStrings) {
-            val y = topMargin + s * stringSpacing
-            drawContext.canvas.nativeCanvas.drawText(
-                stringNames[s],
-                8f,
-                y + 5f,
-                android.graphics.Paint().apply {
-                    color = 0xFFBDBDBD.toInt()
-                    textSize = 13f
-                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
-                }
-            )
-        }
-
-        // Draw tab lines (strings)
-        for (s in 0 until numStrings) {
-            val y = topMargin + s * stringSpacing
-            drawLine(
-                color = RP_STRING_COLOR.copy(alpha = 0.3f),
-                start = Offset(leftMargin, y),
-                end = Offset(w - rightMargin, y),
-                strokeWidth = 1f
-            )
-        }
-
-        // Calculate layout: how many subdivisions total
-        val totalSubs = riff.measures.sumOf { riff.subdivisionsPerMeasure }
-        if (totalSubs == 0) return@Canvas
-        val subWidth = drawableW / totalSubs
-
-        // Draw measure dividers
-        var subOffset = 0
-        for ((mi, measure) in riff.measures.withIndex()) {
-            // Measure start line
-            val x = leftMargin + subOffset * subWidth
-            drawLine(
-                color = RP_FRET_LINE,
-                start = Offset(x, topMargin),
-                end = Offset(x, topMargin + (numStrings - 1) * stringSpacing),
-                strokeWidth = if (mi == 0) 2f else 1f
-            )
-
-            // Highlight current measure
-            if (mi == currentMeasureIdx) {
-                drawRect(
-                    color = RP_ACCENT.copy(alpha = 0.06f),
-                    topLeft = Offset(x, topMargin - 4f),
-                    size = Size(
-                        riff.subdivisionsPerMeasure * subWidth,
-                        (numStrings - 1) * stringSpacing + 8f
-                    )
+            val labelPaint = android.graphics.Paint().apply {
+                color = 0xFFBDBDBD.toInt()
+                textSize = 14f * d
+                typeface = android.graphics.Typeface.create(
+                    android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD
                 )
             }
 
-            // Draw notes in this measure
-            for (note in measure.notes) {
-                val noteSubStart = subOffset + note.startSub - 1
-                val noteX = leftMargin + (noteSubStart + 0.5f) * subWidth
-                val stringIdx = note.string - 1 // 0-indexed (0=high E)
-                val noteY = topMargin + stringIdx * stringSpacing
-
-                val isActive = mi == currentMeasureIdx &&
-                    currentSubIdx >= note.startSub && currentSubIdx <= note.endSub
-
-                // Technique-specific colors
-                val techniqueColor = when (note.technique) {
-                    "palm_mute" -> Color(0xFFFF7043) // orange
-                    "staccato" -> Color(0xFF42A5F5)  // blue
-                    "tremolo" -> Color(0xFFAB47BC)    // purple
-                    "bend" -> Color(0xFF66BB6A)       // green
-                    "hammer_on" -> Color(0xFF26C6DA)  // cyan
-                    "pull_off" -> Color(0xFF26C6DA)   // cyan
-                    else -> null
-                }
-
-                // Note duration line
-                if (note.endSub > note.startSub) {
-                    val endX = leftMargin + (subOffset + note.endSub - 0.5f) * subWidth
-                    val lineColor = when {
-                        isActive -> RP_ACTIVE_NOTE
-                        techniqueColor != null -> techniqueColor.copy(alpha = 0.5f)
-                        else -> Color(0xFF666666)
-                    }
-                    // Palm mute: dashed look (shorter segments)
-                    if (note.technique == "palm_mute") {
-                        val segLen = subWidth * 0.3f
-                        var sx = noteX
-                        while (sx < endX) {
-                            val ex = (sx + segLen).coerceAtMost(endX)
-                            drawLine(lineColor, Offset(sx, noteY), Offset(ex, noteY), 3f)
-                            sx += segLen * 2f
-                        }
-                    } else {
-                        drawLine(lineColor, Offset(noteX, noteY), Offset(endX, noteY), 3f)
-                    }
-                }
-
-                // Note circle background — technique-aware
-                val circleRadius = (subWidth * 0.35f).coerceIn(8f, 16f)
-                val circleColor = when {
-                    isActive -> RP_ACTIVE_NOTE
-                    techniqueColor != null -> techniqueColor
-                    else -> Color(0xFF333333)
-                }
-                // Staccato: smaller circle; palm mute: square-ish
-                if (note.technique == "staccato") {
-                    drawCircle(circleColor, circleRadius * 0.8f, Offset(noteX, noteY))
-                } else if (note.technique == "palm_mute") {
-                    drawRect(
-                        circleColor,
-                        Offset(noteX - circleRadius, noteY - circleRadius * 0.8f),
-                        Size(circleRadius * 2f, circleRadius * 1.6f)
-                    )
-                } else {
-                    drawCircle(circleColor, circleRadius, Offset(noteX, noteY))
-                }
-
-                // Fret number text
-                val textSize = (circleRadius * 1.2f).coerceIn(10f, 16f)
+            // String labels + lines
+            for (s in 0 until numStrings) {
+                val y = topMargin + s * stringSpacing
                 drawContext.canvas.nativeCanvas.drawText(
-                    "${note.fret}",
-                    noteX,
-                    noteY + textSize * 0.35f,
+                    stringNames[s], 8f * d, y + 5f * d, labelPaint
+                )
+                drawLine(
+                    RP_STRING_COLOR.copy(alpha = 0.35f),
+                    Offset(leftMargin, y), Offset(w - rightMargin, y),
+                    strokeWidth = 1.5f * d
+                )
+            }
+
+            // Measures
+            var subOffset = 0
+            for ((mi, measure) in riff.measures.withIndex()) {
+                val measX = leftMargin + subOffset * subWidth
+
+                // Measure bar line
+                drawLine(
+                    RP_FRET_LINE, Offset(measX, topMargin),
+                    Offset(measX, topMargin + (numStrings - 1) * stringSpacing),
+                    strokeWidth = if (mi == 0) 3f * d else 1.5f * d
+                )
+
+                // Active measure highlight
+                if (mi == currentMeasureIdx) {
+                    drawRect(
+                        RP_ACCENT.copy(alpha = 0.08f),
+                        Offset(measX, topMargin - 6f * d),
+                        Size(riff.subdivisionsPerMeasure * subWidth, (numStrings - 1) * stringSpacing + 12f * d)
+                    )
+                }
+
+                // Measure number
+                drawContext.canvas.nativeCanvas.drawText(
+                    "${mi + 1}",
+                    measX + 4f * d,
+                    topMargin - 6f * d,
                     android.graphics.Paint().apply {
-                        color = if (isActive || techniqueColor != null) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
-                        this.textSize = textSize
-                        textAlign = android.graphics.Paint.Align.CENTER
-                        typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+                        color = 0x99FFFFFF.toInt()
+                        textSize = 10f * d
                     }
                 )
 
-                // Technique label below note
-                if (note.technique.isNotEmpty()) {
-                    val label = when (note.technique) {
-                        "palm_mute" -> "PM"
-                        "staccato" -> "."
-                        "tremolo" -> "~~~"
-                        "bend" -> "b"
-                        "hammer_on" -> "h"
-                        "pull_off" -> "p"
-                        else -> ""
+                // Notes
+                for (note in measure.notes) {
+                    val noteSubStart = subOffset + note.startSub - 1
+                    val noteX = leftMargin + (noteSubStart + 0.5f) * subWidth
+                    val stringIdx = note.string - 1
+                    val noteY = topMargin + stringIdx * stringSpacing
+
+                    val isActive = mi == currentMeasureIdx &&
+                        currentSubIdx >= note.startSub && currentSubIdx <= note.endSub
+
+                    val techniqueColor = when (note.technique) {
+                        "palm_mute" -> Color(0xFFFF7043)
+                        "staccato" -> Color(0xFF42A5F5)
+                        "tremolo" -> Color(0xFFAB47BC)
+                        "bend" -> Color(0xFF66BB6A)
+                        "hammer_on", "pull_off" -> Color(0xFF26C6DA)
+                        else -> null
                     }
-                    if (label.isNotEmpty()) {
-                        drawContext.canvas.nativeCanvas.drawText(
-                            label,
-                            noteX,
-                            noteY + circleRadius + 10f,
-                            android.graphics.Paint().apply {
-                                color = (techniqueColor ?: Color.White).copy(alpha = 0.7f)
-                                    .let { c -> android.graphics.Color.argb(
-                                        (c.alpha * 255).toInt(), (c.red * 255).toInt(),
-                                        (c.green * 255).toInt(), (c.blue * 255).toInt()
-                                    ) }
-                                this.textSize = 9f
-                                textAlign = android.graphics.Paint.Align.CENTER
-                                typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+
+                    // Duration line
+                    if (note.endSub > note.startSub) {
+                        val endX = leftMargin + (subOffset + note.endSub - 0.5f) * subWidth
+                        val lineColor = when {
+                            isActive -> RP_ACTIVE_NOTE
+                            techniqueColor != null -> techniqueColor.copy(alpha = 0.5f)
+                            else -> Color(0xFF666666)
+                        }
+                        if (note.technique == "palm_mute") {
+                            val segLen = subWidth * 0.3f
+                            var sx = noteX
+                            while (sx < endX) {
+                                val ex = (sx + segLen).coerceAtMost(endX)
+                                drawLine(lineColor, Offset(sx, noteY), Offset(ex, noteY), 4f * d)
+                                sx += segLen * 2f
                             }
+                        } else {
+                            drawLine(lineColor, Offset(noteX, noteY), Offset(endX, noteY), 4f * d)
+                        }
+                    }
+
+                    // Note circle/shape
+                    val circleRadius = 14f * d
+                    val circleColor = when {
+                        isActive -> RP_ACTIVE_NOTE
+                        techniqueColor != null -> techniqueColor
+                        else -> Color(0xFF333333)
+                    }
+                    when (note.technique) {
+                        "staccato" -> drawCircle(circleColor, circleRadius * 0.85f, Offset(noteX, noteY))
+                        "palm_mute" -> drawRect(
+                            circleColor,
+                            Offset(noteX - circleRadius, noteY - circleRadius * 0.85f),
+                            Size(circleRadius * 2f, circleRadius * 1.7f)
                         )
+                        else -> drawCircle(circleColor, circleRadius, Offset(noteX, noteY))
+                    }
+
+                    // Fret number
+                    val fretTextSize = 13f * d
+                    drawContext.canvas.nativeCanvas.drawText(
+                        "${note.fret}", noteX, noteY + fretTextSize * 0.35f,
+                        android.graphics.Paint().apply {
+                            color = if (isActive || techniqueColor != null) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+                            this.textSize = fretTextSize
+                            textAlign = android.graphics.Paint.Align.CENTER
+                            typeface = android.graphics.Typeface.create(
+                                android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD
+                            )
+                        }
+                    )
+
+                    // Technique label
+                    if (note.technique.isNotEmpty()) {
+                        val label = when (note.technique) {
+                            "palm_mute" -> "PM"
+                            "staccato" -> "."
+                            "tremolo" -> "~~~"
+                            "bend" -> "b"
+                            "hammer_on" -> "h"
+                            "pull_off" -> "p"
+                            else -> ""
+                        }
+                        if (label.isNotEmpty()) {
+                            drawContext.canvas.nativeCanvas.drawText(
+                                label, noteX, noteY + circleRadius + 12f * d,
+                                android.graphics.Paint().apply {
+                                    color = (techniqueColor ?: Color.White).copy(alpha = 0.8f)
+                                        .let { c ->
+                                            android.graphics.Color.argb(
+                                                (c.alpha * 255).toInt(), (c.red * 255).toInt(),
+                                                (c.green * 255).toInt(), (c.blue * 255).toInt()
+                                            )
+                                        }
+                                    this.textSize = 10f * d
+                                    textAlign = android.graphics.Paint.Align.CENTER
+                                    typeface = android.graphics.Typeface.create(
+                                        android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD
+                                    )
+                                }
+                            )
+                        }
                     }
                 }
+
+                // Current subdivision cursor
+                if (mi == currentMeasureIdx && currentSubIdx > 0) {
+                    val curSubX = leftMargin + (subOffset + currentSubIdx - 1) * subWidth
+                    drawLine(
+                        RP_ACCENT.copy(alpha = 0.7f),
+                        Offset(curSubX, topMargin - 8f * d),
+                        Offset(curSubX, topMargin + (numStrings - 1) * stringSpacing + 8f * d),
+                        strokeWidth = 3f * d
+                    )
+                }
+
+                subOffset += riff.subdivisionsPerMeasure
             }
 
-            // Highlight current subdivision
-            if (mi == currentMeasureIdx && currentSubIdx > 0) {
-                val curSubX = leftMargin + (subOffset + currentSubIdx - 1) * subWidth
-                drawLine(
-                    color = RP_ACCENT.copy(alpha = 0.6f),
-                    start = Offset(curSubX, topMargin - 6f),
-                    end = Offset(curSubX, topMargin + (numStrings - 1) * stringSpacing + 6f),
-                    strokeWidth = 2f
-                )
-            }
-
-            subOffset += riff.subdivisionsPerMeasure
+            // Final bar line
+            val endX = leftMargin + subOffset * subWidth
+            drawLine(
+                RP_FRET_LINE, Offset(endX, topMargin),
+                Offset(endX, topMargin + (numStrings - 1) * stringSpacing),
+                strokeWidth = 3f * d
+            )
         }
-
-        // Final bar line
-        val endX = leftMargin + subOffset * subWidth
-        drawLine(
-            color = RP_FRET_LINE,
-            start = Offset(endX, topMargin),
-            end = Offset(endX, topMargin + (numStrings - 1) * stringSpacing),
-            strokeWidth = 2f
-        )
     }
 }
