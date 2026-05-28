@@ -148,7 +148,7 @@ fun DrawScope.drawChromaticCircleShared(
         val label = getChromaticNames(rootNote, relativeMajorOffset)[i]
         val hasSlash = label.contains("/")
         val textSize = if (hasSlash) {
-            if (isSelected) 60f else 44f
+            if (isSelected) 72f else 54f
         } else {
             if (isSelected) 126f else 90f
         }
@@ -174,7 +174,7 @@ fun DrawScope.drawChromaticCircleShared(
 
     val centerLabel = getChromaticNames(rootNote, relativeMajorOffset)[selectedNote]
     val centerHasSlash = centerLabel.contains("/")
-    val centerTextSize = if (centerHasSlash) 80f else 168f
+    val centerTextSize = if (centerHasSlash) 96f else 168f
     val centerPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.argb((255 * alpha).toInt(), 255, 255, 255)
         textSize = centerTextSize

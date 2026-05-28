@@ -1,5 +1,7 @@
 package com.caminerin.guitartrainer.ui
 
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -36,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -277,6 +281,7 @@ fun ToolsMenu(
 
     when (selectedTool) {
         "tuner" -> {
+            LockPortrait()
             Column(modifier = modifier.fillMaxSize()) {
                 TextButton(
                     onClick = { selectedTool = "none" },
@@ -288,6 +293,7 @@ fun ToolsMenu(
             }
         }
         "metronome" -> {
+            LockPortrait()
             Column(modifier = modifier.fillMaxSize()) {
                 TextButton(
                     onClick = { selectedTool = "none" },
@@ -395,6 +401,18 @@ private fun MenuButton(
             if (subtitle != null) {
                 Text(subtitle, fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f), textAlign = TextAlign.Center)
             }
+        }
+    }
+}
+
+@Composable
+private fun LockPortrait() {
+    val context = LocalContext.current
+    DisposableEffect(Unit) {
+        val activity = context as? Activity
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
 }
