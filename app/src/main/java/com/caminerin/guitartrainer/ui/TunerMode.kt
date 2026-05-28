@@ -67,15 +67,42 @@ fun TunerMode(
     var isAutoMode by remember { mutableStateOf(true) }
     var selectedStringIndex by remember { mutableStateOf<Int?>(null) }
     var tuningMenuExpanded by remember { mutableStateOf(false) }
+    var stableString by remember { mutableStateOf<GuitarString?>(null) }
+    var candidateString by remember { mutableStateOf<GuitarString?>(null) }
+    var candidateCount by remember { mutableIntStateOf(0) }
 
     val currentTuning = ALL_TUNINGS[selectedTuningIndex]
 
-    val activeString = if (!isAutoMode) {
+    val rawClosest = if (!isAutoMode) {
         selectedStringIndex?.let { currentTuning.strings.getOrNull(it) }
     } else if (pitchResult == null) {
         null
     } else {
         currentTuning.strings.minByOrNull { abs(centsFromTarget(pitchResult.frequency, it.frequency)) }
+    }
+
+    val activeString = if (!isAutoMode) {
+        rawClosest
+    } else if (rawClosest == null) {
+        stableString
+    } else if (rawClosest == stableString) {
+        candidateString = null
+        candidateCount = 0
+        stableString
+    } else if (rawClosest == candidateString) {
+        candidateCount++
+        if (candidateCount >= 3) {
+            stableString = rawClosest
+            candidateString = null
+            candidateCount = 0
+            rawClosest
+        } else {
+            stableString
+        }
+    } else {
+        candidateString = rawClosest
+        candidateCount = 1
+        stableString ?: rawClosest
     }
 
     val centsFromTarget = if (activeString != null && pitchResult != null) {
