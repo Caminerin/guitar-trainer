@@ -189,7 +189,7 @@ object ChordRepository {
         allChords.filter { it.root == root && it.quality == quality.csvValue }
 
     fun getChordsByLevelAndQuality(level: ChordLevel, quality: ChordQuality): List<ChordShape> =
-        allChords.filter { it.level == level.csvValue && it.quality == quality.csvValue }
+        allChords.filter { (level == ChordLevel.ALL || it.level == level.csvValue) && it.quality == quality.csvValue }
 
     fun getChordsByRootLevelQuality(root: String, level: ChordLevel, quality: ChordQuality): List<ChordShape> =
         allChords.filter { it.root == root &&

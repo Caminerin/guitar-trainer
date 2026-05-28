@@ -104,8 +104,6 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
     var showKeyCircle by remember { mutableStateOf(false) }
     var showScaleSelector by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
-    var guitarMode by rememberSaveable { mutableStateOf(false) }
-
     val revealedNotes = remember { mutableStateListOf<Pair<Int, Int>>() }
     val errorFlash = remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var correctCount by remember { mutableIntStateOf(0) }
@@ -114,63 +112,6 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
     var feedbackIsCorrect by remember { mutableStateOf(true) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
-
-    // Guitar mode: detect pitch and reveal matching scale note
-    var lastRevealedNote by remember { mutableIntStateOf(-1) }
-    var lastRevealTime by remember { mutableStateOf(0L) }
-    var consecutiveFrames by remember { mutableIntStateOf(0) }
-    var lastFrameNote by remember { mutableIntStateOf(-1) }
-    val requiredFrames = 3
-
-    LaunchedEffect(guitarMode, pitchResult, selectedKey, selectedScaleIndex, maxFret) {
-        if (!guitarMode) return@LaunchedEffect
-        val pr = pitchResult ?: return@LaunchedEffect
-        if (pr.confidence < 0.85f || pr.frequency <= 0f) return@LaunchedEffect
-
-        val detectedMidi = pr.noteIndex
-        val detectedNote = detectedMidi % 12
-        val now = System.currentTimeMillis()
-
-        // Require N consecutive frames with the same note for stability
-        if (detectedNote == lastFrameNote) {
-            consecutiveFrames++
-        } else {
-            consecutiveFrames = 1
-            lastFrameNote = detectedNote
-        }
-        if (consecutiveFrames < requiredFrames) return@LaunchedEffect
-
-        // Cooldown: don't process the same note within 500ms
-        if (detectedNote == lastRevealedNote && now - lastRevealTime < 500) return@LaunchedEffect
-
-        if (!isNoteInScale(detectedNote, selectedKey, scale.intervals)) {
-            if (now - lastRevealTime < 300) return@LaunchedEffect
-            errorCount++
-            lastRevealedNote = detectedNote
-            lastRevealTime = now
-            val detectedName = getSpanishNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
-            feedbackText = "$detectedName no pertenece a la escala"
-            feedbackIsCorrect = false
-            return@LaunchedEffect
-        }
-
-        // Use MIDI pitch to find the best matching fretboard position
-        val bestPosition = findBestFretPosition(detectedMidi, maxFret)
-        if (bestPosition != null) {
-            val key = bestPosition
-            if (!revealedNotes.contains(key)) {
-                revealedNotes.add(key)
-                correctCount++
-                lastRevealedNote = detectedNote
-                lastRevealTime = now
-                val degree = getDegreeInScale(detectedNote, selectedKey, scale.intervals)
-                val degreeLabel = if (degree != null) getDegreeLabel(degree) else ""
-                val noteName = getSpanishNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
-                feedbackText = "$noteName = grado $degreeLabel"
-                feedbackIsCorrect = true
-            }
-        }
-    }
     val density = LocalDensity.current
     val fretWidthDp = (60f * zoom).dp
     val openStringWidth = 48.dp
@@ -265,17 +206,6 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
                 // Info button
                 IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(20.dp))
-                }
-
-                // Guitar mode toggle
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (guitarMode) Color(0xFF4CAF50).copy(alpha = 0.5f) else Color.White.copy(alpha = 0.08f))
-                        .clickable { guitarMode = !guitarMode }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text("\uD83C\uDFB8", fontSize = 16.sp)
                 }
 
                 // Zoom controls
