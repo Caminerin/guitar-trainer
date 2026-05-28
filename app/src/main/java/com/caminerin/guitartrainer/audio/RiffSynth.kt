@@ -5,22 +5,24 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 
 /**
- * Single-note guitar synthesizer for riff playback.
- * Uses Karplus-Strong with per-string tone shaping for realistic guitar sound.
- * Supports sound presets (clean, crunch, distortion, etc.).
+ * Enhanced single-note guitar synthesizer for riff playback.
+ * Uses extended Karplus-Strong with harmonic series initialization,
+ * wound/plain string modeling, pick transients, two-stage decay,
+ * and body resonance for realistic guitar tone.
  */
 object RiffSynth {
     private const val SAMPLE_RATE = 44100
-    private const val CROSSFADE_SAMPLES = 2205 // 50ms
+    private const val CROSSFADE_SAMPLES = 2205
 
     private val STANDARD_TUNING_HZ = doubleArrayOf(
-        329.63, // string 1 (high E)
-        246.94, // string 2 (B)
-        196.00, // string 3 (G)
-        146.83, // string 4 (D)
-        110.00, // string 5 (A)
-        82.41   // string 6 (low E)
+        329.63, 246.94, 196.00, 146.83, 110.00, 82.41
     )
+
+    // Wound strings (D,A,E = indices 3,4,5) have more inharmonicity and duller attack
+    private val IS_WOUND = booleanArrayOf(false, false, false, true, true, true)
+
+    // Guitar body resonance frequencies (Hz) — typical dreadnought modes
+    private val BODY_MODES = doubleArrayOf(98.0, 204.0, 390.0)
 
     private var streamTrack: AudioTrack? = null
     @Volatile private var running = false
@@ -33,9 +35,9 @@ object RiffSynth {
     private val lock = Object()
 
     data class NoteEvent(
-        val string: Int,   // 1-6
+        val string: Int,
         val fret: Int,
-        val startMs: Long, // offset from buffer start
+        val startMs: Long,
         val durationMs: Int,
         val technique: String = ""
     )
@@ -102,98 +104,141 @@ object RiffSynth {
         output: FloatArray, freq: Double, string: Int,
         offset: Int, duration: Int, soundPreset: String, technique: String = ""
     ) {
-        // Staccato: shorten to 40% of original duration
-        val effectiveDuration = when (technique) {
-            "staccato" -> (duration * 0.4).toInt().coerceAtLeast(SAMPLE_RATE / 20)
+        val isPalmMute = technique == "palm_mute"
+        val isTremolo = technique == "tremolo"
+        val isBend = technique == "bend"
+        val isLegato = technique == "hammer_on" || technique == "pull_off"
+        val isStaccato = technique == "staccato"
+
+        val effectiveDuration = when {
+            isStaccato -> (duration * 0.4).toInt().coerceAtLeast(SAMPLE_RATE / 20)
             else -> duration
         }
 
         val period = (SAMPLE_RATE / freq).toInt().coerceAtLeast(2)
         val ring = FloatArray(period)
         val random = java.util.Random((freq * 1000).toLong())
+        val stringIdx = (string - 1).coerceIn(0, 5)
+        val wound = IS_WOUND[stringIdx]
 
-        val isPalmMute = technique == "palm_mute"
-        val isTremolo = technique == "tremolo"
-        val isBend = technique == "bend"
-        val isLegato = technique == "hammer_on" || technique == "pull_off"
-
-        // Palm mute: extra low-pass passes for muffled tone
-        val brightnessPassCount = when {
-            isPalmMute -> when (string) {
-                1, 2 -> 5; 3, 4 -> 4; else -> 3
+        // --- Harmonic series initialization ---
+        // Real strings vibrate with harmonics at integer multiples of fundamental.
+        // Wound strings have stronger odd harmonics; plain strings are more even.
+        val numHarmonics = if (wound) 12 else 16
+        val harmonicDecay = if (wound) 0.7 else 0.85
+        for (i in ring.indices) {
+            var sample = 0.0
+            val phase = 2.0 * Math.PI * i / period
+            for (h in 1..numHarmonics) {
+                val amplitude = Math.pow(harmonicDecay, (h - 1).toDouble())
+                // Wound strings: suppress even harmonics slightly for metallic character
+                val evenSuppression = if (wound && h % 2 == 0) 0.6 else 1.0
+                sample += amplitude * evenSuppression * Math.sin(h * phase)
             }
+            // Add controlled noise for pick excitation
+            val noiseAmount = if (isLegato) 0.05f else if (isPalmMute) 0.15f else 0.12f
+            sample += (random.nextFloat() * 2f - 1f) * noiseAmount
+            ring[i] = sample.toFloat()
+        }
+
+        // Normalize ring buffer
+        val ringPeak = ring.maxOfOrNull { kotlin.math.abs(it) } ?: 1f
+        if (ringPeak > 0.01f) {
+            val ringScale = 0.85f / ringPeak
+            for (i in ring.indices) ring[i] *= ringScale
+        }
+
+        // --- Pre-filtering for brightness ---
+        val brightnessPassCount = when {
+            isPalmMute -> when (string) { 1, 2 -> 6; 3, 4 -> 5; else -> 4 }
             soundPreset.contains("distorsion") || soundPreset.contains("fuzz") -> when (string) {
                 1, 2 -> 1; 3, 4 -> 1; else -> 0
             }
             soundPreset.contains("crunch") -> when (string) {
                 1, 2 -> 2; 3, 4 -> 1; else -> 1
             }
-            else -> when (string) {
-                1, 2 -> 3; 3, 4 -> 2; else -> 1
+            soundPreset.contains("acoustic") -> when (string) {
+                1, 2 -> 1; else -> 0
             }
+            else -> when (string) { 1, 2 -> 2; 3, 4 -> 1; else -> 0 }
         }
-
-        // Initialize ring buffer with noise
-        for (i in ring.indices) {
-            ring[i] = (random.nextFloat() * 2f - 1f) * (if (isLegato) 0.5f else 0.9f)
-        }
-
-        // Pre-filter for brightness
         for (pass in 0 until brightnessPassCount) {
             for (i in 1 until ring.size) {
                 ring[i] = ring[i] * 0.5f + ring[i - 1] * 0.5f
             }
         }
 
-        // Per-string decay — palm mute decays much faster
+        // --- Two-stage decay ---
+        // Guitar strings have fast initial decay (energy leaving string) then slow sustain
         val baseDecay = when (string) {
-            1 -> 0.9990f; 2 -> 0.9987f; 3 -> 0.9983f
-            4 -> 0.9980f; 5 -> 0.9975f; else -> 0.9970f
+            1 -> 0.9992f; 2 -> 0.9990f; 3 -> 0.9987f
+            4 -> 0.9984f; 5 -> 0.9980f; else -> 0.9976f
         }
-        val decay = if (isPalmMute) baseDecay * 0.998f else baseDecay
+        val decay = when {
+            isPalmMute -> baseDecay * 0.9965f
+            isStaccato -> baseDecay * 0.998f
+            else -> baseDecay
+        }
 
+        // Blend factor (allpass coefficient) — wound strings need more
         val blend = when {
-            isPalmMute -> when (string) {
-                1, 2 -> 0.48f; 3, 4 -> 0.50f; else -> 0.52f
-            }
-            else -> when (string) {
-                1, 2 -> 0.40f; 3, 4 -> 0.45f; else -> 0.50f
-            }
+            isPalmMute -> when (string) { 1, 2 -> 0.48f; 3, 4 -> 0.50f; else -> 0.52f }
+            wound -> when (string) { 4 -> 0.47f; 5 -> 0.50f; else -> 0.52f }
+            else -> when (string) { 1 -> 0.38f; 2 -> 0.40f; else -> 0.43f }
         }
 
-        // Legato: longer attack (no pick); normal: short attack
-        val attackSamples = if (isLegato) {
-            (period * 4).coerceAtMost(effectiveDuration)
-        } else {
-            (period * 1.5).toInt().coerceAtMost(effectiveDuration)
+        // --- Pick transient ---
+        // Short burst of bright noise at the start simulating pick hitting string
+        val pickTransientSamples = if (isLegato) 0 else (SAMPLE_RATE * 0.003).toInt()
+        val pickTransientAmplitude = when {
+            isPalmMute -> 0.3f
+            soundPreset.contains("acoustic") -> 0.5f
+            soundPreset.contains("distorsion") || soundPreset.contains("fuzz") -> 0.25f
+            else -> 0.4f
+        }
+
+        // Legato: smoother attack; normal: sharp pick attack
+        val attackSamples = when {
+            isLegato -> (period * 5).coerceAtMost(effectiveDuration)
+            isPalmMute -> (period * 2).coerceAtMost(effectiveDuration)
+            else -> (SAMPLE_RATE * 0.002).toInt().coerceAtMost(effectiveDuration)
         }
 
         var readIdx = 0
         val len = effectiveDuration.coerceAtMost(output.size - offset)
 
-        // Bend: pitch glide from current to +2 semitones
+        // Bend parameters
         val bendTargetFreq = if (isBend) freq * Math.pow(2.0, 2.0 / 12.0) else freq
-        val bendStartSample = if (isBend) (len * 0.1).toInt() else len
-        val bendEndSample = if (isBend) (len * 0.5).toInt() else len
+        val bendStartSample = if (isBend) (len * 0.08).toInt() else len
+        val bendEndSample = if (isBend) (len * 0.45).toInt() else len
 
-        // Tremolo: amplitude modulation at ~7Hz
+        // Tremolo parameters
         val tremoloRate = 7.0 * 2.0 * Math.PI / SAMPLE_RATE
-        val tremoloDepth = 0.5f
+        val tremoloDepth = 0.55f
 
         var currentPeriod = period
         var fractionalIdx = 0.0
 
+        // Two-stage decay: faster in first 15% of note
+        val fastDecayEnd = (len * 0.15).toInt()
+        val fastDecayFactor = 0.9997f
+
         for (i in 0 until len) {
-            // Bend: interpolate period
+            // Bend: interpolate period smoothly
             if (isBend && i in bendStartSample..bendEndSample) {
                 val bendProgress = (i - bendStartSample).toDouble() / (bendEndSample - bendStartSample).coerceAtLeast(1)
-                val currentFreq = freq + (bendTargetFreq - freq) * bendProgress
+                // Smooth ease-in-out curve for natural bend feel
+                val smoothProgress = 0.5 - 0.5 * Math.cos(Math.PI * bendProgress)
+                val currentFreq = freq + (bendTargetFreq - freq) * smoothProgress
                 currentPeriod = (SAMPLE_RATE / currentFreq).toInt().coerceAtLeast(2)
             }
 
             val sample = ring[readIdx % ring.size]
             val nextIdx = (readIdx + 1) % ring.size
-            ring[readIdx % ring.size] = (sample * blend + ring[nextIdx] * (1f - blend)) * decay
+
+            // Apply two-stage decay
+            val currentDecay = if (i < fastDecayEnd) decay * fastDecayFactor else decay
+            ring[readIdx % ring.size] = (sample * blend + ring[nextIdx] * (1f - blend)) * currentDecay
 
             if (isBend && currentPeriod != period) {
                 fractionalIdx += period.toDouble() / currentPeriod
@@ -204,13 +249,25 @@ object RiffSynth {
 
             val outIdx = offset + i
             if (outIdx < output.size) {
-                val attack = if (i < attackSamples) i.toFloat() / attackSamples else 1f
+                // Attack envelope
+                val attack = if (i < attackSamples) {
+                    val t = i.toFloat() / attackSamples
+                    t * t // quadratic for snappier attack
+                } else 1f
 
-                // Release envelope — staccato gets sharper cutoff
-                val releaseRatio = if (technique == "staccato") 0.80f else 0.95f
+                // Pick transient: burst of high-freq content at note start
+                val pickTransient = if (i < pickTransientSamples && pickTransientSamples > 0) {
+                    val t = i.toFloat() / pickTransientSamples
+                    val env = (1f - t) * (1f - t) // fast decay
+                    pickTransientAmplitude * env * (random.nextFloat() * 2f - 1f)
+                } else 0f
+
+                // Release envelope
+                val releaseRatio = if (isStaccato) 0.75f else 0.93f
                 val fadeOutStart = (len * releaseRatio).toInt()
                 val release = if (i > fadeOutStart && len > fadeOutStart) {
-                    1f - (i - fadeOutStart).toFloat() / (len - fadeOutStart)
+                    val t = (i - fadeOutStart).toFloat() / (len - fadeOutStart)
+                    (1f - t) * (1f - t) // quadratic fade for smoother end
                 } else 1f
 
                 // Tremolo: amplitude modulation
@@ -218,51 +275,100 @@ object RiffSynth {
                     1f - tremoloDepth * (0.5f + 0.5f * kotlin.math.cos(tremoloRate * i).toFloat())
                 } else 1f
 
-                output[outIdx] += sample * attack * release * tremoloEnv
+                output[outIdx] += (sample + pickTransient) * attack * release * tremoloEnv
             }
         }
     }
 
     private fun applyMasterProcessing(output: FloatArray, soundPreset: String) {
-        // Apply distortion/overdrive if needed
+        // --- Distortion/overdrive ---
         if (soundPreset.contains("distorsion") || soundPreset.contains("fuzz")) {
-            val gain = if (soundPreset.contains("fuzz")) 4.0f else 2.5f
+            val gain = if (soundPreset.contains("fuzz")) 5.0f else 3.0f
             for (i in output.indices) {
                 val x = output[i] * gain
-                output[i] = (2f / Math.PI.toFloat()) * kotlin.math.atan(x)
+                // Asymmetric soft clipping for more natural overdrive
+                output[i] = if (x >= 0f) {
+                    (2f / Math.PI.toFloat()) * kotlin.math.atan(x * 1.2f)
+                } else {
+                    (2f / Math.PI.toFloat()) * kotlin.math.atan(x * 0.9f)
+                }
             }
         } else if (soundPreset.contains("crunch")) {
-            val gain = 1.5f
+            val gain = 1.8f
             for (i in output.indices) {
                 val x = output[i] * gain
                 output[i] = if (x > 0) 1f - kotlin.math.exp(-x) else -(1f - kotlin.math.exp(x))
             }
         }
 
-        // Body resonance (low-pass filter)
+        // --- Guitar body resonance ---
+        // Simulate resonance at guitar body frequencies using cascaded biquad filters
         val bodyMix = when {
-            soundPreset.contains("clean") || soundPreset.contains("acoustic") -> 0.20f
-            soundPreset.contains("surf") -> 0.15f
-            else -> 0.10f
-        }
-        var prev = 0f
-        val filterCoeff = 0.85f
-        for (i in output.indices) {
-            val dry = output[i]
-            val filtered = prev + filterCoeff * (dry - prev)
-            prev = filtered
-            output[i] = dry * (1f - bodyMix) + filtered * bodyMix
+            soundPreset.contains("acoustic") -> 0.28f
+            soundPreset.contains("clean") -> 0.18f
+            soundPreset.contains("surf") -> 0.22f
+            else -> 0.08f
         }
 
-        // Soft master attack (3ms)
-        val attackSamples = (SAMPLE_RATE * 0.003).toInt()
+        if (bodyMix > 0.01f) {
+            val bodyBuffer = FloatArray(output.size)
+            for (modeFreq in BODY_MODES) {
+                // Simple resonant filter per body mode
+                val omega = 2.0 * Math.PI * modeFreq / SAMPLE_RATE
+                val cosOmega = Math.cos(omega).toFloat()
+                val r = 0.98f // resonance sharpness
+                var y1 = 0f
+                var y2 = 0f
+                for (i in output.indices) {
+                    val y = output[i] + 2f * r * cosOmega * y1 - r * r * y2
+                    bodyBuffer[i] += y * 0.33f // scale down since we sum 3 modes
+                    y2 = y1
+                    y1 = y
+                }
+            }
+            for (i in output.indices) {
+                output[i] = output[i] * (1f - bodyMix) + bodyBuffer[i] * bodyMix
+            }
+        }
+
+        // --- Cabinet/room simulation (low-pass) ---
+        val lpfCoeff = when {
+            soundPreset.contains("distorsion") || soundPreset.contains("fuzz") -> 0.75f
+            soundPreset.contains("crunch") -> 0.80f
+            soundPreset.contains("surf") -> 0.70f
+            else -> 0.88f
+        }
+        var lpfPrev = 0f
+        for (i in output.indices) {
+            lpfPrev = lpfPrev + lpfCoeff * (output[i] - lpfPrev)
+            output[i] = output[i] * 0.6f + lpfPrev * 0.4f
+        }
+
+        // --- Surf reverb ---
+        if (soundPreset.contains("surf")) {
+            val delaySamples = (SAMPLE_RATE * 0.035).toInt() // 35ms spring reverb
+            val feedback = 0.4f
+            val reverbMix = 0.3f
+            val delayLine = FloatArray(delaySamples)
+            var delayIdx = 0
+            for (i in output.indices) {
+                val delayed = delayLine[delayIdx]
+                val reverbSample = output[i] + delayed * feedback
+                delayLine[delayIdx] = reverbSample
+                delayIdx = (delayIdx + 1) % delaySamples
+                output[i] = output[i] * (1f - reverbMix) + delayed * reverbMix
+            }
+        }
+
+        // --- Soft master attack (2ms) ---
+        val attackSamples = (SAMPLE_RATE * 0.002).toInt()
         for (i in 0 until attackSamples.coerceAtMost(output.size)) {
             output[i] *= i.toFloat() / attackSamples
         }
 
-        // Normalize
+        // --- Normalize ---
         val peak = output.maxOfOrNull { kotlin.math.abs(it) } ?: 1f
-        val scale = if (peak > 0.01f) 0.85f / peak else 1f
+        val scale = if (peak > 0.01f) 0.88f / peak else 1f
         for (i in output.indices) {
             output[i] = (output[i] * scale).coerceIn(-1f, 1f)
         }
