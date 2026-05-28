@@ -120,7 +120,7 @@ fun MainScreen(
             return
         }
         FullscreenMode.QUIZ -> {
-            if (isLandscape) ScaleQuizScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
+            if (isLandscape) ScaleQuizScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name }, pitchResult = pitchResult)
             else RotatePhoneMessage(onBack = { fullscreenMode = FullscreenMode.NONE.name })
             return
         }

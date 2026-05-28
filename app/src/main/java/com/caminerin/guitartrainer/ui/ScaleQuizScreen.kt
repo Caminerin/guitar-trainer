@@ -54,6 +54,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.caminerin.guitartrainer.audio.PitchDetector
 import kotlinx.coroutines.delay
 import kotlin.math.sqrt
 
@@ -92,9 +93,10 @@ data class QuizResult(
 )
 
 @Composable
-fun ScaleQuizScreen(onBack: () -> Unit) {
-    var selectedKey by rememberSaveable { mutableIntStateOf(0) }
-    var selectedScaleIndex by rememberSaveable { mutableIntStateOf(0) }
+fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? = null) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
+    var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex) }
     var maxFret by rememberSaveable { mutableIntStateOf(12) }
     var zoom by remember { mutableFloatStateOf(1.5f) }
 
@@ -102,6 +104,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
     var showKeyCircle by remember { mutableStateOf(false) }
     var showScaleSelector by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
+    var guitarMode by rememberSaveable { mutableStateOf(false) }
 
     val revealedNotes = remember { mutableStateListOf<Pair<Int, Int>>() }
     val errorFlash = remember { mutableStateOf<Pair<Float, Float>?>(null) }
@@ -111,6 +114,43 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
     var feedbackIsCorrect by remember { mutableStateOf(true) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
+
+    // Guitar mode: detect pitch and reveal matching scale note
+    LaunchedEffect(guitarMode, pitchResult, selectedKey, selectedScaleIndex, maxFret) {
+        if (!guitarMode) return@LaunchedEffect
+        val pr = pitchResult ?: return@LaunchedEffect
+        if (pr.confidence < 0.7f || pr.frequency <= 0f) return@LaunchedEffect
+        val detectedNote = pr.noteIndex % 12
+        if (!isNoteInScale(detectedNote, selectedKey, scale.intervals)) {
+            errorCount++
+            val detectedName = getSpanishNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
+            val scaleNotes = scale.intervals.map { interval ->
+                getSpanishNoteName((selectedKey + interval) % 12, selectedKey, scale.relativeMajorOffset)
+            }.joinToString(", ")
+            feedbackText = "$detectedName no pertenece a la escala. Notas correctas: $scaleNotes"
+            feedbackIsCorrect = false
+            return@LaunchedEffect
+        }
+        // Find unrevealed positions matching this note on the fretboard
+        for (s in 0 until 6) {
+            for (fret in 0..maxFret) {
+                val noteIdx = (STANDARD_TUNING_MIDI[s] + fret) % 12
+                if (noteIdx == detectedNote) {
+                    val key = s to fret
+                    if (!revealedNotes.contains(key)) {
+                        revealedNotes.add(key)
+                        correctCount++
+                        val degree = getDegreeInScale(detectedNote, selectedKey, scale.intervals)
+                        val degreeLabel = if (degree != null) getDegreeLabel(degree) else ""
+                        val noteName = getSpanishNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
+                        feedbackText = "$noteName = grado $degreeLabel de la escala"
+                        feedbackIsCorrect = true
+                        return@LaunchedEffect
+                    }
+                }
+            }
+        }
+    }
     val density = LocalDensity.current
     val fretWidthDp = (60f * zoom).dp
     val openStringWidth = 48.dp
@@ -205,6 +245,17 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                 // Info button
                 IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(20.dp))
+                }
+
+                // Guitar mode toggle
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (guitarMode) Color(0xFF4CAF50).copy(alpha = 0.5f) else Color.White.copy(alpha = 0.08f))
+                        .clickable { guitarMode = !guitarMode }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("\uD83C\uDFB8", fontSize = 16.sp)
                 }
 
                 // Zoom controls
@@ -351,6 +402,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                 scaleIntervals = scale.intervals,
                 onNoteSelected = {
                     selectedKey = it; showKeyCircle = false
+                    AppPreferences.saveKey(it, context)
                     revealedNotes.clear(); correctCount = 0; errorCount = 0; feedbackText = ""
                 },
                 onDismiss = { showKeyCircle = false },
@@ -362,6 +414,7 @@ fun ScaleQuizScreen(onBack: () -> Unit) {
                 currentIndex = selectedScaleIndex,
                 onSelected = {
                     selectedScaleIndex = it; showScaleSelector = false
+                    AppPreferences.saveScale(it, context)
                     revealedNotes.clear(); correctCount = 0; errorCount = 0; feedbackText = ""
                 },
                 onDismiss = { showScaleSelector = false }

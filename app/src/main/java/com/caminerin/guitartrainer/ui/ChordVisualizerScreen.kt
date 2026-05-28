@@ -108,6 +108,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
 
     LaunchedEffect(Unit) {
         ChordRepository.loadChords(context)
+        ScaleChordRepository.load(context)
     }
 
     var selectedRoot by rememberSaveable { mutableIntStateOf(-1) }
@@ -123,6 +124,9 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
     var showLevelSelector by remember { mutableStateOf(false) }
     var showDisplaySelector by remember { mutableStateOf(false) }
     var showColorSelector by remember { mutableStateOf(false) }
+    var showScaleSelector by remember { mutableStateOf(false) }
+    var scaleFilterEnabled by rememberSaveable { mutableStateOf(false) }
+    var selectedScaleName by rememberSaveable { mutableStateOf("Mayor (Jónica)") }
 
     // Load color preferences
     LaunchedEffect(Unit) { DegreeColorPrefs.load(context) }
@@ -130,10 +134,21 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
     val quality = ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
     val level = ChordLevel.entries.find { it.csvValue == selectedLevel } ?: ChordLevel.BEGINNER
 
+    val scaleOffset = if (scaleFilterEnabled) getRelativeMajorOffset(selectedScaleName) else 0
+
     val filteredChords = if (hasSelectedRoot) {
-        val rootName = AMERICAN_NOTE_NAMES[selectedRoot]
-        ChordRepository.getChordsByRootLevelQuality(rootName, level, quality)
-            .sortedBy { it.priority }
+        if (scaleFilterEnabled) {
+            val scaleChords = ScaleChordRepository.getChordsForScale(selectedScaleName, selectedRoot, scaleOffset)
+            val scaleChordNames = scaleChords.map { it.chordName.lowercase() }.toSet()
+            val rootName = AMERICAN_NOTE_NAMES[selectedRoot]
+            ChordRepository.getChordsByRootLevelQuality(rootName, level, quality)
+                .filter { chord -> chord.getDisplayName(selectedRoot, scaleOffset).lowercase() in scaleChordNames }
+                .sortedBy { it.priority }
+        } else {
+            val rootName = AMERICAN_NOTE_NAMES[selectedRoot]
+            ChordRepository.getChordsByRootLevelQuality(rootName, level, quality)
+                .sortedBy { it.priority }
+        }
     } else emptyList()
 
     val safeIndex = if (filteredChords.isEmpty()) 0 else selectedChordIndex.coerceIn(0, filteredChords.size - 1)
@@ -191,6 +206,36 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Text(level.displayName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // Scale filter toggle
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (scaleFilterEnabled) Color(0xFF7C4DFF).copy(alpha = 0.5f) else Color.White.copy(alpha = 0.08f))
+                    .clickable {
+                        if (scaleFilterEnabled) {
+                            scaleFilterEnabled = false
+                        } else if (hasSelectedRoot) {
+                            scaleFilterEnabled = true
+                        }
+                    }
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            ) {
+                Text("Escala", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+
+            if (scaleFilterEnabled) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
+                        .clickable { showScaleSelector = true }
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                    val shortName = selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
+                    Text(shortName, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
             }
 
             // Display mode selector (N+G)
@@ -357,8 +402,11 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
 
     // Root selector overlay (chromatic circle)
     if (showRootSelector) {
+        val rootForCircle = if (hasSelectedRoot) selectedRoot else 0
         ChromaticCircleOverlay(
-            selectedNote = if (hasSelectedRoot) selectedRoot else 0,
+            selectedNote = rootForCircle,
+            rootNote = rootForCircle,
+            scaleIntervals = listOf(0, 2, 4, 5, 7, 9, 11),
             onNoteSelected = { note ->
                 selectedRoot = note
                 selectedChordIndex = 0
@@ -498,6 +546,19 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
         ChordColorSelectorOverlay(
             context = context,
             onDismiss = { showColorSelector = false }
+        )
+    }
+
+    // Scale selector overlay
+    if (showScaleSelector) {
+        ScaleNameSelectorOverlay(
+            currentName = selectedScaleName,
+            onSelected = { name ->
+                selectedScaleName = name
+                selectedChordIndex = 0
+                showScaleSelector = false
+            },
+            onDismiss = { showScaleSelector = false }
         )
     }
 }
