@@ -59,6 +59,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.ChordSynth
 import com.caminerin.guitartrainer.audio.TickPlayer
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -132,6 +135,13 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     var currentMeasure by remember { mutableIntStateOf(-1) }
     var currentSub by remember { mutableIntStateOf(-1) }
 
+    // Section-based playback state
+    var currentSectionIdx by remember { mutableIntStateOf(-1) }
+    var loopSectionIdx by remember { mutableIntStateOf(-1) } // -1 = play all, >= 0 = loop that section
+    var speedTrainerOn by remember { mutableStateOf(false) }
+    var speedTrainerBpm by remember { mutableIntStateOf(60) }
+    val speedTrainerStep = 5 // BPM increment per repetition
+
     val tickPlayer = remember { TickPlayer() }
     DisposableEffect(Unit) {
         onDispose { tickPlayer.release() }
@@ -141,34 +151,73 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     val bpmState = rememberUpdatedState(bpm)
     val useTargetBpmState = rememberUpdatedState(useTargetBpm)
     val currentSongState = rememberUpdatedState(currentSong)
+    val loopSectionState = rememberUpdatedState(loopSectionIdx)
+    val speedTrainerOnState = rememberUpdatedState(speedTrainerOn)
+    val speedTrainerBpmState = rememberUpdatedState(speedTrainerBpm)
 
-    // Detect shuffle/swing feel from current song
-    val songHasSwing = currentSong?.feel?.contains("shuffle", ignoreCase = true) == true ||
+    val songHasSwing = currentSong?.swing == true ||
+        currentSong?.feel?.contains("shuffle", ignoreCase = true) == true ||
         currentSong?.feel?.contains("ternario", ignoreCase = true) == true ||
         currentSong?.feel?.contains("swing", ignoreCase = true) == true
     val humanRng = remember { java.util.Random() }
 
-    // Playback loop with accents, swing, and humanization
+    // Pattern-based playback loop with accents, swing, humanization, section loop, speed trainer
     LaunchedEffect(isPlaying) {
         if (!isPlaying) {
             currentMeasure = -1
             currentSub = -1
+            currentSectionIdx = -1
             return@LaunchedEffect
         }
         try {
             while (isActive) {
                 val mList = measuresState.value
                 val song = currentSongState.value
-                val effectiveBpm = if (useTargetBpmState.value && song != null)
-                    song.bpmTarget else bpmState.value
-                val hasSwing = song?.feel?.let {
+                val loopIdx = loopSectionState.value
+
+                val effectiveBpm = when {
+                    speedTrainerOnState.value -> speedTrainerBpmState.value
+                    useTargetBpmState.value && song != null -> song.bpmTarget
+                    else -> bpmState.value
+                }
+
+                val hasSwing = song?.swing == true || (song?.feel?.let {
                     it.contains("shuffle", ignoreCase = true) ||
                     it.contains("ternario", ignoreCase = true) ||
                     it.contains("swing", ignoreCase = true)
-                } ?: false
-                val swingRatio = if (hasSwing) 0.67f else 0.5f // triplet swing
+                } ?: false)
+                val swingRatio = if (hasSwing) 0.67f else 0.5f
 
-                for ((mi, m) in mList.withIndex()) {
+                // Determine which measures to play (section loop or all)
+                val measuresToPlay: List<IndexedValue<Measure>>
+                if (loopIdx >= 0 && song != null && song.sections.isNotEmpty()) {
+                    // Find flat measure range for the looped section
+                    var flatIdx = 0
+                    var startFlat = 0
+                    var endFlat = 0
+                    for ((si, sec) in song.sections.withIndex()) {
+                        if (si == loopIdx) startFlat = flatIdx
+                        flatIdx += sec.measures.size
+                        if (si == loopIdx) { endFlat = flatIdx; break }
+                    }
+                    currentSectionIdx = loopIdx
+                    measuresToPlay = mList.withIndex().toList().filter { it.index in startFlat until endFlat }
+                } else {
+                    measuresToPlay = mList.withIndex().toList()
+                }
+
+                for ((mi, m) in measuresToPlay) {
+                    // Track current section index
+                    if (song != null && song.sections.isNotEmpty()) {
+                        var flatIdx = 0
+                        for ((si, sec) in song.sections.withIndex()) {
+                            if (mi < flatIdx + sec.measures.size) {
+                                currentSectionIdx = si; break
+                            }
+                            flatIdx += sec.measures.size
+                        }
+                    }
+
                     val numSubs = m.subdivisions.size.coerceAtLeast(1)
                     for ((si, slot) in m.subdivisions.withIndex()) {
                         if (!isActive) break
@@ -178,7 +227,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         val measureMs = beatMs * beatsPerMeasure
                         val baseSubMs = measureMs.toFloat() / numSubs
 
-                        // B: Swing — alternate long/short subdivisions within each beat
                         val subsPerBeat = numSubs / beatsPerMeasure.coerceAtLeast(1)
                         val subWithinBeat = if (subsPerBeat > 1) si % subsPerBeat else 0
                         val swingSubMs = if (subsPerBeat == 2) {
@@ -186,21 +234,22 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             else (baseSubMs * 2f * (1f - swingRatio)).toLong()
                         } else baseSubMs.toLong()
 
-                        // D: Humanization — random timing jitter ±8ms
                         val jitterMs = (humanRng.nextGaussian() * 5.0).toLong().coerceIn(-8L, 8L)
                         val finalSubMs = (swingSubMs + jitterMs).coerceAtLeast(30L)
 
-                        if (slot.strumDirection != "-") {
+                        val strokeDir = slot.strumDirection
+                        if (strokeDir != "-") {
                             slot.chordId?.let { id ->
                                 val chord = ChordRepository.getChords().firstOrNull { it.id == id }
-                                val isUpStrum = slot.strumDirection == "U"
+                                val isMute = strokeDir == "x" || strokeDir == "X"
+                                val isUpStrum = strokeDir == "U"
 
-                                // A: Dynamic accents
                                 val velocity = when {
-                                    si == 0 -> 1.0f                          // beat 1: full
-                                    subsPerBeat > 1 && subWithinBeat == 0 -> 0.85f // downbeat: strong
-                                    isUpStrum -> 0.55f                       // upstrum: soft
-                                    else -> 0.7f                             // other: medium
+                                    si == 0 -> 1.0f
+                                    subsPerBeat > 1 && subWithinBeat == 0 -> 0.85f
+                                    isMute -> 0.5f
+                                    isUpStrum -> 0.55f
+                                    else -> 0.7f
                                 }
 
                                 var nextStrum = numSubs
@@ -210,11 +259,28 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                                     }
                                 }
                                 val durationMs = (baseSubMs * (nextStrum - si) + 200).toInt().coerceAtLeast(400)
-                                chord?.let { ChordSynth.playChord(it.frets, durationMs, isUpStrum, velocity) }
+
+                                chord?.let {
+                                    val strokeType = when {
+                                        isMute -> ChordSynth.StrokeType.MUTE
+                                        isUpStrum -> ChordSynth.StrokeType.UP
+                                        else -> ChordSynth.StrokeType.DOWN
+                                    }
+                                    ChordSynth.playStroke(it.frets, durationMs, strokeType, velocity)
+                                }
                             }
                         }
                         if (metronomeOn) tickPlayer.tick()
                         delay(finalSubMs)
+                    }
+                }
+
+                // Speed trainer: increase BPM after each full pass
+                if (speedTrainerOnState.value && song != null) {
+                    val newBpm = (speedTrainerBpmState.value + speedTrainerStep).coerceAtMost(song.bpmTarget)
+                    speedTrainerBpm = newBpm
+                    if (newBpm >= song.bpmTarget) {
+                        speedTrainerOn = false
                     }
                 }
             }
@@ -222,6 +288,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
             ChordSynth.stop()
             currentMeasure = -1
             currentSub = -1
+            currentSectionIdx = -1
         }
     }
 
@@ -388,46 +455,128 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
 
             // Song info bar
             currentSong?.let { song ->
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFF2A1A3A))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("${song.title} \u2022 ${song.artist}",
-                            color = Color(0xFFFFC107), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                        val feelLabel = if (songHasSwing) " \u2022 Swing" else ""
-                        Text("Cejilla: traste ${song.capo} \u2022 ${song.key}$feelLabel",
-                            color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, maxLines = 1)
-                    }
-                    // BPM target toggle
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (useTargetBpm) Color(0xFF43A047).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
-                            .clickable {
-                                useTargetBpm = !useTargetBpm
-                                bpm = if (useTargetBpm) song.bpmTarget else song.bpmStart
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("${song.title} \u2022 ${song.artist}",
+                                color = Color(0xFFFFC107), fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            val feelLabel = if (songHasSwing) " \u2022 Swing" else ""
+                            Text("Cejilla: traste ${song.capo} \u2022 ${song.key}$feelLabel",
+                                color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, maxLines = 1)
+                        }
+                        // BPM target toggle
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (useTargetBpm) Color(0xFF43A047).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
+                                .clickable {
+                                    useTargetBpm = !useTargetBpm
+                                    speedTrainerOn = false
+                                    bpm = if (useTargetBpm) song.bpmTarget else song.bpmStart
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                if (useTargetBpm) "\u266A ${song.bpmTarget}" else "\uD83C\uDFEB ${song.bpmStart}",
+                                color = if (useTargetBpm) Color(0xFF81C784) else Color.White.copy(alpha = 0.5f),
+                                fontSize = 11.sp
+                            )
+                        }
+                        // Speed trainer toggle
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (speedTrainerOn) Color(0xFFFF9800).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
+                                .clickable {
+                                    speedTrainerOn = !speedTrainerOn
+                                    if (speedTrainerOn) {
+                                        useTargetBpm = false
+                                        speedTrainerBpm = song.bpmStart
+                                        bpm = song.bpmStart
+                                    }
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                if (speedTrainerOn) "\u23F1 $speedTrainerBpm" else "\u23F1",
+                                color = if (speedTrainerOn) Color(0xFFFFCC80) else Color.White.copy(alpha = 0.3f),
+                                fontSize = 11.sp
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color.White.copy(alpha = 0.08f))
+                                .clickable {
+                                    currentSong = null
+                                    loopSectionIdx = -1
+                                    speedTrainerOn = false
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("\u2715", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                        }
+                    }
+
+                    // Section bar — scrollable row showing sections with loop toggle
+                    if (song.sections.isNotEmpty()) {
+                        val sectionListState = rememberLazyListState()
+                        LazyRow(
+                            state = sectionListState,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(song.sections.size) { idx ->
+                                val sec = song.sections[idx]
+                                val isActive = idx == currentSectionIdx
+                                val isLooped = idx == loopSectionIdx
+                                val sectionLabel = when (sec.name) {
+                                    "verso" -> "Verso"
+                                    "estribillo" -> "Estrib."
+                                    "puente" -> "Puente"
+                                    "final" -> "Final"
+                                    else -> sec.name.replaceFirstChar { it.uppercase() }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(
+                                            when {
+                                                isLooped -> Color(0xFFFF9800).copy(alpha = 0.5f)
+                                                isActive -> Color(0xFF7B1FA2).copy(alpha = 0.5f)
+                                                else -> Color.White.copy(alpha = 0.08f)
+                                            }
+                                        )
+                                        .clickable {
+                                            loopSectionIdx = if (loopSectionIdx == idx) -1 else idx
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        "$sectionLabel (${sec.measures.size})" + if (isLooped) " \u21BB" else "",
+                                        color = when {
+                                            isLooped -> Color(0xFFFFCC80)
+                                            isActive -> Color(0xFFCE93D8)
+                                            else -> Color.White.copy(alpha = 0.5f)
+                                        },
+                                        fontSize = 10.sp,
+                                        fontWeight = if (isActive || isLooped) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
                             }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            if (useTargetBpm) "\u266A ${song.bpmTarget}" else "\uD83C\uDFEB ${song.bpmStart}",
-                            color = if (useTargetBpm) Color(0xFF81C784) else Color.White.copy(alpha = 0.5f),
-                            fontSize = 11.sp
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable { currentSong = null }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text("\u2715", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                        }
                     }
                 }
             }
@@ -576,34 +725,45 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 onPick = { song ->
                     currentSong = song
                     bpm = song.bpmStart
-                    measureCount = song.measuresUsed
+                    useTargetBpm = false
+                    loopSectionIdx = -1
+                    speedTrainerOn = false
+                    speedTrainerBpm = song.bpmStart
                     val songBeats = song.meter.split("/").firstOrNull()?.trim()?.toIntOrNull() ?: 4
                     beatsPerMeasure = songBeats
-                    val subdivs = song.subdivisionsPerMeasure.coerceIn(1, 8)
+                    val subdivs = song.subdivisions.coerceIn(1, 8)
                     measures.clear()
                     val allChords = ChordRepository.getChords()
-                    song.measures.forEach { measure ->
-                        val slots = mutableListOf<ChordSlot>()
-                        val strums = measure.strumPattern
-                        val perSubChords = measure.perSubdivisionChords
-                        if (perSubChords.isNotEmpty()) {
+
+                    // Load from JSON sections
+                    for (section in song.sections) {
+                        val pattern = section.pattern
+                        for (secMeasure in section.measures) {
+                            val slots = mutableListOf<ChordSlot>()
+                            val perSubChords = secMeasure.chordsPerSub
                             for (s in 0 until subdivs) {
-                                val chordName = perSubChords.getOrElse(s) { perSubChords.lastOrNull().orEmpty() }
+                                val chordName = if (perSubChords.isNotEmpty())
+                                    perSubChords.getOrElse(s) { perSubChords.lastOrNull().orEmpty() }
+                                else
+                                    secMeasure.chords.firstOrNull().orEmpty()
                                 val chordId = findOpenChordIdByName(chordName, allChords)
-                                val direction = strums.getOrElse(s) { "D" }
+                                val direction = if (s < pattern.size) {
+                                    when (pattern[s].type) {
+                                        "down" -> "D"
+                                        "up" -> "U"
+                                        "mute" -> "x"
+                                        else -> "-"
+                                    }
+                                } else "D"
                                 slots.add(ChordSlot(chordId, direction))
                             }
-                        } else {
-                            val mainChord = measure.chords.firstOrNull()
-                            val chordId = mainChord?.let { findOpenChordIdByName(it.symbol, allChords) }
-                            for (s in 0 until subdivs) {
-                                val direction = strums.getOrElse(s) { "D" }
-                                slots.add(ChordSlot(chordId, direction))
+                            val patternStr = pattern.joinToString(" ") {
+                                when (it.type) { "down" -> "D"; "up" -> "U"; "mute" -> "x"; else -> "-" }
                             }
+                            measures.add(Measure(slots, strumPattern = patternStr.takeIf { it.isNotBlank() }))
                         }
-                        val patternStr = strums.joinToString(" ")
-                        measures.add(Measure(slots, strumPattern = patternStr.takeIf { it.isNotBlank() }))
                     }
+                    measureCount = measures.size.coerceAtLeast(1)
                     while (measures.size < measureCount) measures.add(Measure())
                     modeKey = false
                     showSongPicker = false
