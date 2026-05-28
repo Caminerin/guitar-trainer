@@ -96,6 +96,7 @@ private val QUALITY_COLORS = mapOf(
 )
 
 private val LEVEL_COLORS = mapOf(
+    "all" to Color(0xFF5C6BC0),
     "beginner_core" to Color(0xFF4CAF50),
     "intermediate_core" to Color(0xFFFF9800),
     "advanced_reference" to Color(0xFFE53935)
@@ -109,11 +110,12 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
     LaunchedEffect(Unit) {
         ChordRepository.loadChords(context)
         ScaleChordRepository.load(context)
+        AppPreferences.loadChordState(context)
     }
 
-    var selectedRoot by rememberSaveable { mutableIntStateOf(-1) }
-    var selectedQuality by rememberSaveable { mutableStateOf(ChordQuality.MAJOR.csvValue) }
-    var selectedLevel by rememberSaveable { mutableStateOf(ChordLevel.BEGINNER.csvValue) }
+    var selectedRoot by rememberSaveable { mutableIntStateOf(AppPreferences.chordRoot) }
+    var selectedQuality by rememberSaveable { mutableStateOf(AppPreferences.chordQuality) }
+    var selectedLevel by rememberSaveable { mutableStateOf(AppPreferences.chordLevel) }
     var selectedChordIndex by rememberSaveable { mutableIntStateOf(0) }
     val hasSelectedRoot = selectedRoot >= 0
 
@@ -125,8 +127,13 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
     var showDisplaySelector by remember { mutableStateOf(false) }
     var showColorSelector by remember { mutableStateOf(false) }
     var showScaleSelector by remember { mutableStateOf(false) }
-    var scaleFilterEnabled by rememberSaveable { mutableStateOf(false) }
-    var selectedScaleName by rememberSaveable { mutableStateOf("Mayor (Jónica)") }
+    var scaleFilterEnabled by rememberSaveable { mutableStateOf(AppPreferences.chordScaleEnabled) }
+    var selectedScaleName by rememberSaveable { mutableStateOf(AppPreferences.chordScaleName) }
+
+    // Save state whenever it changes
+    LaunchedEffect(selectedRoot, selectedQuality, selectedLevel, scaleFilterEnabled, selectedScaleName) {
+        AppPreferences.saveChordState(selectedRoot, selectedQuality, selectedLevel, scaleFilterEnabled, selectedScaleName, context)
+    }
 
     // Load color preferences
     LaunchedEffect(Unit) { DegreeColorPrefs.load(context) }
@@ -181,7 +188,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Text(
-                    if (hasSelectedRoot) getChromaticNames(selectedRoot)[selectedRoot] else "Nota",
+                    if (hasSelectedRoot) getChromaticNames(selectedRoot)[selectedRoot] else "Raíz",
                     color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold
                 )
             }
@@ -201,41 +208,27 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .background((LEVEL_COLORS[selectedLevel] ?: Color.Gray).copy(alpha = 0.4f))
+                    .background((LEVEL_COLORS[selectedLevel] ?: Color(0xFF5C6BC0)).copy(alpha = 0.4f))
                     .clickable { showLevelSelector = true }
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Text(level.displayName, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text("Nivel: ${level.displayName}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
-            // Scale filter toggle
+            // Scale filter
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (scaleFilterEnabled) Color(0xFF7C4DFF).copy(alpha = 0.5f) else Color.White.copy(alpha = 0.08f))
                     .clickable {
-                        if (scaleFilterEnabled) {
-                            scaleFilterEnabled = false
-                        } else if (hasSelectedRoot) {
-                            scaleFilterEnabled = true
-                        }
+                        if (hasSelectedRoot) showScaleSelector = true
                     }
                     .padding(horizontal = 10.dp, vertical = 8.dp)
             ) {
-                Text("Escala", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-
-            if (scaleFilterEnabled) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
-                        .clickable { showScaleSelector = true }
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
-                ) {
-                    val shortName = selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
-                    Text(shortName, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+                val scaleLabel = if (scaleFilterEnabled) {
+                    selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
+                } else "Escala"
+                Text(scaleLabel, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
 
             // Display mode selector (N+G)
@@ -444,26 +437,34 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ChordQuality.entries.forEach { q ->
-                        val color = QUALITY_COLORS[q.csvValue] ?: Color.Gray
-                        val isSelected = q.csvValue == selectedQuality
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) color else color.copy(alpha = 0.3f))
-                                .clickable {
-                                    selectedQuality = q.csvValue
-                                    selectedChordIndex = 0
-                                    showQualitySelector = false
-                                }
-                                .padding(horizontal = 20.dp, vertical = 14.dp)
+                QualityGroup.entries.forEach { group ->
+                    val groupQualities = ChordQuality.entries.filter { it.group == group }
+                    if (groupQualities.isNotEmpty()) {
+                        Text(group.displayName, color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(q.displayName, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            groupQualities.forEach { q ->
+                                val color = QUALITY_COLORS[q.csvValue] ?: Color.Gray
+                                val isSelected = q.csvValue == selectedQuality
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isSelected) color else color.copy(alpha = 0.3f))
+                                        .clickable {
+                                            selectedQuality = q.csvValue
+                                            selectedChordIndex = 0
+                                            showQualitySelector = false
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                                ) {
+                                    Text(q.displayName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
+                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
             }
@@ -553,9 +554,15 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
     if (showScaleSelector) {
         ScaleNameSelectorOverlay(
             currentName = selectedScaleName,
+            showDisableOption = scaleFilterEnabled,
             onSelected = { name ->
                 selectedScaleName = name
+                scaleFilterEnabled = true
                 selectedChordIndex = 0
+                showScaleSelector = false
+            },
+            onDisable = {
+                scaleFilterEnabled = false
                 showScaleSelector = false
             },
             onDismiss = { showScaleSelector = false }

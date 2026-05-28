@@ -27,6 +27,28 @@ object NoteFormatPreference {
     }
 }
 
+enum class AccidentalStyle(val label: String) {
+    SHARP("♯ Sostenidos"),
+    FLAT("♭ Bemoles")
+}
+
+object AccidentalPreference {
+    var current by mutableStateOf(AccidentalStyle.FLAT)
+        private set
+
+    fun set(style: AccidentalStyle, context: Context) {
+        current = style
+        context.getSharedPreferences("guitar_prefs", Context.MODE_PRIVATE)
+            .edit().putString("accidental_style", style.name).apply()
+    }
+
+    fun load(context: Context) {
+        val saved = context.getSharedPreferences("guitar_prefs", Context.MODE_PRIVATE)
+            .getString("accidental_style", AccidentalStyle.FLAT.name)
+        current = try { AccidentalStyle.valueOf(saved ?: AccidentalStyle.FLAT.name) } catch (_: Exception) { AccidentalStyle.FLAT }
+    }
+}
+
 object AppPreferences {
     private const val PREFS = "guitar_prefs"
 
@@ -70,6 +92,42 @@ object AppPreferences {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putInt("last_bpm", bpm).apply()
     }
+
+    // Chord visualizer state preservation
+    var chordRoot by mutableStateOf(-1)
+        private set
+    var chordQuality by mutableStateOf("major")
+        private set
+    var chordLevel by mutableStateOf("all")
+        private set
+    var chordScaleEnabled by mutableStateOf(false)
+        private set
+    var chordScaleName by mutableStateOf("Mayor (Jónica)")
+        private set
+
+    fun saveChordState(root: Int, quality: String, level: String, scaleEnabled: Boolean, scaleName: String, context: Context) {
+        chordRoot = root
+        chordQuality = quality
+        chordLevel = level
+        chordScaleEnabled = scaleEnabled
+        chordScaleName = scaleName
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putInt("chord_root", root)
+            .putString("chord_quality", quality)
+            .putString("chord_level", level)
+            .putBoolean("chord_scale_on", scaleEnabled)
+            .putString("chord_scale_name", scaleName)
+            .apply()
+    }
+
+    fun loadChordState(context: Context) {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        chordRoot = p.getInt("chord_root", -1)
+        chordQuality = p.getString("chord_quality", "major") ?: "major"
+        chordLevel = p.getString("chord_level", "all") ?: "all"
+        chordScaleEnabled = p.getBoolean("chord_scale_on", false)
+        chordScaleName = p.getString("chord_scale_name", "Mayor (Jónica)") ?: "Mayor (Jónica)"
+    }
 }
 
 val AMERICAN_NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
@@ -98,7 +156,10 @@ fun getNoteName(noteIndex: Int, rootNote: Int = -1, relativeMajorOffset: Int = 0
 }
 
 fun getChromaticNames(rootNote: Int = -1, relativeMajorOffset: Int = 0): List<String> {
-    val useFlats = rootNote >= 0 && keyUsesFlatsForScale(rootNote, relativeMajorOffset)
+    val useFlats = when (AccidentalPreference.current) {
+        AccidentalStyle.FLAT -> true
+        AccidentalStyle.SHARP -> if (rootNote >= 0) keyUsesFlatsForScale(rootNote, relativeMajorOffset) else false
+    }
     return when (NoteFormatPreference.current) {
         NoteFormat.AMERICAN -> if (useFlats) AMERICAN_NOTE_NAMES_FLAT else AMERICAN_NOTE_NAMES
         NoteFormat.EUROPEAN -> if (useFlats) EUROPEAN_NOTE_NAMES_FLAT else EUROPEAN_NOTE_NAMES
@@ -385,6 +446,24 @@ fun getDegreeInScale(noteIndex: Int, rootIndex: Int, scaleIntervals: List<Int>):
 fun isNoteInScale(noteIndex: Int, rootIndex: Int, scaleIntervals: List<Int>): Boolean {
     val interval = (noteIndex - rootIndex + 12) % 12
     return scaleIntervals.contains(interval)
+}
+
+fun findBestFretPosition(midiNote: Int, maxFret: Int): Pair<Int, Int>? {
+    var bestString = -1
+    var bestFret = -1
+    var bestDist = Int.MAX_VALUE
+    for (s in 0 until 6) {
+        val fret = midiNote - STANDARD_TUNING_MIDI[s]
+        if (fret in 0..maxFret) {
+            val dist = kotlin.math.abs(fret - maxFret / 2)
+            if (dist < bestDist) {
+                bestDist = dist
+                bestString = s
+                bestFret = fret
+            }
+        }
+    }
+    return if (bestString >= 0) bestString to bestFret else null
 }
 
 fun getDegreeLabel(degree: Int): String {

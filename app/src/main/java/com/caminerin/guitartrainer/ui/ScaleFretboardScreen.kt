@@ -22,8 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.ZoomIn
-import androidx.compose.material.icons.filled.ZoomOut
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -204,25 +203,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit) {
             }
         }
 
-        // ===== DEGREE COLOR LEGEND =====
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF252525))
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Zoom controls
-            IconButton(onClick = { zoom = (zoom - 0.3f).coerceAtLeast(0.5f) }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.ZoomOut, "Alejar", tint = Color.White, modifier = Modifier.size(18.dp))
-            }
-            IconButton(onClick = { zoom = (zoom + 0.3f).coerceAtMost(3f) }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.ZoomIn, "Acercar", tint = Color.White, modifier = Modifier.size(18.dp))
-            }
-        }
+        // (Zoom via pinch gesture on the fretboard)
 
         // ===== FRETBOARD =====
         val openStringWidth = 48.dp

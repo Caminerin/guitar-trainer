@@ -64,16 +64,17 @@ private data class SongColumn(
 )
 
 private val SONG_COLUMNS = listOf(
-    SongColumn("Canci\u00f3n", 180.dp, { it.title }, "title"),
+    SongColumn("Canción", 180.dp, { it.title }, "title"),
     SongColumn("Artista", 140.dp, { it.artist }, "artist"),
     SongColumn("Dif.", 50.dp, { "${it.level}" }, "level"),
-    SongColumn("N\u00ba Ac.", 55.dp, { "${it.chordsUsed.size}" }, "chords_count"),
+    SongColumn("Compás", 60.dp, { it.meter.ifBlank { "4/4" } }, "meter"),
+    SongColumn("Nº Acord.", 65.dp, { "${it.chordsUsed.size}" }, "chords_count"),
     SongColumn("Tonalidad", 80.dp, { it.key }, "key"),
     SongColumn("BPM Ini.", 65.dp, { "${it.bpmStart}" }, "bpm_start"),
     SongColumn("BPM Obj.", 65.dp, { "${it.bpmTarget}" }, "bpm_target"),
-    SongColumn("Capo", 50.dp, { if (it.capo > 0) "S\u00ed (${it.capo})" else "No" }, "capo"),
+    SongColumn("Capo", 50.dp, { if (it.capo > 0) "Sí (${it.capo})" else "No" }, "capo"),
     SongColumn("Acordes", 200.dp, { it.chordsUsed.joinToString(", ") }, "chords"),
-    SongColumn("Foco pr\u00e1ctica", 200.dp, { it.practiceFocus }, "focus")
+    SongColumn("Foco práctica", 200.dp, { it.practiceFocus }, "focus")
 )
 
 private val TABLE_TOTAL_WIDTH = SONG_COLUMNS.sumOf { it.width.value.toInt() }.dp
@@ -101,15 +102,19 @@ fun SongPickerOverlay(
     var showDifficultyFilter by remember { mutableStateOf(false) }
     var showKeyFilter by remember { mutableStateOf(false) }
     var showCapoFilter by remember { mutableStateOf(false) }
+    var showMeterFilter by remember { mutableStateOf(false) }
     var showSearchFieldFilter by remember { mutableStateOf(false) }
+    var selectedMeter by remember { mutableStateOf<String?>(null) }
 
     val allKeys = remember(songs) { songs.map { it.key }.distinct().sorted() }
+    val allMeters = remember(songs) { songs.map { it.meter.ifBlank { "4/4" } }.distinct().sorted() }
 
-    val filtered = remember(searchQuery, searchField, selectedLevel, selectedKey, selectedCapo) {
+    val filtered = remember(searchQuery, searchField, selectedLevel, selectedKey, selectedCapo, selectedMeter) {
         songs.filter { song ->
             (selectedLevel == null || song.level == selectedLevel) &&
             (selectedKey == null || song.key == selectedKey) &&
             (selectedCapo == null || (selectedCapo == true && song.capo > 0) || (selectedCapo == false && song.capo == 0)) &&
+            (selectedMeter == null || song.meter.ifBlank { "4/4" } == selectedMeter) &&
             (searchQuery.isBlank() || when (searchField) {
                 SearchField.TITLE -> song.title.contains(searchQuery, ignoreCase = true)
                 SearchField.ARTIST -> song.artist.contains(searchQuery, ignoreCase = true)
@@ -235,8 +240,19 @@ fun SongPickerOverlay(
                         .clickable { showCapoFilter = true }
                         .padding(horizontal = 8.dp, vertical = 6.dp)
                 ) {
-                    val capoLabel = when (selectedCapo) { true -> "Capo: S\u00ed"; false -> "Capo: No"; else -> "Capo" }
+                    val capoLabel = when (selectedCapo) { true -> "Capo: Sí"; false -> "Capo: No"; else -> "Capo" }
                     Text(capoLabel, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Meter filter button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (selectedMeter != null) Color(0xFF7C4DFF).copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
+                        .clickable { showMeterFilter = true }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text(selectedMeter ?: "Compás", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -405,6 +421,17 @@ fun SongPickerOverlay(
                 FilterOptionRow("Sin capo", selectedCapo == false) { selectedCapo = false; showCapoFilter = false }
             }
         }
+        if (showMeterFilter) {
+            FilterOverlayDialog(
+                title = "Compás",
+                onDismiss = { showMeterFilter = false }
+            ) {
+                FilterOptionRow("Todos", selectedMeter == null) { selectedMeter = null; showMeterFilter = false }
+                allMeters.forEach { meter ->
+                    FilterOptionRow(meter, selectedMeter == meter) { selectedMeter = meter; showMeterFilter = false }
+                }
+            }
+        }
     }
 }
 
@@ -436,16 +463,17 @@ private fun SongTableRow(song: Song, onClick: () -> Unit) {
                         ) {
                             Text(value, color = levelColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
-                        3 -> Text(value, color = Color(0xFF90CAF9), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        4 -> Text(value, color = Color(0xFFFFD600), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        5 -> Text(value, color = Color(0xFF81C784), fontSize = 12.sp)
-                        6 -> Text(value, color = Color(0xFFFF8A65), fontSize = 12.sp)
-                        7 -> Text(value,
+                        3 -> Text(value, color = Color(0xFF7C4DFF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        4 -> Text(value, color = Color(0xFF90CAF9), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        5 -> Text(value, color = Color(0xFFFFD600), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        6 -> Text(value, color = Color(0xFF81C784), fontSize = 12.sp)
+                        7 -> Text(value, color = Color(0xFFFF8A65), fontSize = 12.sp)
+                        8 -> Text(value,
                             color = if (song.capo > 0) Color(0xFFFFC107) else Color.White.copy(alpha = 0.4f),
                             fontSize = 12.sp)
-                        8 -> Text(value, color = Color(0xFFCE93D8), fontSize = 11.sp,
+                        9 -> Text(value, color = Color(0xFFCE93D8), fontSize = 11.sp,
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        9 -> Text(value, color = Color(0xFF80DEEA), fontSize = 11.sp,
+                        10 -> Text(value, color = Color(0xFF80DEEA), fontSize = 11.sp,
                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                         else -> Text(value, color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                     }

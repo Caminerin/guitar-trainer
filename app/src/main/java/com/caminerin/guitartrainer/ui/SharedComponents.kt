@@ -936,7 +936,9 @@ fun NoteDisplayToolbarButton(noteDisplay: NoteDisplay, onClick: () -> Unit) {
 @Composable
 fun ScaleNameSelectorOverlay(
     currentName: String,
+    showDisableOption: Boolean = false,
     onSelected: (String) -> Unit,
+    onDisable: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     Box(
@@ -958,6 +960,19 @@ fun ScaleNameSelectorOverlay(
         ) {
             Text("Escala", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(12.dp))
+            if (showDisableOption) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE53935).copy(alpha = 0.3f))
+                        .clickable { onDisable() }
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text("Desactivar filtro", color = Color(0xFFEF9A9A), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             ALL_SCALES.forEach { scaleEntry ->
                 val name = scaleEntry.name
                 val normalizedName = name.lowercase().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u")

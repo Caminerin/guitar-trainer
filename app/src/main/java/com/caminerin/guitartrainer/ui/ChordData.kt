@@ -99,40 +99,48 @@ data class ChordShape(
 }
 
 enum class ChordLevel(val displayName: String, val csvValue: String) {
+    ALL("Todos", "all"),
     BEGINNER("Principiante", "beginner_core"),
     INTERMEDIATE("Intermedio", "intermediate_core"),
     ADVANCED("Avanzado", "advanced_reference")
 }
 
-enum class ChordQuality(val displayName: String, val csvValue: String) {
-    MAJOR("Mayor", "major"),
-    MINOR("Menor", "minor"),
-    DOMINANT7("7\u00aa", "dominant7"),
-    MAJ7("Maj7", "maj7"),
-    MINOR7("m7", "m7"),
-    SUS2("Sus2", "sus2"),
-    SUS4("Sus4", "sus4"),
-    DIMINISHED("Dim", "diminished"),
-    DIMINISHED7("Dim7", "diminished7"),
-    HALF_DIM7("m7b5", "half_diminished7"),
-    AUGMENTED("Aug", "augmented"),
-    ADD9("add9", "add9"),
-    DOMINANT9("9\u00aa", "dominant9"),
-    MAJ9("Maj9", "maj9"),
-    MINOR9("m9", "minor9"),
-    MINOR_MAJOR7("mMaj7", "minor_major7"),
-    MINOR_MAJOR9("mMaj9", "minor_major9"),
-    SIXTH("6\u00aa", "sixth"),
-    SIX_NINE("6/9", "six_nine"),
-    MINOR6("m6", "minor6"),
-    MINOR_SIX_NINE("m6/9", "minor_six_nine"),
-    POWER5("5 (Power)", "power5"),
-    DOM7SUS4("7sus4", "dominant7sus4"),
-    NINE_SUS4("9sus4", "nine_sus4"),
-    MINOR_ADD9("madd9", "minor_add9"),
-    MINOR11("m11", "minor11"),
-    MINOR13("m13", "minor13"),
-    MINOR7_FLAT9("m7b9", "minor7_flat9")
+enum class QualityGroup(val displayName: String) {
+    TRIAD("Tríadas"),
+    TETRAD("Cuatríadas"),
+    EXTENDED("Extensiones"),
+    OTHER("Otros")
+}
+
+enum class ChordQuality(val displayName: String, val csvValue: String, val group: QualityGroup) {
+    MAJOR("Mayor", "major", QualityGroup.TRIAD),
+    MINOR("Menor", "minor", QualityGroup.TRIAD),
+    DIMINISHED("Dim", "diminished", QualityGroup.TRIAD),
+    AUGMENTED("Aug", "augmented", QualityGroup.TRIAD),
+    SUS2("Sus2", "sus2", QualityGroup.TRIAD),
+    SUS4("Sus4", "sus4", QualityGroup.TRIAD),
+    POWER5("5 (Power)", "power5", QualityGroup.TRIAD),
+    DOMINANT7("7ª", "dominant7", QualityGroup.TETRAD),
+    MAJ7("Maj7", "maj7", QualityGroup.TETRAD),
+    MINOR7("m7", "m7", QualityGroup.TETRAD),
+    DIMINISHED7("Dim7", "diminished7", QualityGroup.TETRAD),
+    HALF_DIM7("m7b5", "half_diminished7", QualityGroup.TETRAD),
+    MINOR_MAJOR7("mMaj7", "minor_major7", QualityGroup.TETRAD),
+    SIXTH("6ª", "sixth", QualityGroup.TETRAD),
+    MINOR6("m6", "minor6", QualityGroup.TETRAD),
+    DOM7SUS4("7sus4", "dominant7sus4", QualityGroup.TETRAD),
+    ADD9("add9", "add9", QualityGroup.EXTENDED),
+    DOMINANT9("9ª", "dominant9", QualityGroup.EXTENDED),
+    MAJ9("Maj9", "maj9", QualityGroup.EXTENDED),
+    MINOR9("m9", "minor9", QualityGroup.EXTENDED),
+    MINOR_MAJOR9("mMaj9", "minor_major9", QualityGroup.EXTENDED),
+    SIX_NINE("6/9", "six_nine", QualityGroup.EXTENDED),
+    MINOR_SIX_NINE("m6/9", "minor_six_nine", QualityGroup.EXTENDED),
+    NINE_SUS4("9sus4", "nine_sus4", QualityGroup.EXTENDED),
+    MINOR_ADD9("madd9", "minor_add9", QualityGroup.EXTENDED),
+    MINOR11("m11", "minor11", QualityGroup.EXTENDED),
+    MINOR13("m13", "minor13", QualityGroup.EXTENDED),
+    MINOR7_FLAT9("m7b9", "minor7_flat9", QualityGroup.EXTENDED)
 }
 
 object ChordRepository {
@@ -184,7 +192,10 @@ object ChordRepository {
         allChords.filter { it.level == level.csvValue && it.quality == quality.csvValue }
 
     fun getChordsByRootLevelQuality(root: String, level: ChordLevel, quality: ChordQuality): List<ChordShape> =
-        allChords.filter { it.root == root && it.level == level.csvValue && it.quality == quality.csvValue }
+        allChords.filter { it.root == root &&
+            (level == ChordLevel.ALL || it.level == level.csvValue) &&
+            it.quality == quality.csvValue
+        }
 
     fun getAvailableRoots(): List<String> =
         allChords.map { it.root }.distinct().sortedBy {

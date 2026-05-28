@@ -196,13 +196,13 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     Box(modifier = Modifier.fillMaxSize().background(CP_BG)) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Toolbar
-            Row(
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(CP_TOOLBAR)
                     .padding(horizontal = 6.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
                     Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
@@ -303,8 +303,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         Text("Visualizar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-
-                Spacer(modifier = Modifier.weight(1f))
 
                 // Save progression
                 Box(
@@ -897,7 +895,7 @@ private fun ChordPickerOverlay(
                 ) {
                     Text("Todos", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
-                ChordLevel.entries.forEach { lvl ->
+                ChordLevel.entries.filter { it != ChordLevel.ALL }.forEach { lvl ->
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))

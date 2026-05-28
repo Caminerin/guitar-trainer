@@ -116,38 +116,58 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
     val scale = ALL_SCALES[selectedScaleIndex]
 
     // Guitar mode: detect pitch and reveal matching scale note
+    var lastRevealedNote by remember { mutableIntStateOf(-1) }
+    var lastRevealTime by remember { mutableStateOf(0L) }
+    var consecutiveFrames by remember { mutableIntStateOf(0) }
+    var lastFrameNote by remember { mutableIntStateOf(-1) }
+    val requiredFrames = 3
+
     LaunchedEffect(guitarMode, pitchResult, selectedKey, selectedScaleIndex, maxFret) {
         if (!guitarMode) return@LaunchedEffect
         val pr = pitchResult ?: return@LaunchedEffect
-        if (pr.confidence < 0.7f || pr.frequency <= 0f) return@LaunchedEffect
-        val detectedNote = pr.noteIndex % 12
+        if (pr.confidence < 0.85f || pr.frequency <= 0f) return@LaunchedEffect
+
+        val detectedMidi = pr.noteIndex
+        val detectedNote = detectedMidi % 12
+        val now = System.currentTimeMillis()
+
+        // Require N consecutive frames with the same note for stability
+        if (detectedNote == lastFrameNote) {
+            consecutiveFrames++
+        } else {
+            consecutiveFrames = 1
+            lastFrameNote = detectedNote
+        }
+        if (consecutiveFrames < requiredFrames) return@LaunchedEffect
+
+        // Cooldown: don't process the same note within 500ms
+        if (detectedNote == lastRevealedNote && now - lastRevealTime < 500) return@LaunchedEffect
+
         if (!isNoteInScale(detectedNote, selectedKey, scale.intervals)) {
+            if (now - lastRevealTime < 300) return@LaunchedEffect
             errorCount++
+            lastRevealedNote = detectedNote
+            lastRevealTime = now
             val detectedName = getSpanishNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
-            val scaleNotes = scale.intervals.map { interval ->
-                getSpanishNoteName((selectedKey + interval) % 12, selectedKey, scale.relativeMajorOffset)
-            }.joinToString(", ")
-            feedbackText = "$detectedName no pertenece a la escala. Notas correctas: $scaleNotes"
+            feedbackText = "$detectedName no pertenece a la escala"
             feedbackIsCorrect = false
             return@LaunchedEffect
         }
-        // Find unrevealed positions matching this note on the fretboard
-        for (s in 0 until 6) {
-            for (fret in 0..maxFret) {
-                val noteIdx = (STANDARD_TUNING_MIDI[s] + fret) % 12
-                if (noteIdx == detectedNote) {
-                    val key = s to fret
-                    if (!revealedNotes.contains(key)) {
-                        revealedNotes.add(key)
-                        correctCount++
-                        val degree = getDegreeInScale(detectedNote, selectedKey, scale.intervals)
-                        val degreeLabel = if (degree != null) getDegreeLabel(degree) else ""
-                        val noteName = getSpanishNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
-                        feedbackText = "$noteName = grado $degreeLabel de la escala"
-                        feedbackIsCorrect = true
-                        return@LaunchedEffect
-                    }
-                }
+
+        // Use MIDI pitch to find the best matching fretboard position
+        val bestPosition = findBestFretPosition(detectedMidi, maxFret)
+        if (bestPosition != null) {
+            val key = bestPosition
+            if (!revealedNotes.contains(key)) {
+                revealedNotes.add(key)
+                correctCount++
+                lastRevealedNote = detectedNote
+                lastRevealTime = now
+                val degree = getDegreeInScale(detectedNote, selectedKey, scale.intervals)
+                val degreeLabel = if (degree != null) getDegreeLabel(degree) else ""
+                val noteName = getSpanishNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
+                feedbackText = "$noteName = grado $degreeLabel"
+                feedbackIsCorrect = true
             }
         }
     }

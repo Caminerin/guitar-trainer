@@ -43,7 +43,9 @@ private fun getDegreeColor(degree: Int): Color {
 }
 
 private fun parseDegreeNumber(romanDegree: String): Int {
-    val cleaned = romanDegree.replace("b", "").replace("#", "").replace("°", "").replace("+", "").uppercase()
+    val stripped = romanDegree
+        .replace(Regex("(maj7|m7b5|m7|dim7|aug7|ø7|7|add9|sus[24]|6|9|11|13)$", RegexOption.IGNORE_CASE), "")
+    val cleaned = stripped.replace("b", "").replace("#", "").replace("°", "").replace("+", "").uppercase().trim()
     return when (cleaned) {
         "I" -> 1; "II" -> 2; "III" -> 3; "IV" -> 4
         "V" -> 5; "VI" -> 6; "VII" -> 7

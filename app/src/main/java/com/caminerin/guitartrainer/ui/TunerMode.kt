@@ -70,34 +70,40 @@ fun TunerMode(
 
     val currentTuning = ALL_TUNINGS[selectedTuningIndex]
 
-    // Stabilized auto-detection: require consistent candidate for multiple frames
-    var autoCandidate by remember { mutableStateOf<GuitarString?>(null) }
-    var autoCandidateCount by remember { mutableIntStateOf(0) }
+    // Stabilized auto-detection: fast initial pick, then require stability to switch
     var confirmedAutoString by remember { mutableStateOf<GuitarString?>(null) }
-    val stabilityThreshold = 3
+    var switchCandidate by remember { mutableStateOf<GuitarString?>(null) }
+    var switchCandidateCount by remember { mutableIntStateOf(0) }
 
     val activeString = if (!isAutoMode) {
         selectedStringIndex?.let { currentTuning.strings.getOrNull(it) }
-    } else if (pitchResult == null) {
-        null
+    } else if (pitchResult == null || pitchResult.confidence < 0.5f) {
+        confirmedAutoString
     } else {
         val candidate = currentTuning.strings.minByOrNull {
             abs(centsFromTarget(pitchResult.frequency, it.frequency))
         }
         val candidateCents = if (candidate != null) abs(centsFromTarget(pitchResult.frequency, candidate.frequency)) else 999f
-        if (candidateCents > 150f) {
-            autoCandidate = null
-            autoCandidateCount = 0
+        if (candidateCents > 200f) {
             confirmedAutoString
-        } else if (candidate != null && candidate.number == autoCandidate?.number) {
-            autoCandidateCount++
-            if (autoCandidateCount >= stabilityThreshold) {
+        } else if (confirmedAutoString == null) {
+            confirmedAutoString = candidate
+            confirmedAutoString
+        } else if (candidate != null && candidate.number == confirmedAutoString?.number) {
+            switchCandidate = null
+            switchCandidateCount = 0
+            confirmedAutoString
+        } else if (candidate != null && candidate.number == switchCandidate?.number) {
+            switchCandidateCount++
+            if (switchCandidateCount >= 2) {
                 confirmedAutoString = candidate
+                switchCandidate = null
+                switchCandidateCount = 0
             }
             confirmedAutoString
         } else {
-            autoCandidate = candidate
-            autoCandidateCount = 1
+            switchCandidate = candidate
+            switchCandidateCount = 1
             confirmedAutoString
         }
     }
