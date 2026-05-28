@@ -352,12 +352,23 @@ private fun RiffCard(riff: Riff, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.padding(top = 2.dp)
             ) {
-                // Style tag
                 SmallTag(text = riff.style.replace("_", " "), color = Color(0xFF546E7A))
-                // Sound tag
                 SmallTag(text = riff.sound.replace("_", " "), color = soundColor)
-                // BPM tag
                 SmallTag(text = "${riff.bpmTarget} bpm", color = Color(0xFF455A64))
+                // Technique tags from note data
+                val techniques = riff.measures.flatMap { m -> m.notes.map { it.technique } }
+                    .filter { it.isNotEmpty() }.distinct()
+                for (tech in techniques) {
+                    val techColor = when (tech) {
+                        "palm_mute" -> Color(0xFFFF7043)
+                        "staccato" -> Color(0xFF42A5F5)
+                        "tremolo" -> Color(0xFFAB47BC)
+                        "bend" -> Color(0xFF66BB6A)
+                        "hammer_on", "pull_off" -> Color(0xFF26C6DA)
+                        else -> Color(0xFF78909C)
+                    }
+                    SmallTag(text = tech.replace("_", " "), color = techColor)
+                }
             }
         }
 
@@ -449,7 +460,8 @@ private fun RiffPlayerView(riff: Riff, onBack: () -> Unit) {
                                 string = note.string,
                                 fret = note.fret,
                                 startMs = noteStartMs,
-                                durationMs = noteDurMs.coerceAtMost(2000)
+                                durationMs = noteDurMs.coerceAtMost(2000),
+                                technique = note.technique
                             )
                         )
                     }
@@ -871,24 +883,58 @@ private fun TabNotationView(
                 val isActive = mi == currentMeasureIdx &&
                     currentSubIdx >= note.startSub && currentSubIdx <= note.endSub
 
+                // Technique-specific colors
+                val techniqueColor = when (note.technique) {
+                    "palm_mute" -> Color(0xFFFF7043) // orange
+                    "staccato" -> Color(0xFF42A5F5)  // blue
+                    "tremolo" -> Color(0xFFAB47BC)    // purple
+                    "bend" -> Color(0xFF66BB6A)       // green
+                    "hammer_on" -> Color(0xFF26C6DA)  // cyan
+                    "pull_off" -> Color(0xFF26C6DA)   // cyan
+                    else -> null
+                }
+
                 // Note duration line
                 if (note.endSub > note.startSub) {
                     val endX = leftMargin + (subOffset + note.endSub - 0.5f) * subWidth
-                    drawLine(
-                        color = if (isActive) RP_ACTIVE_NOTE else Color(0xFF666666),
-                        start = Offset(noteX, noteY),
-                        end = Offset(endX, noteY),
-                        strokeWidth = 3f
-                    )
+                    val lineColor = when {
+                        isActive -> RP_ACTIVE_NOTE
+                        techniqueColor != null -> techniqueColor.copy(alpha = 0.5f)
+                        else -> Color(0xFF666666)
+                    }
+                    // Palm mute: dashed look (shorter segments)
+                    if (note.technique == "palm_mute") {
+                        val segLen = subWidth * 0.3f
+                        var sx = noteX
+                        while (sx < endX) {
+                            val ex = (sx + segLen).coerceAtMost(endX)
+                            drawLine(lineColor, Offset(sx, noteY), Offset(ex, noteY), 3f)
+                            sx += segLen * 2f
+                        }
+                    } else {
+                        drawLine(lineColor, Offset(noteX, noteY), Offset(endX, noteY), 3f)
+                    }
                 }
 
-                // Note circle background
+                // Note circle background — technique-aware
                 val circleRadius = (subWidth * 0.35f).coerceIn(8f, 16f)
-                drawCircle(
-                    color = if (isActive) RP_ACTIVE_NOTE else Color(0xFF333333),
-                    radius = circleRadius,
-                    center = Offset(noteX, noteY)
-                )
+                val circleColor = when {
+                    isActive -> RP_ACTIVE_NOTE
+                    techniqueColor != null -> techniqueColor
+                    else -> Color(0xFF333333)
+                }
+                // Staccato: smaller circle; palm mute: square-ish
+                if (note.technique == "staccato") {
+                    drawCircle(circleColor, circleRadius * 0.8f, Offset(noteX, noteY))
+                } else if (note.technique == "palm_mute") {
+                    drawRect(
+                        circleColor,
+                        Offset(noteX - circleRadius, noteY - circleRadius * 0.8f),
+                        Size(circleRadius * 2f, circleRadius * 1.6f)
+                    )
+                } else {
+                    drawCircle(circleColor, circleRadius, Offset(noteX, noteY))
+                }
 
                 // Fret number text
                 val textSize = (circleRadius * 1.2f).coerceIn(10f, 16f)
@@ -897,12 +943,42 @@ private fun TabNotationView(
                     noteX,
                     noteY + textSize * 0.35f,
                     android.graphics.Paint().apply {
-                        color = if (isActive) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
+                        color = if (isActive || techniqueColor != null) 0xFF000000.toInt() else 0xFFFFFFFF.toInt()
                         this.textSize = textSize
                         textAlign = android.graphics.Paint.Align.CENTER
                         typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
                     }
                 )
+
+                // Technique label below note
+                if (note.technique.isNotEmpty()) {
+                    val label = when (note.technique) {
+                        "palm_mute" -> "PM"
+                        "staccato" -> "."
+                        "tremolo" -> "~~~"
+                        "bend" -> "b"
+                        "hammer_on" -> "h"
+                        "pull_off" -> "p"
+                        else -> ""
+                    }
+                    if (label.isNotEmpty()) {
+                        drawContext.canvas.nativeCanvas.drawText(
+                            label,
+                            noteX,
+                            noteY + circleRadius + 10f,
+                            android.graphics.Paint().apply {
+                                color = (techniqueColor ?: Color.White).copy(alpha = 0.7f)
+                                    .let { c -> android.graphics.Color.argb(
+                                        (c.alpha * 255).toInt(), (c.red * 255).toInt(),
+                                        (c.green * 255).toInt(), (c.blue * 255).toInt()
+                                    ) }
+                                this.textSize = 9f
+                                textAlign = android.graphics.Paint.Align.CENTER
+                                typeface = android.graphics.Typeface.create(android.graphics.Typeface.MONOSPACE, android.graphics.Typeface.BOLD)
+                            }
+                        )
+                    }
+                }
             }
 
             // Highlight current subdivision

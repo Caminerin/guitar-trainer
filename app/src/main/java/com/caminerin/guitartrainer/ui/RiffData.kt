@@ -8,7 +8,8 @@ data class RiffNote(
     val string: Int,   // 1-6 (1=high E, 6=low E)
     val fret: Int,
     val startSub: Int, // 1-based subdivision within measure
-    val endSub: Int
+    val endSub: Int,
+    val technique: String = "" // palm_mute, staccato, tremolo, bend, hammer_on, pull_off
 )
 
 data class RiffMeasure(
@@ -36,7 +37,8 @@ data class Riff(
     val measures: List<RiffMeasure>
 )
 
-private val NOTE_REGEX = Regex("(\\d+)\\.(\\d+)\\((\\d+)-(\\d+)\\)")
+// Matches: string.fret(start-end) or string.fret(start-end,technique)
+private val NOTE_REGEX = Regex("(\\d+)\\.(\\d+)\\((\\d+)-(\\d+)(?:,([a-z_]+))?\\)")
 
 private fun parseMeasureNotes(raw: String): List<RiffNote> {
     if (raw.isBlank()) return emptyList()
@@ -46,7 +48,8 @@ private fun parseMeasureNotes(raw: String): List<RiffNote> {
             string = m.groupValues[1].toInt(),
             fret = m.groupValues[2].toInt(),
             startSub = m.groupValues[3].toInt(),
-            endSub = m.groupValues[4].toInt()
+            endSub = m.groupValues[4].toInt(),
+            technique = m.groupValues.getOrElse(5) { "" }
         )
     }
 }
