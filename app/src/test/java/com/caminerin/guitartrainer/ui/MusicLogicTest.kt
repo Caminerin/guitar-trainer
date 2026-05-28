@@ -122,10 +122,10 @@ class MusicLogicTest {
     @Test
     fun `getDegreeInScale returns correct degrees for C major`() {
         val cMajorIntervals = listOf(0, 2, 4, 5, 7, 9, 11)
-        assertEquals(0, getDegreeInScale(0, 0, cMajorIntervals))  // C = 1st degree (0-indexed)
-        assertEquals(1, getDegreeInScale(2, 0, cMajorIntervals))  // D = 2nd degree
-        assertEquals(2, getDegreeInScale(4, 0, cMajorIntervals))  // E = 3rd degree
-        assertEquals(4, getDegreeInScale(7, 0, cMajorIntervals))  // G = 5th degree
+        assertEquals(1, getDegreeInScale(0, 0, cMajorIntervals))  // C = 1st degree
+        assertEquals(2, getDegreeInScale(2, 0, cMajorIntervals))  // D = 2nd degree
+        assertEquals(3, getDegreeInScale(4, 0, cMajorIntervals))  // E = 3rd degree
+        assertEquals(5, getDegreeInScale(7, 0, cMajorIntervals))  // G = 5th degree
         assertNull(getDegreeInScale(1, 0, cMajorIntervals))       // C# = not in scale
     }
 
@@ -146,14 +146,14 @@ class MusicLogicTest {
     // ===== Degree labels =====
 
     @Test
-    fun `getDegreeLabel returns correct Roman numerals`() {
-        assertEquals("I", getDegreeLabel(1))
-        assertEquals("II", getDegreeLabel(2))
-        assertEquals("III", getDegreeLabel(3))
-        assertEquals("IV", getDegreeLabel(4))
-        assertEquals("V", getDegreeLabel(5))
-        assertEquals("VI", getDegreeLabel(6))
-        assertEquals("VII", getDegreeLabel(7))
+    fun `getDegreeLabel returns correct labels`() {
+        assertEquals("1", getDegreeLabel(1))
+        assertEquals("2", getDegreeLabel(2))
+        assertEquals("3", getDegreeLabel(3))
+        assertEquals("4", getDegreeLabel(4))
+        assertEquals("5", getDegreeLabel(5))
+        assertEquals("6", getDegreeLabel(6))
+        assertEquals("7", getDegreeLabel(7))
     }
 
     // ===== Fret note calculation =====

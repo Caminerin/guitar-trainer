@@ -94,6 +94,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     var selectedKey by rememberSaveable { mutableIntStateOf(0) }
     var selectedScaleName by rememberSaveable { mutableStateOf("Mayor (Jónica)") }
     var bpm by rememberSaveable { mutableIntStateOf(60) }
+    var beatsPerMeasure by rememberSaveable { mutableIntStateOf(4) }
     var measureCount by rememberSaveable { mutableIntStateOf(4) }
 
     // The progression: list of measures, each with subdivisions, each with optional chordId
@@ -149,7 +150,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         currentMeasure = mi
                         currentSub = si
                         val beatMs = 60000L / bpmState.value
-                        val beatsPerMeasure = 4L
                         val measureMs = beatMs * beatsPerMeasure
                         val subMs = measureMs / m.subdivisions.size.coerceAtLeast(1)
                         if (slot.strumDirection != "-") {
@@ -252,6 +252,17 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
 
                 // BPM
                 BpmToolbarButton(bpm) { showBpmSelector = true }
+
+                // Beats per measure
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF7C4DFF).copy(alpha = 0.25f))
+                        .clickable { showBeatsSelector = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("$beatsPerMeasure/4", color = Color(0xFFB388FF), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
 
                 // Measures count
                 Box(
@@ -573,6 +584,42 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 onSelectFree = { modeKey = false },
                 onDismiss = { showModeSelector = false }
             )
+        }
+
+        // Beats per measure selector overlay
+        if (showBeatsSelector) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable { showBeatsSelector = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF2A2A2A))
+                        .clickable(enabled = false) {}
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text("Compás", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    listOf(2, 3, 4, 5, 6, 7).forEach { beats ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.6f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (beatsPerMeasure == beats) CP_PRIMARY.copy(alpha = 0.5f) else Color.Transparent)
+                                .clickable { beatsPerMeasure = beats; showBeatsSelector = false }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("$beats/4", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
         }
 
         // Measure subdivision selector overlay
