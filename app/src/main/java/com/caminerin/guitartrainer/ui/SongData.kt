@@ -26,6 +26,7 @@ data class Song(
     val measures: List<SongMeasure>,
     val arrangementType: String,
     val practiceFocus: String,
+    val feel: String,
     val sourceUrl: String,
     val notes: String
 )
@@ -204,6 +205,7 @@ object SongRepository {
                 )
             }
 
+            val feel = col(parts, "feel_ritmico")
             val arrangementType = col(parts, "tipo_arreglo")
             val practiceFocus = col(parts, "foco_practica")
             val sourceUrl = col(parts, "fuente_url")
@@ -229,6 +231,7 @@ object SongRepository {
                 strumLegend = strumLegend,
                 defaultStrums = defaultStrums,
                 measures = measures,
+                feel = feel,
                 arrangementType = arrangementType,
                 practiceFocus = practiceFocus,
                 sourceUrl = sourceUrl,

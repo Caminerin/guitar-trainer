@@ -25,8 +25,8 @@ object ChordSynth {
 
     private val lock = Object()
 
-    fun playChord(frets: List<Int?>, durationMs: Int = 1200, upStrum: Boolean = false) {
-        val newSamples = generateGuitarChord(frets, durationMs, upStrum) ?: return
+    fun playChord(frets: List<Int?>, durationMs: Int = 1200, upStrum: Boolean = false, velocity: Float = 1.0f) {
+        val newSamples = generateGuitarChord(frets, durationMs, upStrum, velocity) ?: return
 
         synchronized(lock) {
             if (!running) {
@@ -138,7 +138,7 @@ object ChordSynth {
         }
     }
 
-    private fun generateGuitarChord(frets: List<Int?>, durationMs: Int, upStrum: Boolean = false): FloatArray? {
+    private fun generateGuitarChord(frets: List<Int?>, durationMs: Int, upStrum: Boolean = false, velocity: Float = 1.0f): FloatArray? {
         data class StringInfo(val freq: Double, val stringIndex: Int, val strumOffset: Int)
 
         val activeStrings = mutableListOf<Pair<Int, Double>>() // (stringIndex, freq)
@@ -152,9 +152,11 @@ object ChordSynth {
 
         // For up-strum: reverse the strum order (treble first)
         val ordered = if (upStrum) activeStrings.reversed() else activeStrings
+        // Softer strums have wider string delays (slower, lighter strum)
+        val delayScale = if (velocity < 0.6f) 1.4f else 1.0f
         val strings = ordered.mapIndexed { strIdx, (s, freq) ->
-            val offset = STRUM_DELAYS.getOrElse(strIdx) { strIdx * 150 }
-            StringInfo(freq, s, offset)
+            val baseOffset = STRUM_DELAYS.getOrElse(strIdx) { strIdx * 150 }
+            StringInfo(freq, s, (baseOffset * delayScale).toInt())
         }
 
         val totalOffset = if (strings.isNotEmpty()) strings.maxOf { it.strumOffset } else 0
@@ -174,9 +176,10 @@ object ChordSynth {
             output[i] *= i.toFloat() / attackSamples
         }
 
-        // Normalize
+        // Normalize with velocity
+        val clampedVelocity = velocity.coerceIn(0.2f, 1.0f)
         val peak = output.maxOfOrNull { kotlin.math.abs(it) } ?: 1f
-        val scale = if (peak > 0.01f) 0.82f / peak else 1f
+        val scale = if (peak > 0.01f) 0.82f * clampedVelocity / peak else 1f
         for (i in output.indices) {
             output[i] = (output[i] * scale).coerceIn(-1f, 1f)
         }
