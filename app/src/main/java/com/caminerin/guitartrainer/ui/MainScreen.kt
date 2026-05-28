@@ -68,7 +68,8 @@ private enum class FullscreenMode {
     CHORDS,
     CAGED,
     QUIZ,
-    CHORD_PRACTICE
+    CHORD_PRACTICE,
+    RIFF_PRACTICE
 }
 
 enum class AppMode(val title: String, val icon: ImageVector) {
@@ -139,6 +140,12 @@ fun MainScreen(
             ChordPracticeScreen(
                 onBack = { fullscreenMode = FullscreenMode.NONE.name },
                 onGoToVisualizer = { fullscreenMode = FullscreenMode.CHORDS.name }
+            )
+            return
+        }
+        FullscreenMode.RIFF_PRACTICE -> {
+            RiffPracticeScreen(
+                onBack = { fullscreenMode = FullscreenMode.NONE.name }
             )
             return
         }
@@ -253,7 +260,8 @@ fun MainScreen(
                 )
                 AppMode.PRACTICE -> PracticeMenu(
                     onOpenCagedPractice = { fullscreenMode = FullscreenMode.CAGED.name },
-                    onOpenChordPractice = { fullscreenMode = FullscreenMode.CHORD_PRACTICE.name }
+                    onOpenChordPractice = { fullscreenMode = FullscreenMode.CHORD_PRACTICE.name },
+                    onOpenRiffPractice = { fullscreenMode = FullscreenMode.RIFF_PRACTICE.name }
                 )
                 AppMode.QUIZ -> QuizMenu(
                     onOpenQuiz = { fullscreenMode = FullscreenMode.QUIZ.name }
