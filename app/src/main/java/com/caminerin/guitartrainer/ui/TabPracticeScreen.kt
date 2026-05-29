@@ -1038,10 +1038,10 @@ fun TabViewer(
         else if (numStrings == 4) listOf("G", "D", "A", "E")
         else (1..numStrings).map { "S$it" }
 
-    val lineSpacing = 32.dp
+    val lineSpacing = 40.dp
     val beatWidth = 48.dp
     val measurePadding = 24.dp
-    val headerWidth = 28.dp
+    val headerWidth = 48.dp
 
     var totalWidth = headerWidth.value
     for (measure in track.measures) {
@@ -1088,18 +1088,19 @@ fun TabViewer(
             val beatW = beatWidth.toPx()
             val measPad = measurePadding.toPx()
             val headerW = headerWidth.toPx()
-            val topOffset = 30f
-            val noteFontSize = 36f
-            val labelFontSize = 30f
+            val topOffset = 40f
+            val noteFontSize = 42f
+            val labelFontSize = 48f
 
             for (i in 0 until numStrings) {
                 val y = topOffset + i * stringSpacing
                 drawContext.canvas.nativeCanvas.drawText(
                     stringNames.getOrElse(i) { "" },
-                    4f, y + 5f,
+                    4f, y + 14f,
                     android.graphics.Paint().apply {
-                        color = 0xFF888888.toInt()
+                        color = 0xFFBBBBBB.toInt()
                         textSize = labelFontSize
+                        isFakeBoldText = true
                         isAntiAlias = true
                     }
                 )
