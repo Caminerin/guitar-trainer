@@ -429,11 +429,10 @@ private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
             CagedPracticeScreen(onBack = { isViewMode = true }, pitchResult = pitchResult)
         }
 
-        // Toggle at bottom-left to avoid conflicting with screen controls at top
         Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 6.dp)
+                .align(Alignment.BottomStart)
+                .padding(start = 10.dp, bottom = 14.dp)
         ) {
             ModeToggle(
                 leftLabel = "Ver",
@@ -465,8 +464,8 @@ private fun UnifiedChordsScreen() {
 
         Box(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 6.dp)
+                .align(Alignment.BottomStart)
+                .padding(start = 10.dp, bottom = 14.dp)
         ) {
             ModeToggle(
                 leftLabel = "Ver",
