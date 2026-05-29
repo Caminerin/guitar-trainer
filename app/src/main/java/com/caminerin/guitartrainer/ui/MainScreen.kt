@@ -432,8 +432,8 @@ private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
         // Toggle at bottom-left to avoid conflicting with screen controls at top
         Box(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 8.dp, bottom = 6.dp)
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 6.dp)
         ) {
             ModeToggle(
                 leftLabel = "Ver",
@@ -465,8 +465,8 @@ private fun UnifiedChordsScreen() {
 
         Box(
             modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 8.dp, bottom = 6.dp)
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 6.dp)
         ) {
             ModeToggle(
                 leftLabel = "Ver",
