@@ -66,7 +66,7 @@ import com.caminerin.guitartrainer.audio.PitchDetector
 private enum class NavDestination(val label: String, val icon: ImageVector) {
     SCALES("Escalas", Icons.Default.MusicNote),
     CHORDS("Acordes", Icons.Default.Piano),
-    RIFFS("Riffs", Icons.Default.Audiotrack),
+    TABS("Tabs", Icons.Default.Audiotrack),
     QUIZ("Quiz", Icons.Default.Quiz),
     TUNER("Afinar", Icons.Default.Tune),
     METRONOME("Metro", Icons.Default.Speed)
@@ -126,7 +126,7 @@ fun MainScreen(
                     when (dest) {
                         NavDestination.SCALES -> UnifiedScalesScreen(pitchResult = pitchResult)
                         NavDestination.CHORDS -> UnifiedChordsScreen()
-                        NavDestination.RIFFS -> RiffPracticeScreen(
+                        NavDestination.TABS -> TabPracticeScreen(
                             onBack = { selectedNav = 0 },
                             showBackButton = false
                         )
