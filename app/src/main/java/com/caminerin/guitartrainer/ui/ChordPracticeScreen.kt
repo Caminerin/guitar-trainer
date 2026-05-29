@@ -497,14 +497,16 @@ private fun ProgressionPlayerScreen(
     var loopEnabled by remember { mutableStateOf(true) }
     var metronomeEnabled by remember { mutableStateOf(true) }
     var currentBeatGlobal by remember { mutableIntStateOf(-1) }
+    var beatsPerMeasure by remember { mutableIntStateOf(4) } // 3=3/4, 4=4/4, 6=6/8
 
     val bpmState = rememberUpdatedState(bpm)
     val loopState = rememberUpdatedState(loopEnabled)
     val metronomeState = rememberUpdatedState(metronomeEnabled)
+    val beatsState = rememberUpdatedState(beatsPerMeasure)
 
-    val totalBeats = progression.steps.size * 4
-    val currentChordIndex = if (currentBeatGlobal >= 0) currentBeatGlobal / 4 else -1
-    val beatInMeasure = if (currentBeatGlobal >= 0) currentBeatGlobal % 4 else -1
+    val totalBeats = progression.steps.size * beatsPerMeasure
+    val currentChordIndex = if (currentBeatGlobal >= 0) currentBeatGlobal / beatsPerMeasure else -1
+    val beatInMeasure = if (currentBeatGlobal >= 0) currentBeatGlobal % beatsPerMeasure else -1
 
     // Chord names for current root
     val chordNames = remember(rootIndex, progression) {
@@ -562,8 +564,8 @@ private fun ProgressionPlayerScreen(
         }
     }
 
-    // Stop playback when root changes
-    LaunchedEffect(rootIndex) {
+    // Stop playback when root or time signature changes
+    LaunchedEffect(rootIndex, beatsPerMeasure) {
         isPlaying = false
     }
 
@@ -601,6 +603,32 @@ private fun ProgressionPlayerScreen(
                     fontSize = 11.sp,
                     maxLines = 1
                 )
+            }
+            // Time signature selector
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                for ((beats, label) in listOf(3 to "3/4", 4 to "4/4", 6 to "6/8")) {
+                    val selected = beatsPerMeasure == beats
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                if (selected) ACCENT else Color.White.copy(alpha = 0.08f)
+                            )
+                            .clickable { beatsPerMeasure = beats }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            label,
+                            color = if (selected) Color.Black else Color.White.copy(alpha = 0.6f),
+                            fontSize = 12.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
             }
         }
 
@@ -681,22 +709,7 @@ private fun ProgressionPlayerScreen(
                     )
                 }
 
-                // Beat indicator dots (always visible)
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    for (beat in 0 until 4) {
-                        val active = isPlaying && beatInMeasure >= 0 && beat <= beatInMeasure
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (active) ACCENT
-                                    else Color.White.copy(alpha = 0.15f)
-                                )
-                        )
-                    }
-                }
+
             }
 
             // Right: all chord measures
@@ -716,7 +729,7 @@ private fun ProgressionPlayerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     for ((idx, name) in chordNames.withIndex()) {
                         val isActive = idx == currentChordIndex ||
@@ -724,35 +737,53 @@ private fun ProgressionPlayerScreen(
                         val borderColor = if (isActive) ACCENT else Color.White.copy(alpha = 0.15f)
                         val bgColor = if (isActive) ACCENT.copy(alpha = 0.15f) else CARD_BG
 
-                        Box(
-                            modifier = Modifier
-                                .width(90.dp)
-                                .height(72.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(bgColor)
-                                .border(
-                                    width = if (isActive) 2.dp else 1.dp,
-                                    color = borderColor,
-                                    shape = RoundedCornerShape(10.dp)
-                                )
-                                .clickable {
-                                    // Jump to this chord
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(
-                                    "${idx + 1}",
-                                    color = Color.White.copy(alpha = 0.3f),
-                                    fontSize = 10.sp
-                                )
-                                Text(
-                                    name,
-                                    color = if (isActive) ACCENT else Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1
-                                )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .width(90.dp)
+                                    .height(72.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(bgColor)
+                                    .border(
+                                        width = if (isActive) 2.dp else 1.dp,
+                                        color = borderColor,
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable {
+                                        // Jump to this chord
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        "${idx + 1}",
+                                        color = Color.White.copy(alpha = 0.3f),
+                                        fontSize = 10.sp
+                                    )
+                                    Text(
+                                        name,
+                                        color = if (isActive) ACCENT else Color.White,
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(5.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                for (beat in 0 until beatsPerMeasure) {
+                                    val active = isPlaying && idx == currentChordIndex &&
+                                        beatInMeasure >= 0 && beat <= beatInMeasure
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (active) ACCENT
+                                                else Color.White.copy(alpha = 0.15f)
+                                            )
+                                    )
+                                }
                             }
                         }
                     }
@@ -768,10 +799,7 @@ private fun ProgressionPlayerScreen(
                 .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Reserve space for Ver/Practicar toggle overlay
-            Spacer(modifier = Modifier.width(155.dp))
-
-            // All controls centered and equidistant in remaining space
+            // All controls centered and equidistant
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
