@@ -181,7 +181,8 @@ object TabRepository {
         return withContext(Dispatchers.IO) {
             try {
                 val cacheFile = File(context.cacheDir, "tabs/${entry.path}")
-                val jsonStr = if (cacheFile.exists()) {
+                val cacheValid = cacheFile.exists() && System.currentTimeMillis() - cacheFile.lastModified() < 3600000
+                val jsonStr = if (cacheValid) {
                     cacheFile.readText()
                 } else {
                     val url = REPO_BASE + encodePath(entry.path)
