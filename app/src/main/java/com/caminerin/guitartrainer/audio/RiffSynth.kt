@@ -107,7 +107,7 @@ object RiffSynth {
 
     fun playSequence(notes: List<NoteEvent>, soundPreset: String = "clean") {
         if (notes.isEmpty()) return
-        val totalMs = notes.maxOf { it.startMs + it.durationMs } + 200
+        val totalMs = notes.maxOf { it.startMs + it.durationMs } + 50
         val totalSamples = (SAMPLE_RATE * totalMs / 1000).toInt()
         val buffer = FloatArray(totalSamples)
 

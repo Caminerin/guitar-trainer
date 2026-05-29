@@ -528,35 +528,57 @@ fun TabPlayerScreen(
     fun stopPlayback() {
         playJob?.cancel()
         isPlaying = false
+        RiffSynth.stop()
     }
 
-    fun buildMeasureNotes(track: TabTrack, measureIdx: Int, baseTempo: Int): Pair<List<RiffSynth.NoteEvent>, Long> {
+    fun measureDurationMs(track: TabTrack, measureIdx: Int, baseTempo: Int): Long {
         val beatDurationMs = 60_000.0 / baseTempo
-        val measure = track.measures[measureIdx]
-        val events = mutableListOf<RiffSynth.NoteEvent>()
-        var timeMs = 0L
+        var totalMs = 0L
+        for (beat in track.measures[measureIdx]) {
+            val dur = beatDurationMs * (4.0 / beat.duration)
+            totalMs += if (beat.isDotted) (dur * 1.5).toLong() else dur.toLong()
+        }
+        return totalMs
+    }
 
-        for (beat in measure) {
-            val durationBeat = beatDurationMs * (4.0 / beat.duration)
-            val dur = if (beat.isDotted) (durationBeat * 1.5).toLong() else durationBeat.toLong()
+    fun buildContinuousSequence(
+        track: TabTrack,
+        startMeasure: Int,
+        endMeasure: Int,
+        baseTempo: Int
+    ): Triple<List<RiffSynth.NoteEvent>, List<Long>, Long> {
+        val beatDurationMs = 60_000.0 / baseTempo
+        val allEvents = mutableListOf<RiffSynth.NoteEvent>()
+        val measureOffsets = mutableListOf<Long>()
+        var globalTimeMs = 0L
 
-            if (!beat.isRest) {
-                for (note in beat.notes) {
-                    val stringIdx = note.string - 1
-                    if (stringIdx in 0..5 && note.fret >= 0) {
-                        events.add(RiffSynth.NoteEvent(
-                            string = stringIdx,
-                            fret = note.fret,
-                            startMs = timeMs,
-                            durationMs = dur.toInt().coerceAtLeast(50),
-                            technique = note.effects.firstOrNull() ?: ""
-                        ))
+        for (mi in startMeasure until endMeasure) {
+            measureOffsets.add(globalTimeMs)
+            val measure = track.measures[mi]
+            var localTimeMs = 0L
+
+            for (beat in measure) {
+                val durationBeat = beatDurationMs * (4.0 / beat.duration)
+                val dur = if (beat.isDotted) (durationBeat * 1.5).toLong() else durationBeat.toLong()
+
+                if (!beat.isRest) {
+                    for (note in beat.notes) {
+                        if (note.string in 1..6 && note.fret >= 0) {
+                            allEvents.add(RiffSynth.NoteEvent(
+                                string = note.string,
+                                fret = note.fret,
+                                startMs = globalTimeMs + localTimeMs,
+                                durationMs = dur.toInt().coerceAtLeast(50),
+                                technique = note.effects.firstOrNull() ?: ""
+                            ))
+                        }
                     }
                 }
+                localTimeMs += dur
             }
-            timeMs += dur
+            globalTimeMs += localTimeMs
         }
-        return events to timeMs
+        return Triple(allEvents, measureOffsets, globalTimeMs)
     }
 
     fun startPlayback(fromMeasure: Int? = null) {
@@ -571,39 +593,44 @@ fun TabPlayerScreen(
         playJob = scope.launch {
             withContext(Dispatchers.Default) {
                 RiffSynth.init(context)
-                val baseTempo = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300)
 
-                val startMeasure = if (fromMeasure != null) fromMeasure
-                    else if (loopEnabled && loopStart >= 0) loopStart
-                    else currentMeasure
-                val endMeasure = if (loopEnabled && loopEnd >= 0) (loopEnd + 1).coerceAtMost(track.measures.size) else track.measures.size
+                do {
+                    val baseTempo = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300)
+                    val startMeasure = if (fromMeasure != null && !loopEnabled) fromMeasure
+                        else if (loopEnabled && loopStart >= 0) loopStart
+                        else currentMeasure
+                    val endMeasure = if (loopEnabled && loopEnd >= 0) (loopEnd + 1).coerceAtMost(track.measures.size)
+                        else track.measures.size
 
-                var mi = startMeasure
-                while (isActive && isPlaying) {
-                    if (mi >= endMeasure) {
-                        if (loopEnabled) mi = if (loopStart >= 0) loopStart else startMeasure
-                        else break
-                    }
+                    if (startMeasure >= endMeasure) break
 
-                    currentMeasure = mi
-                    val (notes, _) = buildMeasureNotes(track, mi, baseTempo)
+                    val (notes, measureOffsets, totalDurationMs) = buildContinuousSequence(
+                        track, startMeasure, endMeasure, baseTempo
+                    )
 
                     if (notes.isNotEmpty()) {
                         RiffSynth.playSequence(notes, "crunch")
                     }
 
-                    val currentMeasureBeats = track.measures[mi]
+                    val playStartTime = System.currentTimeMillis()
                     val beatDurationMs = 60_000.0 / baseTempo
-                    for ((bi, beat) in currentMeasureBeats.withIndex()) {
+
+                    for (mi in startMeasure until endMeasure) {
                         if (!isActive || !isPlaying) break
-                        currentBeatInMeasure = bi
-                        val dur = beatDurationMs * (4.0 / beat.duration)
-                        val waitMs = if (beat.isDotted) (dur * 1.5).toLong() else dur.toLong()
-                        delay(waitMs.coerceAtLeast(30))
+                        currentMeasure = mi
+
+                        val measureBeats = track.measures[mi]
+                        for ((bi, beat) in measureBeats.withIndex()) {
+                            if (!isActive || !isPlaying) break
+                            currentBeatInMeasure = bi
+                            val dur = beatDurationMs * (4.0 / beat.duration)
+                            val waitMs = if (beat.isDotted) (dur * 1.5).toLong() else dur.toLong()
+                            delay(waitMs.coerceAtLeast(20))
+                        }
                     }
 
-                    mi++
-                }
+                    if (!isActive || !isPlaying) break
+                } while (loopEnabled)
 
                 withContext(Dispatchers.Main) {
                     isPlaying = false
