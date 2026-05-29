@@ -115,12 +115,10 @@ object RiffSynth {
             val offsetSamples = (SAMPLE_RATE * note.startMs / 1000).toInt()
             val durSamples = (SAMPLE_RATE * note.durationMs / 1000).toInt()
 
-            if (samplesLoaded && note.fret <= 20) {
-                renderSampleNote(buffer, note, offsetSamples, durSamples, soundPreset)
-            } else {
-                val freq = noteFrequency(note.string, note.fret)
-                synthesizeNote(buffer, freq, note.string, offsetSamples, durSamples, soundPreset, note.technique)
-            }
+            // Always use Karplus-Strong synthesis for correct pitch
+            // (WAV samples have mismatched string/frequency assignments)
+            val freq = noteFrequency(note.string, note.fret)
+            synthesizeNote(buffer, freq, note.string, offsetSamples, durSamples, soundPreset, note.technique)
         }
 
         applyMasterProcessing(buffer, soundPreset)
