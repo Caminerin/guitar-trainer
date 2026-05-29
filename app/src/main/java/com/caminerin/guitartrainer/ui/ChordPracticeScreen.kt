@@ -280,16 +280,13 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                                     }
                                 }
                                 val durationMs = (baseSubMs * (nextStrum - si) + 200).toInt().coerceAtLeast(400)
-                                val isChordChange = si == 0 || slot.chordId != m.subdivisions.getOrNull(si - 1)?.chordId
-                                val muteGap = if (isChordChange) 25 else 0
 
                                 chord?.let {
                                     StrumEngine.strum(
                                         frets = it.frets,
                                         direction = effectiveDir,
                                         velocity = effectiveVelocity,
-                                        durationMs = durationMs,
-                                        muteGapMs = muteGap
+                                        durationMs = durationMs
                                     )
                                 }
                             }
