@@ -3,7 +3,17 @@ package com.caminerin.guitartrainer.ui
 import android.app.Activity
 import android.content.Context
 import android.content.pm.ActivityInfo
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,35 +25,31 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Quiz
-import androidx.compose.material.icons.filled.RemoveRedEye
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Piano
+import androidx.compose.material.icons.filled.Quiz
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -54,31 +60,27 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.PitchDetector
 
-private enum class FullscreenMode {
-    NONE,
-    SCALES,
-    CHORDS,
-    CAGED,
-    QUIZ,
-    CHORD_PRACTICE,
-    RIFF_PRACTICE
+private enum class NavDestination(val label: String, val icon: ImageVector) {
+    SCALES("Escalas", Icons.Default.MusicNote),
+    CHORDS("Acordes", Icons.Default.Piano),
+    RIFFS("Riffs", Icons.Default.Audiotrack),
+    QUIZ("Quiz", Icons.Default.Quiz),
+    TUNER("Afinar", Icons.Default.Tune),
+    METRONOME("Metro", Icons.Default.Speed)
 }
 
 enum class AppMode(val title: String, val icon: ImageVector) {
-    VISUALIZER("Visualizador", Icons.Default.RemoveRedEye),
-    PRACTICE("Pr\u00e1ctica", Icons.Default.FitnessCenter),
+    VISUALIZER("Visualizador", Icons.Default.MusicNote),
+    PRACTICE("Práctica", Icons.Default.Piano),
     QUIZ("Quiz", Icons.Default.Quiz),
-    TOOLS("Herramientas", Icons.Default.Build)
+    TOOLS("Herramientas", Icons.Default.Tune)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     pitchResult: PitchDetector.PitchResult?,
@@ -92,189 +94,148 @@ fun MainScreen(
         DegreeColorPrefs.load(context)
     }
 
-    var selectedTab by rememberSaveable { mutableStateOf(AppPreferences.lastTab) }
-    var fullscreenMode by rememberSaveable { mutableStateOf(FullscreenMode.NONE.name) }
-    var showExitDialog by remember { mutableStateOf(false) }
+    var selectedNav by rememberSaveable { mutableIntStateOf(AppPreferences.lastTab.coerceIn(0, NavDestination.entries.size - 1)) }
     var showSettings by remember { mutableStateOf(false) }
-    val modes = AppMode.entries
+    val destinations = NavDestination.entries
+    var previousNav by remember { mutableIntStateOf(selectedNav) }
 
-    val currentMode = try { FullscreenMode.valueOf(fullscreenMode) } catch (_: Exception) { FullscreenMode.NONE }
-
-    // Back handler: if in fullscreen mode, go back to menu; if in menu, show exit dialog
     BackHandler {
-        if (currentMode != FullscreenMode.NONE) {
-            fullscreenMode = FullscreenMode.NONE.name
-        } else {
-            showExitDialog = true
-        }
+        (context as? Activity)?.finish()
     }
 
-    when (currentMode) {
-        FullscreenMode.SCALES -> {
-            ForceLandscape()
-            ScaleFretboardScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name })
-            return
-        }
-        FullscreenMode.CHORDS -> {
-            ForceLandscape()
-            ChordVisualizerScreen(
-                onBack = { fullscreenMode = FullscreenMode.NONE.name },
-                onGoToPractice = { fullscreenMode = FullscreenMode.CHORD_PRACTICE.name }
-            )
-            return
-        }
-        FullscreenMode.CAGED -> {
-            ForceLandscape()
-            CagedPracticeScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name }, pitchResult = pitchResult)
-            return
-        }
-        FullscreenMode.QUIZ -> {
-            ForceLandscape()
-            ScaleQuizScreen(onBack = { fullscreenMode = FullscreenMode.NONE.name }, pitchResult = pitchResult)
-            return
-        }
-        FullscreenMode.CHORD_PRACTICE -> {
-            ForceLandscape()
-            ChordPracticeScreen(
-                onBack = { fullscreenMode = FullscreenMode.NONE.name },
-                onGoToVisualizer = { fullscreenMode = FullscreenMode.CHORDS.name }
-            )
-            return
-        }
-        FullscreenMode.RIFF_PRACTICE -> {
-            RiffPracticeScreen(
-                onBack = { fullscreenMode = FullscreenMode.NONE.name }
-            )
-            return
-        }
-        FullscreenMode.NONE -> { /* show normal UI below */ }
-    }
-
-    if (showExitDialog) {
-        AlertDialog(
-            onDismissRequest = { showExitDialog = false },
-            title = { Text("\u00bfSalir de Guitar Trainer?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showExitDialog = false
-                    (context as? Activity)?.finish()
-                }) {
-                    Text("Salir", color = Color(0xFFE53935))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showExitDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
-        )
-    }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Styled app name
-                        Text(
-                            "Guitar",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFFC107)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            "Trainer",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Light,
-                            fontStyle = FontStyle.Italic,
-                            color = Color(0xFFB0BEC5)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "\uD83C\uDFB8",
-                            fontSize = 18.sp
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(
-                        onClick = { showSettings = true },
-                        modifier = Modifier.padding(end = 4.dp)
-                    ) {
-                        Icon(Icons.Default.Settings, "Ajustes", tint = Color.White, modifier = Modifier.size(24.dp))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1A1A1A),
-                    titleContentColor = Color.White
-                )
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF1A1A1A))
-                .padding(padding)
-        ) {
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color(0xFF252525),
-                contentColor = Color.White
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppColors.background)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Content area
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
             ) {
-                modes.forEachIndexed { index, mode ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index; AppPreferences.saveTab(index, context) },
-                        text = {
-                            Text(
-                                mode.title,
-                                fontSize = 10.sp,
-                                maxLines = 1,
-                                softWrap = false,
-                                color = if (selectedTab == index) Color(0xFFFFC107) else Color.White.copy(alpha = 0.6f)
-                            )
-                        },
-                        icon = {
-                            Icon(
-                                mode.icon,
-                                contentDescription = mode.title,
-                                modifier = Modifier.size(20.dp),
-                                tint = if (selectedTab == index) Color(0xFFFFC107) else Color.White.copy(alpha = 0.6f)
-                            )
+                AnimatedContent(
+                    targetState = selectedNav,
+                    transitionSpec = {
+                        val direction = if (targetState > previousNav) 1 else -1
+                        (slideInHorizontally { direction * it / 4 } + fadeIn())
+                            .togetherWith(slideOutHorizontally { -direction * it / 4 } + fadeOut())
+                    },
+                    label = "nav_transition"
+                ) { navIndex ->
+                    val dest = destinations[navIndex]
+                    when (dest) {
+                        NavDestination.SCALES -> ScaleFretboardScreen(
+                            onBack = { selectedNav = 0 },
+                            showBackButton = false
+                        )
+                        NavDestination.CHORDS -> ChordVisualizerScreen(
+                            onBack = { selectedNav = 0 },
+                            onGoToPractice = { selectedNav = 1 },
+                            showBackButton = false
+                        )
+                        NavDestination.RIFFS -> RiffPracticeScreen(
+                            onBack = { selectedNav = 0 },
+                            showBackButton = false
+                        )
+                        NavDestination.QUIZ -> ScaleQuizScreen(
+                            onBack = { selectedNav = 0 },
+                            pitchResult = pitchResult,
+                            showBackButton = false
+                        )
+                        NavDestination.TUNER -> {
+                            TunerMode(pitchResult = pitchResult)
                         }
+                        NavDestination.METRONOME -> {
+                            MetronomeMode()
+                        }
+                    }
+                }
+
+                // Floating metronome FAB for practice screens
+                val showFab = selectedNav in listOf(0, 1, 2, 3)
+                if (showFab) {
+                    FloatingMetronomeFab(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 12.dp, bottom = 8.dp)
                     )
                 }
             }
 
-            when (modes[selectedTab]) {
-                AppMode.VISUALIZER -> VisualizerMenu(
-                    onOpenScales = { fullscreenMode = FullscreenMode.SCALES.name },
-                    onOpenChords = { fullscreenMode = FullscreenMode.CHORDS.name }
-                )
-                AppMode.PRACTICE -> PracticeMenu(
-                    onOpenCagedPractice = { fullscreenMode = FullscreenMode.CAGED.name },
-                    onOpenChordPractice = { fullscreenMode = FullscreenMode.CHORD_PRACTICE.name },
-                    onOpenRiffPractice = { fullscreenMode = FullscreenMode.RIFF_PRACTICE.name }
-                )
-                AppMode.QUIZ -> QuizMenu(
-                    onOpenQuiz = { fullscreenMode = FullscreenMode.QUIZ.name }
-                )
-                AppMode.TOOLS -> ToolsMenu(
-                    pitchResult = pitchResult
-                )
+            // Bottom Navigation Bar
+            NavigationBar(
+                containerColor = AppColors.navBar,
+                contentColor = AppColors.text,
+                tonalElevation = 0.dp,
+                modifier = Modifier.height(56.dp)
+            ) {
+                destinations.forEachIndexed { index, dest ->
+                    NavigationBarItem(
+                        icon = {
+                            Icon(
+                                dest.icon,
+                                contentDescription = dest.label,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        label = {
+                            Text(
+                                dest.label,
+                                fontSize = 9.sp,
+                                maxLines = 1,
+                                fontWeight = if (selectedNav == index) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        selected = selectedNav == index,
+                        onClick = {
+                            hapticTick(context)
+                            previousNav = selectedNav
+                            selectedNav = index
+                            AppPreferences.saveTab(index, context)
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = AppColors.navSelected,
+                            selectedTextColor = AppColors.navSelected,
+                            unselectedIconColor = AppColors.navUnselected,
+                            unselectedTextColor = AppColors.navUnselected,
+                            indicatorColor = AppColors.navSelected.copy(alpha = 0.12f)
+                        )
+                    )
+                }
             }
         }
-    }
 
-    if (showSettings) {
-        SettingsOverlay(context = context, onDismiss = { showSettings = false })
+        // Settings button — top right corner overlay
+        IconButton(
+            onClick = { showSettings = true },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = 4.dp, top = 4.dp)
+        ) {
+            Icon(Icons.Default.Settings, "Ajustes", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+        }
+
+        if (showSettings) {
+            SettingsOverlay(context = context, onDismiss = { showSettings = false })
+        }
     }
-    }
+}
+
+fun hapticTick(context: Context) {
+    try {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vm = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
+            vm?.defaultVibrator?.vibrate(VibrationEffect.createOneShot(15, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            val v = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                v?.vibrate(VibrationEffect.createOneShot(15, VibrationEffect.DEFAULT_AMPLITUDE))
+            }
+        }
+    } catch (_: Exception) { }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -283,7 +244,7 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f))
+            .background(AppColors.overlay)
             .clickable(
                 indication = null,
                 interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -294,7 +255,7 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .clip(RoundedCornerShape(16.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(AppColors.surfaceVariant)
                 .clickable(
                     indication = null,
                     interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -303,20 +264,20 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Ajustes", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("Ajustes", color = AppColors.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
 
             // Nomenclature
-            Text("Nomenclatura", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("Nomenclatura", color = AppColors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 NoteFormat.entries.forEach { fmt ->
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (NoteFormatPreference.current == fmt) Color(0xFF5C6BC0) else Color.White.copy(alpha = 0.1f))
+                            .background(if (NoteFormatPreference.current == fmt) AppColors.tertiary else Color.White.copy(alpha = 0.1f))
                             .clickable { NoteFormatPreference.set(fmt, context) }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
-                        Text(fmt.label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(fmt.label, color = AppColors.text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -329,7 +290,7 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
             )
 
             // Degree colors - Scale
-            Text("Colores de grado (escalas)", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("Colores de grado (escalas)", color = AppColors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             val scaleDegs = listOf(
                 "Tónica (I)" to ("tonic" to DegreeColorPrefs.tonicColor),
                 "Tercera (III)" to ("third" to DegreeColorPrefs.thirdColor),
@@ -350,7 +311,7 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
                             .background(currentColor)
                             .clickable { expanded = !expanded }
                     )
-                    Text(label, color = Color.White, fontSize = 13.sp,
+                    Text(label, color = AppColors.text, fontSize = 13.sp,
                         modifier = Modifier.clickable { expanded = !expanded })
                 }
                 if (expanded) {
@@ -370,7 +331,7 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
             }
 
             // Degree colors - Chords
-            Text("Colores de intervalo (acordes)", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text("Colores de intervalo (acordes)", color = AppColors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             val chordDegs = listOf(
                 "Raíz (1)" to ("root" to DegreeColorPrefs.chordRootColor),
                 "Tercera (3)" to ("third" to DegreeColorPrefs.chordThirdColor),
@@ -391,7 +352,7 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
                             .background(currentColor)
                             .clickable { expanded = !expanded }
                     )
-                    Text(label, color = Color.White, fontSize = 13.sp,
+                    Text(label, color = AppColors.text, fontSize = 13.sp,
                         modifier = Modifier.clickable { expanded = !expanded })
                 }
                 if (expanded) {
@@ -415,19 +376,19 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF5C6BC0))
+                    .background(AppColors.tertiary)
                     .clickable { onDismiss() }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Cerrar", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text("Cerrar", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
 }
 
 @Composable
-private fun ForceLandscape() {
+fun ForceLandscape() {
     val context = LocalContext.current
     DisposableEffect(Unit) {
         val activity = context as? Activity

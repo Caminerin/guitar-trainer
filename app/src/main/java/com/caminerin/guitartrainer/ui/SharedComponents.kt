@@ -1,6 +1,8 @@
 package com.caminerin.guitartrainer.ui
 
 import android.content.Context
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,23 +25,31 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.caminerin.guitartrainer.audio.MetronomeEngine
 
 // ===== SHARED CSV PARSING =====
 fun smartSplit(line: String): List<String> {
@@ -64,6 +74,30 @@ fun smartSplit(line: String): List<String> {
 val SHARED_BG = Color(0xFF1A1A1A)
 val SHARED_TOOLBAR = Color(0xFF1E1E1E)
 val SHARED_ACCENT = Color(0xFF7B1FA2)
+
+// ===== CENTRALIZED APP COLOR SYSTEM =====
+object AppColors {
+    val background = Color(0xFF121212)
+    val surface = Color(0xFF1E1E1E)
+    val surfaceVariant = Color(0xFF2A2A2A)
+    val surfaceBright = Color(0xFF3A3A3A)
+    val primary = Color(0xFFFFC107)         // Golden yellow accent
+    val onPrimary = Color(0xFF121212)
+    val secondary = Color(0xFF7B1FA2)       // Purple accent
+    val tertiary = Color(0xFF7C4DFF)        // Violet for interactive elements
+    val text = Color(0xFFFFFFFF)
+    val textSecondary = Color(0xFFB0BEC5)
+    val textMuted = Color(0xFF78909C)
+    val success = Color(0xFF4CAF50)
+    val warning = Color(0xFFFF9800)
+    val error = Color(0xFFF44336)
+    val divider = Color(0xFF333333)
+    val navBar = Color(0xFF0D0D0D)
+    val navSelected = primary
+    val navUnselected = Color(0xFF78909C)
+    val overlay = Color.Black.copy(alpha = 0.8f)
+    val cardBg = Color(0xFF1A1A1A)
+}
 
 // ===== COLOR PALETTE for degree/interval color picker =====
 val COLOR_PALETTE = listOf(
@@ -993,6 +1027,118 @@ fun ScaleNameSelectorOverlay(
                     Text(name, color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
                         fontSize = 15.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                 }
+            }
+        }
+    }
+}
+
+// ===== FLOATING METRONOME FAB =====
+@Composable
+fun FloatingMetronomeFab(
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var bpm by remember { mutableIntStateOf(120) }
+    var isPlaying by remember { mutableStateOf(false) }
+    val engine = remember { MetronomeEngine() }
+    @Suppress("UNUSED_VARIABLE")
+    val beat by engine.currentBeat.collectAsState()
+    val playing by engine.isPlaying.collectAsState()
+
+    val fabColor by animateColorAsState(
+        targetValue = if (playing) AppColors.primary else AppColors.surfaceBright,
+        animationSpec = tween(200),
+        label = "fab_color"
+    )
+
+    DisposableEffect(Unit) {
+        onDispose {
+            engine.stop()
+        }
+    }
+
+    LaunchedEffect(isPlaying, bpm) {
+        if (isPlaying) {
+            engine.liveBpm = bpm
+            engine.start(
+                com.caminerin.guitartrainer.audio.MetronomeConfig(bpm = bpm)
+            )
+        } else {
+            engine.stop()
+        }
+    }
+
+    Box(modifier = modifier) {
+        if (expanded) {
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(AppColors.surface)
+                    .padding(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text("$bpm BPM", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(-5, -1, 1, 5).forEach { delta ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(AppColors.surfaceVariant)
+                                .clickable {
+                                    bpm = (bpm + delta).coerceIn(40, 240)
+                                    engine.liveBpm = bpm
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                if (delta > 0) "+$delta" else "$delta",
+                                color = AppColors.text,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isPlaying) AppColors.error else AppColors.success)
+                        .clickable { isPlaying = !isPlaying }
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        if (isPlaying) "Stop" else "Play",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(AppColors.surfaceVariant)
+                        .clickable { expanded = false }
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text("Cerrar", color = AppColors.textSecondary, fontSize = 10.sp)
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(fabColor)
+                    .clickable { expanded = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Speed,
+                    contentDescription = "Metrónomo",
+                    tint = if (playing) AppColors.onPrimary else AppColors.text,
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }
