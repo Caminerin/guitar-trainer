@@ -192,9 +192,9 @@ fun MainScreen(
             }
         }
 
-        // Settings button — hide on Quiz to avoid overlapping score
-        val isQuizScreen = selectedNav == NavDestination.QUIZ.ordinal
-        if (!isQuizScreen) {
+        // Settings button — hide on Quiz/Riffs to avoid overlapping UI elements
+        val hideSettings = selectedNav in listOf(NavDestination.QUIZ.ordinal, NavDestination.RIFFS.ordinal)
+        if (!hideSettings) {
             IconButton(
                 onClick = { showSettings = true },
                 modifier = Modifier
