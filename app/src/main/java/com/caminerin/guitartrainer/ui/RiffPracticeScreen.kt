@@ -368,7 +368,8 @@ private fun RiffCard(riff: Riff, onClick: () -> Unit) {
                         "staccato" -> Color(0xFF42A5F5)
                         "tremolo" -> Color(0xFFAB47BC)
                         "bend" -> Color(0xFF66BB6A)
-                        "hammer_on", "pull_off" -> Color(0xFF26C6DA)
+                        "hammer_on", "pull_off", "pull" -> Color(0xFF26C6DA)
+                        "sustain" -> Color(0xFF8BC34A)
                         else -> Color(0xFF78909C)
                     }
                     SmallTag(text = tech.replace("_", " "), color = techColor)
@@ -914,7 +915,8 @@ private fun TabNotationView(
                         "staccato" -> Color(0xFF42A5F5)
                         "tremolo" -> Color(0xFFAB47BC)
                         "bend" -> Color(0xFF66BB6A)
-                        "hammer_on", "pull_off" -> Color(0xFF26C6DA)
+                        "hammer_on", "pull_off", "pull" -> Color(0xFF26C6DA)
+                        "sustain" -> Color(0xFF8BC34A)
                         else -> null
                     }
 
@@ -978,7 +980,8 @@ private fun TabNotationView(
                             "tremolo" -> "~~~"
                             "bend" -> "b"
                             "hammer_on" -> "h"
-                            "pull_off" -> "p"
+                            "pull_off", "pull" -> "p"
+                            "sustain" -> "sus"
                             else -> ""
                         }
                         if (label.isNotEmpty()) {
