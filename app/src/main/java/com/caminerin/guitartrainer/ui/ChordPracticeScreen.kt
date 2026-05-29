@@ -58,6 +58,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.ChordSynth
+import com.caminerin.guitartrainer.audio.StrumEngine
+import com.caminerin.guitartrainer.audio.StrumPatternLibrary
+import com.caminerin.guitartrainer.audio.StrumPattern
 import com.caminerin.guitartrainer.audio.TickPlayer
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -93,6 +96,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
         ScaleChordRepository.load(context)
         SongRepository.load(context)
         ChordSynth.init(context)
+        StrumEngine.init(context)
         dataLoaded = true
     }
 
@@ -128,6 +132,8 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     var showMeasureSubSelector by remember { mutableStateOf<Int?>(null) }
     var showBeatsSelector by remember { mutableStateOf(false) }
     var selectedSlotChordId by remember { mutableStateOf<String?>(null) }
+    var selectedPattern by remember { mutableStateOf(StrumPatternLibrary.default) }
+    var showPatternPicker by remember { mutableStateOf(false) }
 
 
     var isPlaying by remember { mutableStateOf(false) }
@@ -145,7 +151,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
 
     val tickPlayer = remember { TickPlayer() }
     DisposableEffect(Unit) {
-        onDispose { tickPlayer.release() }
+        onDispose { tickPlayer.release(); StrumEngine.stop() }
     }
 
     val measuresState = rememberUpdatedState(measures.toList())
@@ -161,6 +167,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
         currentSong?.feel?.contains("ternario", ignoreCase = true) == true ||
         currentSong?.feel?.contains("swing", ignoreCase = true) == true
     val humanRng = remember { java.util.Random() }
+    val selectedPatternState = rememberUpdatedState(selectedPattern)
 
     // Pattern-based playback loop with accents, swing, humanization, section loop, speed trainer
     LaunchedEffect(isPlaying) {
@@ -220,6 +227,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     }
 
                     val numSubs = m.subdivisions.size.coerceAtLeast(1)
+                    val pat = selectedPatternState.value
                     for ((si, slot) in m.subdivisions.withIndex()) {
                         if (!isActive) break
                         currentMeasure = mi
@@ -238,21 +246,39 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         val jitterMs = (humanRng.nextGaussian() * 5.0).toLong().coerceIn(-8L, 8L)
                         val finalSubMs = (swingSubMs + jitterMs).coerceAtLeast(30L)
 
+                        // Resolve stroke from pattern when song has no per-slot direction,
+                        // or fall back to the slot's own direction
+                        val patStroke = pat.strokes.getOrNull(si % pat.strokes.size)
                         val strokeDir = slot.strumDirection
-                        if (strokeDir != "-") {
+                        val usePatternStroke = (song == null && patStroke != null)
+
+                        val effectiveDir: StrumEngine.Direction
+                        val effectiveVelocity: Float
+                        if (usePatternStroke && patStroke != null) {
+                            effectiveDir = patStroke.direction
+                            val accentBoost = if (patStroke.accent) 1.0f else 0.85f
+                            val ghostDamp = if (patStroke.ghost) 0.25f else 1.0f
+                            effectiveVelocity = patStroke.velocity * accentBoost * ghostDamp
+                        } else {
+                            effectiveDir = when {
+                                strokeDir == "-" -> StrumEngine.Direction.REST
+                                strokeDir == "x" || strokeDir == "X" -> StrumEngine.Direction.MUTE
+                                strokeDir == "U" -> StrumEngine.Direction.UP
+                                else -> StrumEngine.Direction.DOWN
+                            }
+                            effectiveVelocity = when {
+                                effectiveDir == StrumEngine.Direction.REST -> 0f
+                                si == 0 -> 1.0f
+                                subsPerBeat > 1 && subWithinBeat == 0 -> 0.85f
+                                effectiveDir == StrumEngine.Direction.MUTE -> 0.5f
+                                effectiveDir == StrumEngine.Direction.UP -> 0.55f
+                                else -> 0.7f
+                            }
+                        }
+
+                        if (effectiveDir != StrumEngine.Direction.REST) {
                             slot.chordId?.let { id ->
                                 val chord = ChordRepository.getChords().firstOrNull { it.id == id }
-                                val isMute = strokeDir == "x" || strokeDir == "X"
-                                val isUpStrum = strokeDir == "U"
-
-                                val velocity = when {
-                                    si == 0 -> 1.0f
-                                    subsPerBeat > 1 && subWithinBeat == 0 -> 0.85f
-                                    isMute -> 0.5f
-                                    isUpStrum -> 0.55f
-                                    else -> 0.7f
-                                }
-
                                 var nextStrum = numSubs
                                 for (ns in (si + 1) until numSubs) {
                                     if (m.subdivisions[ns].strumDirection != "-") {
@@ -260,14 +286,17 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                                     }
                                 }
                                 val durationMs = (baseSubMs * (nextStrum - si) + 200).toInt().coerceAtLeast(400)
+                                val isChordChange = si == 0 || slot.chordId != m.subdivisions.getOrNull(si - 1)?.chordId
+                                val muteGap = if (isChordChange) 25 else 0
 
                                 chord?.let {
-                                    val strokeType = when {
-                                        isMute -> ChordSynth.StrokeType.MUTE
-                                        isUpStrum -> ChordSynth.StrokeType.UP
-                                        else -> ChordSynth.StrokeType.DOWN
-                                    }
-                                    ChordSynth.playStroke(it.frets, durationMs, strokeType, velocity)
+                                    StrumEngine.strum(
+                                        frets = it.frets,
+                                        direction = effectiveDir,
+                                        velocity = effectiveVelocity,
+                                        durationMs = durationMs,
+                                        muteGapMs = muteGap
+                                    )
                                 }
                             }
                         }
@@ -286,6 +315,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 }
             }
         } finally {
+            StrumEngine.mute()
             ChordSynth.stop()
             currentMeasure = -1
             currentSub = -1
@@ -422,6 +452,23 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     ) {
                         Text("Visualizar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
+                }
+
+                // Strum pattern selector
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFE65100).copy(alpha = 0.35f))
+                        .clickable { showPatternPicker = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        selectedPattern.nameEs,
+                        color = Color(0xFFFFCC80),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
                 }
 
                 // Metronome toggle
@@ -713,7 +760,9 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 },
                 onPlay = { id ->
                     val chord = ChordRepository.getChords().firstOrNull { it.id == id }
-                    chord?.let { ChordSynth.playChord(it.frets, 1500) }
+                    chord?.let {
+                        StrumEngine.strum(it.frets, StrumEngine.Direction.DOWN, 0.85f, 1500)
+                    }
                 },
                 onDismiss = { showChordPicker = null }
             )
@@ -831,6 +880,95 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             contentAlignment = Alignment.Center
                         ) {
                             Text("$beats/4", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Pattern picker overlay
+        if (showPatternPicker) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable { showPatternPicker = false },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(0.88f)
+                        .fillMaxHeight(0.7f)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF2A2A2A))
+                        .clickable(enabled = false) {}
+                        .padding(16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("Patrón de rasgueo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    StrumPatternLibrary.ALL.forEach { pat ->
+                        val isSelected = pat.id == selectedPattern.id
+                        val patSymbols = pat.strokes.joinToString(" ") { stroke ->
+                            when (stroke.direction) {
+                                StrumEngine.Direction.DOWN -> if (stroke.accent) "\u2193\u2193" else "\u2193"
+                                StrumEngine.Direction.UP -> if (stroke.ghost) "(\u2191)" else "\u2191"
+                                StrumEngine.Direction.MUTE -> "x"
+                                StrumEngine.Direction.DEAD -> "\u2022"
+                                StrumEngine.Direction.REST -> "\u2014"
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isSelected) Color(0xFFE65100).copy(alpha = 0.4f)
+                                    else Color.Transparent
+                                )
+                                .clickable {
+                                    selectedPattern = pat
+                                    showPatternPicker = false
+                                }
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        pat.nameEs,
+                                        color = if (isSelected) Color(0xFFFFCC80) else Color.White,
+                                        fontSize = 15.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                    Text(
+                                        pat.genre,
+                                        color = Color.White.copy(alpha = 0.4f),
+                                        fontSize = 11.sp
+                                    )
+                                    Text(
+                                        pat.timeSignature,
+                                        color = Color.White.copy(alpha = 0.3f),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                                Text(
+                                    patSymbols,
+                                    color = Color(0xFF80CBC4),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                if (pat.description.isNotBlank()) {
+                                    Text(
+                                        pat.description,
+                                        color = Color.White.copy(alpha = 0.4f),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
