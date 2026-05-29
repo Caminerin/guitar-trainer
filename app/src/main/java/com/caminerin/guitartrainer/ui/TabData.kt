@@ -46,6 +46,7 @@ data class CatalogEntry(
     val tempo: Int,
     val tracks: Int,
     val guitarTracks: Int,
+    val bassTracks: Int,
     val path: String
 )
 
@@ -72,10 +73,16 @@ object TabRepository {
         loadError = null
     }
 
-    fun filter(searchQuery: String = "", artist: String? = null): List<CatalogEntry> {
-        if (searchQuery.isBlank() && artist == null) return catalog
+    fun filter(
+        searchQuery: String = "",
+        artist: String? = null,
+        bpmMin: Int? = null,
+        bpmMax: Int? = null
+    ): List<CatalogEntry> {
         return catalog.filter { entry ->
             (artist == null || entry.artist.equals(artist, ignoreCase = true)) &&
+            (bpmMin == null || entry.tempo >= bpmMin) &&
+            (bpmMax == null || entry.tempo <= bpmMax) &&
             (searchQuery.isBlank() ||
                 entry.song.contains(searchQuery, ignoreCase = true) ||
                 entry.artist.contains(searchQuery, ignoreCase = true))
@@ -103,6 +110,23 @@ object TabRepository {
         }
     }
 
+    private fun normalizeTitle(title: String): String {
+        return title.lowercase()
+            .replace(Regex("\\(.*?\\)"), "")
+            .replace(Regex("\\[.*?]"), "")
+            .replace(Regex("[^a-z0-9]"), "")
+            .trim()
+    }
+
+    private fun deduplicateCatalog(entries: List<CatalogEntry>): List<CatalogEntry> {
+        val grouped = entries.groupBy {
+            "${it.artist.lowercase().trim()}|||${normalizeTitle(it.song)}"
+        }
+        return grouped.values.map { versions ->
+            versions.sortedByDescending { it.guitarTracks + it.bassTracks }.first()
+        }
+    }
+
     suspend fun loadCatalog(context: Context) {
         if (catalogLoaded) return
         loadError = null
@@ -118,20 +142,21 @@ object TabRepository {
                 }
                 val json = JSONObject(jsonStr)
                 val songs = json.getJSONArray("songs")
-                val entries = mutableListOf<CatalogEntry>()
+                val rawEntries = mutableListOf<CatalogEntry>()
                 for (i in 0 until songs.length()) {
                     val s = songs.getJSONObject(i)
-                    entries.add(CatalogEntry(
+                    rawEntries.add(CatalogEntry(
                         artist = s.getString("artist"),
                         song = s.getString("song"),
                         tempo = s.optInt("tempo", 120),
                         tracks = s.optInt("tracks", 1),
                         guitarTracks = s.optInt("guitar_tracks", 1),
+                        bassTracks = s.optInt("bass_tracks", 0),
                         path = s.getString("path")
                     ))
                 }
-                catalog = entries
-                allArtists = entries.map { it.artist }.distinct().sorted()
+                catalog = deduplicateCatalog(rawEntries).sortedBy { it.artist.lowercase() }
+                allArtists = catalog.map { it.artist }.distinct().sorted()
                 catalogLoaded = true
             } catch (e: Throwable) {
                 android.util.Log.e("TabData", "Error loading catalog", e)
