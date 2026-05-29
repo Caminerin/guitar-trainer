@@ -48,7 +48,9 @@ data class CatalogEntry(
     val guitarTracks: Int,
     val bassTracks: Int,
     val path: String
-)
+) {
+    val otherTracks: Int get() = (tracks - guitarTracks - bassTracks).coerceAtLeast(0)
+}
 
 object TabRepository {
     private const val REPO_BASE = "https://raw.githubusercontent.com/Caminerin/guitar-tabs-library/main/"

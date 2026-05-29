@@ -71,6 +71,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+// Sort state: column name -> SortDirection
+enum class SortDirection { NONE, ASC, DESC }
+data class SortKey(val column: String, val direction: SortDirection)
+
 // ===================== CATALOG SCREEN =====================
 @Composable
 fun TabPracticeScreen(
@@ -86,6 +90,9 @@ fun TabPracticeScreen(
     var showFilterOverlay by remember { mutableStateOf(false) }
     var selectedEntry by remember { mutableStateOf<CatalogEntry?>(null) }
     var bpmRange by remember { mutableStateOf(30f..300f) }
+    var sortKeys by remember { mutableStateOf(listOf<SortKey>()) }
+    var minGuitars by remember { mutableIntStateOf(0) }
+    var minBass by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) {
         try {
@@ -110,12 +117,48 @@ fun TabPracticeScreen(
             artists = TabRepository.getArtists(),
             selectedArtist = selectedArtist,
             bpmRange = bpmRange,
+            minGuitars = minGuitars,
+            minBass = minBass,
             onArtistSelected = { selectedArtist = it },
             onBpmRangeChanged = { bpmRange = it },
-            onClear = { selectedArtist = null; bpmRange = 30f..300f },
+            onMinGuitarsChanged = { minGuitars = it },
+            onMinBassChanged = { minBass = it },
+            onClear = { selectedArtist = null; bpmRange = 30f..300f; minGuitars = 0; minBass = 0 },
             onDismiss = { showFilterOverlay = false }
         )
         return
+    }
+
+    fun toggleSort(column: String) {
+        val existing = sortKeys.find { it.column == column }
+        sortKeys = if (existing == null) {
+            sortKeys + SortKey(column, SortDirection.ASC)
+        } else if (existing.direction == SortDirection.ASC) {
+            sortKeys.map { if (it.column == column) it.copy(direction = SortDirection.DESC) else it }
+        } else {
+            sortKeys.filter { it.column != column }
+        }
+    }
+
+    fun applySorting(entries: List<CatalogEntry>): List<CatalogEntry> {
+        if (sortKeys.isEmpty()) return entries
+        return entries.sortedWith(Comparator { a, b ->
+            for (key in sortKeys) {
+                val cmp = when (key.column) {
+                    "song" -> a.song.compareTo(b.song, ignoreCase = true)
+                    "artist" -> a.artist.compareTo(b.artist, ignoreCase = true)
+                    "gtr" -> a.guitarTracks.compareTo(b.guitarTracks)
+                    "bass" -> a.bassTracks.compareTo(b.bassTracks)
+                    "bpm" -> a.tempo.compareTo(b.tempo)
+                    "tracks" -> a.tracks.compareTo(b.tracks)
+                    else -> 0
+                }
+                if (cmp != 0) {
+                    return@Comparator if (key.direction == SortDirection.DESC) -cmp else cmp
+                }
+            }
+            0
+        })
     }
 
     Column(
@@ -256,21 +299,114 @@ fun TabPracticeScreen(
                 searchQuery, selectedArtist,
                 if (bpmActive) bpmRange.start.toInt() else null,
                 if (bpmActive) bpmRange.endInclusive.toInt() else null
-            )
+            ).filter { entry ->
+                (minGuitars == 0 || entry.guitarTracks >= minGuitars) &&
+                (minBass == 0 || entry.bassTracks >= minBass)
+            }
+            val sortedEntries = applySorting(filteredEntries)
             val listState = rememberLazyListState()
+
+            // Column headers
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(AppColors.surface.copy(alpha = 0.7f))
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SortableHeader("Canción", "song", sortKeys, Modifier.weight(1.4f)) { toggleSort("song") }
+                SortableHeader("Artista", "artist", sortKeys, Modifier.weight(1f)) { toggleSort("artist") }
+                SortableHeader("🎸", "gtr", sortKeys, Modifier.width(36.dp)) { toggleSort("gtr") }
+                SortableHeader("🎸B", "bass", sortKeys, Modifier.width(36.dp)) { toggleSort("bass") }
+                SortableHeader("BPM", "bpm", sortKeys, Modifier.width(44.dp)) { toggleSort("bpm") }
+            }
 
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(filteredEntries) { entry ->
-                    SongListItem(
-                        entry = entry,
-                        onClick = { selectedEntry = entry }
-                    )
+                items(sortedEntries) { entry ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedEntry = entry }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            entry.song,
+                            color = AppColors.text,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1.4f)
+                        )
+                        Text(
+                            entry.artist,
+                            color = AppColors.textSecondary,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            "${entry.guitarTracks}",
+                            color = Color(0xFF4CAF50),
+                            fontSize = 11.sp,
+                            modifier = Modifier.width(36.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Text(
+                            "${entry.bassTracks}",
+                            color = Color(0xFFFF9800),
+                            fontSize = 11.sp,
+                            modifier = Modifier.width(36.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Text(
+                            "${entry.tempo}",
+                            color = AppColors.textSecondary,
+                            fontSize = 11.sp,
+                            modifier = Modifier.width(44.dp),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SortableHeader(
+    label: String,
+    column: String,
+    sortKeys: List<SortKey>,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val sortKey = sortKeys.find { it.column == column }
+    val sortIndex = sortKeys.indexOfFirst { it.column == column }
+    val arrow = when (sortKey?.direction) {
+        SortDirection.ASC -> " ▲"
+        SortDirection.DESC -> " ▼"
+        else -> ""
+    }
+    val indexLabel = if (sortIndex >= 0 && sortKeys.size > 1) "${sortIndex + 1}" else ""
+
+    Box(
+        modifier = modifier
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(
+            "$label$arrow$indexLabel",
+            color = if (sortKey != null) AppColors.tertiary else AppColors.textSecondary,
+            fontSize = 10.sp,
+            fontWeight = if (sortKey != null) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1
+        )
     }
 }
 
@@ -287,70 +423,25 @@ private fun FilterChip(text: String, onRemove: () -> Unit) {
     }
 }
 
-@Composable
-private fun SongListItem(entry: CatalogEntry, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                entry.song,
-                color = AppColors.text,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                entry.artist,
-                color = AppColors.textSecondary,
-                fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Column(
-            horizontalAlignment = Alignment.End,
-            modifier = Modifier.padding(start = 8.dp)
-        ) {
-            Text("${entry.tempo} BPM", color = AppColors.textSecondary, fontSize = 10.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (entry.guitarTracks > 0) {
-                    Text(
-                        "${entry.guitarTracks} gtr",
-                        color = Color(0xFF4CAF50),
-                        fontSize = 10.sp
-                    )
-                }
-                if (entry.bassTracks > 0) {
-                    Text(
-                        "${entry.bassTracks} bass",
-                        color = Color(0xFFFF9800),
-                        fontSize = 10.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
 // ===================== FILTER OVERLAY =====================
 @Composable
 private fun FilterOverlay(
     artists: List<String>,
     selectedArtist: String?,
     bpmRange: ClosedFloatingPointRange<Float>,
+    minGuitars: Int,
+    minBass: Int,
     onArtistSelected: (String?) -> Unit,
     onBpmRangeChanged: (ClosedFloatingPointRange<Float>) -> Unit,
+    onMinGuitarsChanged: (Int) -> Unit,
+    onMinBassChanged: (Int) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit
 ) {
     var artistSearch by remember { mutableStateOf("") }
     var localBpmRange by remember { mutableStateOf(bpmRange) }
+    var localMinGuitars by remember { mutableIntStateOf(minGuitars) }
+    var localMinBass by remember { mutableIntStateOf(minBass) }
 
     Column(
         modifier = Modifier
@@ -384,7 +475,7 @@ private fun FilterOverlay(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .background(AppColors.tertiary)
-                    .clickable { onBpmRangeChanged(localBpmRange); onDismiss() }
+                    .clickable { onBpmRangeChanged(localBpmRange); onMinGuitarsChanged(localMinGuitars); onMinBassChanged(localMinBass); onDismiss() }
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text("Aplicar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -412,6 +503,56 @@ private fun FilterOverlay(
                 valueRange = 30f..300f,
                 modifier = Modifier.fillMaxWidth()
             )
+            Spacer(Modifier.height(20.dp))
+
+            // Min guitars
+            Text("Mínimo guitarras", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                listOf(0, 1, 2, 3, 4).forEach { n ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (localMinGuitars == n) Color(0xFF4CAF50) else AppColors.surface)
+                            .clickable { localMinGuitars = n }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            if (n == 0) "Todas" else "$n+",
+                            color = if (localMinGuitars == n) Color.White else AppColors.text,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+
+            // Min bass
+            Text("Mínimo bajos", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                listOf(0, 1, 2).forEach { n ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (localMinBass == n) Color(0xFFFF9800) else AppColors.surface)
+                            .clickable { localMinBass = n }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            if (n == 0) "Todas" else "$n+",
+                            color = if (localMinBass == n) Color.White else AppColors.text,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.height(20.dp))
 
             // Artist filter
@@ -528,35 +669,57 @@ fun TabPlayerScreen(
     fun stopPlayback() {
         playJob?.cancel()
         isPlaying = false
+        RiffSynth.stop()
     }
 
-    fun buildMeasureNotes(track: TabTrack, measureIdx: Int, baseTempo: Int): Pair<List<RiffSynth.NoteEvent>, Long> {
+    fun measureDurationMs(track: TabTrack, measureIdx: Int, baseTempo: Int): Long {
         val beatDurationMs = 60_000.0 / baseTempo
-        val measure = track.measures[measureIdx]
-        val events = mutableListOf<RiffSynth.NoteEvent>()
-        var timeMs = 0L
+        var totalMs = 0L
+        for (beat in track.measures[measureIdx]) {
+            val dur = beatDurationMs * (4.0 / beat.duration)
+            totalMs += if (beat.isDotted) (dur * 1.5).toLong() else dur.toLong()
+        }
+        return totalMs
+    }
 
-        for (beat in measure) {
-            val durationBeat = beatDurationMs * (4.0 / beat.duration)
-            val dur = if (beat.isDotted) (durationBeat * 1.5).toLong() else durationBeat.toLong()
+    fun buildContinuousSequence(
+        track: TabTrack,
+        startMeasure: Int,
+        endMeasure: Int,
+        baseTempo: Int
+    ): Triple<List<RiffSynth.NoteEvent>, List<Long>, Long> {
+        val beatDurationMs = 60_000.0 / baseTempo
+        val allEvents = mutableListOf<RiffSynth.NoteEvent>()
+        val measureOffsets = mutableListOf<Long>()
+        var globalTimeMs = 0L
 
-            if (!beat.isRest) {
-                for (note in beat.notes) {
-                    val stringIdx = note.string - 1
-                    if (stringIdx in 0..5 && note.fret >= 0) {
-                        events.add(RiffSynth.NoteEvent(
-                            string = stringIdx,
-                            fret = note.fret,
-                            startMs = timeMs,
-                            durationMs = dur.toInt().coerceAtLeast(50),
-                            technique = note.effects.firstOrNull() ?: ""
-                        ))
+        for (mi in startMeasure until endMeasure) {
+            measureOffsets.add(globalTimeMs)
+            val measure = track.measures[mi]
+            var localTimeMs = 0L
+
+            for (beat in measure) {
+                val durationBeat = beatDurationMs * (4.0 / beat.duration)
+                val dur = if (beat.isDotted) (durationBeat * 1.5).toLong() else durationBeat.toLong()
+
+                if (!beat.isRest) {
+                    for (note in beat.notes) {
+                        if (note.string in 1..6 && note.fret >= 0) {
+                            allEvents.add(RiffSynth.NoteEvent(
+                                string = note.string,
+                                fret = note.fret,
+                                startMs = globalTimeMs + localTimeMs,
+                                durationMs = dur.toInt().coerceAtLeast(50),
+                                technique = note.effects.firstOrNull() ?: ""
+                            ))
+                        }
                     }
                 }
+                localTimeMs += dur
             }
-            timeMs += dur
+            globalTimeMs += localTimeMs
         }
-        return events to timeMs
+        return Triple(allEvents, measureOffsets, globalTimeMs)
     }
 
     fun startPlayback(fromMeasure: Int? = null) {
@@ -571,39 +734,44 @@ fun TabPlayerScreen(
         playJob = scope.launch {
             withContext(Dispatchers.Default) {
                 RiffSynth.init(context)
-                val baseTempo = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300)
 
-                val startMeasure = if (fromMeasure != null) fromMeasure
-                    else if (loopEnabled && loopStart >= 0) loopStart
-                    else currentMeasure
-                val endMeasure = if (loopEnabled && loopEnd >= 0) (loopEnd + 1).coerceAtMost(track.measures.size) else track.measures.size
+                do {
+                    val baseTempo = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300)
+                    val startMeasure = if (fromMeasure != null && !loopEnabled) fromMeasure
+                        else if (loopEnabled && loopStart >= 0) loopStart
+                        else currentMeasure
+                    val endMeasure = if (loopEnabled && loopEnd >= 0) (loopEnd + 1).coerceAtMost(track.measures.size)
+                        else track.measures.size
 
-                var mi = startMeasure
-                while (isActive && isPlaying) {
-                    if (mi >= endMeasure) {
-                        if (loopEnabled) mi = if (loopStart >= 0) loopStart else startMeasure
-                        else break
-                    }
+                    if (startMeasure >= endMeasure) break
 
-                    currentMeasure = mi
-                    val (notes, _) = buildMeasureNotes(track, mi, baseTempo)
+                    val (notes, measureOffsets, totalDurationMs) = buildContinuousSequence(
+                        track, startMeasure, endMeasure, baseTempo
+                    )
 
                     if (notes.isNotEmpty()) {
                         RiffSynth.playSequence(notes, "crunch")
                     }
 
-                    val currentMeasureBeats = track.measures[mi]
+                    val playStartTime = System.currentTimeMillis()
                     val beatDurationMs = 60_000.0 / baseTempo
-                    for ((bi, beat) in currentMeasureBeats.withIndex()) {
+
+                    for (mi in startMeasure until endMeasure) {
                         if (!isActive || !isPlaying) break
-                        currentBeatInMeasure = bi
-                        val dur = beatDurationMs * (4.0 / beat.duration)
-                        val waitMs = if (beat.isDotted) (dur * 1.5).toLong() else dur.toLong()
-                        delay(waitMs.coerceAtLeast(30))
+                        currentMeasure = mi
+
+                        val measureBeats = track.measures[mi]
+                        for ((bi, beat) in measureBeats.withIndex()) {
+                            if (!isActive || !isPlaying) break
+                            currentBeatInMeasure = bi
+                            val dur = beatDurationMs * (4.0 / beat.duration)
+                            val waitMs = if (beat.isDotted) (dur * 1.5).toLong() else dur.toLong()
+                            delay(waitMs.coerceAtLeast(20))
+                        }
                     }
 
-                    mi++
-                }
+                    if (!isActive || !isPlaying) break
+                } while (loopEnabled)
 
                 withContext(Dispatchers.Main) {
                     isPlaying = false
@@ -736,108 +904,106 @@ fun TabPlayerScreen(
                 )
             }
 
-            // Compact controls
-            Column(
+            // Single-line controls: BPM slider left, 4 buttons right
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(AppColors.surface)
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // BPM + presets in compact row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "${(entry.tempo * bpmFactor).toInt()} BPM",
-                        color = AppColors.text,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.width(65.dp)
-                    )
-                    Slider(
-                        value = bpmFactor,
-                        onValueChange = { bpmFactor = it },
-                        valueRange = 0.25f..1.5f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = AppColors.tertiary,
-                            activeTrackColor = AppColors.tertiary
-                        ),
-                        modifier = Modifier.weight(1f)
-                    )
-                    listOf("50%" to 0.5f, "75%" to 0.75f, "100%" to 1f).forEach { (label, factor) ->
-                        Box(
-                            modifier = Modifier
-                                .padding(start = 2.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(
-                                    if (bpmFactor == factor) AppColors.tertiary
-                                    else Color.White.copy(alpha = 0.08f)
-                                )
-                                .clickable { bpmFactor = factor }
-                                .padding(horizontal = 6.dp, vertical = 3.dp)
-                        ) {
-                            Text(label, fontSize = 10.sp, color = AppColors.text)
-                        }
-                    }
-                }
+                // BPM label + slider (left half)
+                Text(
+                    "${(entry.tempo * bpmFactor).toInt()}",
+                    color = AppColors.text,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.width(30.dp)
+                )
+                Slider(
+                    value = bpmFactor,
+                    onValueChange = { bpmFactor = it },
+                    valueRange = 0.25f..1.5f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = AppColors.tertiary,
+                        activeTrackColor = AppColors.tertiary
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
 
-                // Playback controls
+                // 4 control buttons (right, equidistant)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.width(200.dp)
                 ) {
+                    // Measure counter
                     Text(
-                        "Compás ${currentMeasure + 1}/${track.measures.size}",
+                        "${currentMeasure + 1}/${track.measures.size}",
                         color = AppColors.textSecondary,
-                        fontSize = 11.sp
+                        fontSize = 10.sp,
+                        modifier = Modifier
+                            .clickable {
+                                stopPlayback()
+                                currentMeasure = 0
+                                currentBeatInMeasure = 0
+                            }
                     )
 
-                    IconButton(onClick = {
-                        loopEnabled = !loopEnabled
-                        if (!loopEnabled) { loopStart = -1; loopEnd = -1 }
-                    }) {
-                        Icon(
-                            Icons.Default.Repeat, "Loop",
-                            tint = if (loopEnabled) AppColors.tertiary else AppColors.textSecondary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    if (loopEnabled && loopStart >= 0) {
-                        Text(
-                            "Loop: ${loopStart + 1}-${if (loopEnd >= 0) "${loopEnd + 1}" else "?"}",
-                            color = AppColors.tertiary,
-                            fontSize = 10.sp
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
-                            if (isPlaying) stopPlayback() else startPlayback()
-                        },
+                    // Loop
+                    Icon(
+                        Icons.Default.Repeat, "Loop",
+                        tint = if (loopEnabled) AppColors.tertiary else AppColors.textSecondary,
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(24.dp)
+                            .clickable {
+                                loopEnabled = !loopEnabled
+                                if (!loopEnabled) { loopStart = -1; loopEnd = -1 }
+                            }
+                    )
+
+                    // Play/Stop
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(if (isPlaying) AppColors.error else AppColors.tertiary)
+                            .clickable {
+                                if (isPlaying) stopPlayback() else startPlayback()
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
                             "Play",
                             tint = Color.White,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
-                    IconButton(onClick = {
-                        stopPlayback()
-                        currentMeasure = if (loopEnabled && loopStart >= 0) loopStart else 0
-                        currentBeatInMeasure = 0
-                    }) {
-                        Icon(Icons.Default.Refresh, "Reiniciar", tint = AppColors.textSecondary, modifier = Modifier.size(22.dp))
-                    }
+                    // Reset
+                    Icon(
+                        Icons.Default.Refresh, "Reiniciar",
+                        tint = AppColors.textSecondary,
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable {
+                                stopPlayback()
+                                currentMeasure = if (loopEnabled && loopStart >= 0) loopStart else 0
+                                currentBeatInMeasure = 0
+                            }
+                    )
                 }
+            }
+
+            // Loop info (only when active, very compact)
+            if (loopEnabled && loopStart >= 0) {
+                Text(
+                    "Loop: ${loopStart + 1}-${if (loopEnd >= 0) "${loopEnd + 1}" else "?"}",
+                    color = AppColors.tertiary,
+                    fontSize = 9.sp,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
             }
         }
     }
