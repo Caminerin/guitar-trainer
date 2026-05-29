@@ -799,6 +799,9 @@ private fun ProgressionPlayerScreen(
                 .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Reserve space for Ver/Practicar toggle at left
+            Spacer(modifier = Modifier.width(155.dp))
+
             // All controls centered and equidistant
             Row(
                 modifier = Modifier.weight(1f),
