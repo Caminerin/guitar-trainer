@@ -65,6 +65,13 @@ object TabRepository {
     fun getCatalog() = catalog
     fun getArtists() = allArtists
 
+    fun reset() {
+        catalog = emptyList()
+        allArtists = emptyList()
+        catalogLoaded = false
+        loadError = null
+    }
+
     fun filter(searchQuery: String = "", artist: String? = null): List<CatalogEntry> {
         if (searchQuery.isBlank() && artist == null) return catalog
         return catalog.filter { entry ->
