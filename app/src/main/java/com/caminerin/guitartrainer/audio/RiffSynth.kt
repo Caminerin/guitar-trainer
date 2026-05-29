@@ -107,8 +107,9 @@ object RiffSynth {
         val isPalmMute = technique == "palm_mute"
         val isTremolo = technique == "tremolo"
         val isBend = technique == "bend"
-        val isLegato = technique == "hammer_on" || technique == "pull_off"
+        val isLegato = technique == "hammer_on" || technique == "pull_off" || technique == "pull"
         val isStaccato = technique == "staccato"
+        val isSustain = technique == "sustain"
 
         val effectiveDuration = when {
             isStaccato -> (duration * 0.4).toInt().coerceAtLeast(SAMPLE_RATE / 20)
@@ -177,6 +178,7 @@ object RiffSynth {
         val decay = when {
             isPalmMute -> baseDecay * 0.9965f
             isStaccato -> baseDecay * 0.998f
+            isSustain -> baseDecay * 1.0003f // slower decay for sustained notes
             else -> baseDecay
         }
 
