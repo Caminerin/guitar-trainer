@@ -231,15 +231,19 @@ object RiffSynth {
                 }
             } else baseRate
 
-            // Read sample with linear interpolation
+            // Read sample with linear interpolation; loop sustain tail for long notes
             val idx = sampleIdx.toInt()
-            val sample = if (idx < sampleData.size - 1) {
-                val frac = (sampleIdx - idx).toFloat()
-                sampleData[idx] * (1f - frac) + sampleData[idx + 1] * frac
-            } else if (idx < sampleData.size) {
-                sampleData[idx]
+            val loopStart = (sampleData.size * 2 / 3).coerceAtLeast(1)
+            val loopLen = sampleData.size - loopStart
+            val effectiveIdx = if (idx < sampleData.size) idx
+                else loopStart + ((idx - sampleData.size) % loopLen)
+            val sample = if (effectiveIdx < sampleData.size - 1) {
+                val frac = (sampleIdx - sampleIdx.toInt()).toFloat()
+                sampleData[effectiveIdx] * (1f - frac) + sampleData[effectiveIdx + 1] * frac
+            } else if (effectiveIdx < sampleData.size) {
+                sampleData[effectiveIdx]
             } else {
-                0f // past end of sample
+                0f
             }
 
             sampleIdx += currentRate
