@@ -229,9 +229,14 @@ fun TabPracticeScreen(
                 singleLine = true,
                 modifier = Modifier.weight(1f)
             )
-            IconButton(onClick = { showFilterOverlay = true }) {
-                Icon(Icons.Default.FilterList, "Filtros", tint = AppColors.tertiary)
-            }
+            Icon(
+                Icons.Default.FilterList, "Filtros",
+                tint = AppColors.tertiary,
+                modifier = Modifier
+                    .padding(horizontal = 12.dp)
+                    .size(24.dp)
+                    .clickable { showFilterOverlay = true }
+            )
         }
 
         // Active filter chips
@@ -316,8 +321,8 @@ fun TabPracticeScreen(
             ) {
                 SortableHeader("Canción", "song", sortKeys, Modifier.weight(1.4f)) { toggleSort("song") }
                 SortableHeader("Artista", "artist", sortKeys, Modifier.weight(1f)) { toggleSort("artist") }
-                SortableHeader("🎸", "gtr", sortKeys, Modifier.width(36.dp)) { toggleSort("gtr") }
-                SortableHeader("🎸B", "bass", sortKeys, Modifier.width(36.dp)) { toggleSort("bass") }
+                SortableHeader("Gtr", "gtr", sortKeys, Modifier.width(36.dp)) { toggleSort("gtr") }
+                SortableHeader("Bajo", "bass", sortKeys, Modifier.width(36.dp)) { toggleSort("bass") }
                 SortableHeader("BPM", "bpm", sortKeys, Modifier.width(44.dp)) { toggleSort("bpm") }
             }
 
@@ -336,7 +341,8 @@ fun TabPracticeScreen(
                         Text(
                             entry.song,
                             color = AppColors.text,
-                            fontSize = 12.sp,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1.4f)
@@ -344,7 +350,7 @@ fun TabPracticeScreen(
                         Text(
                             entry.artist,
                             color = AppColors.textSecondary,
-                            fontSize = 11.sp,
+                            fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -352,21 +358,21 @@ fun TabPracticeScreen(
                         Text(
                             "${entry.guitarTracks}",
                             color = Color(0xFF4CAF50),
-                            fontSize = 11.sp,
+                            fontSize = 13.sp,
                             modifier = Modifier.width(36.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
                             "${entry.bassTracks}",
                             color = Color(0xFFFF9800),
-                            fontSize = 11.sp,
+                            fontSize = 13.sp,
                             modifier = Modifier.width(36.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
                             "${entry.tempo}",
                             color = AppColors.textSecondary,
-                            fontSize = 11.sp,
+                            fontSize = 13.sp,
                             modifier = Modifier.width(44.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -403,7 +409,7 @@ private fun SortableHeader(
         Text(
             "$label$arrow$indexLabel",
             color = if (sortKey != null) AppColors.tertiary else AppColors.textSecondary,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = if (sortKey != null) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1
         )
