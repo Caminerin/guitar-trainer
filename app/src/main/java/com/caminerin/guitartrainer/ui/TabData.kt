@@ -157,6 +157,16 @@ object TabRepository {
                         path = s.getString("path")
                     ))
                 }
+                // Test entry: JSON generated directly from user's .gp3 file
+                rawEntries.add(0, CatalogEntry(
+                    artist = "Metallica",
+                    song = "Nothing Else Matters (prueba JSON)",
+                    tempo = 74,
+                    tracks = 10,
+                    guitarTracks = 6,
+                    bassTracks = 1,
+                    path = "test/Metallica/Nothing Else Matters (prueba JSON).json"
+                ))
                 catalog = deduplicateCatalog(rawEntries).sortedBy { it.artist.lowercase() }
                 allArtists = catalog.map { it.artist }.distinct().sorted()
                 catalogLoaded = true
