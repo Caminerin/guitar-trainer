@@ -15,6 +15,9 @@ fun TabPracticeScreen(
     onBack: () -> Unit,
     showBackButton: Boolean = true
 ) {
+    val loaded = TabRepository.isLoaded()
+    val count = TabRepository.getCatalog().size
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -22,9 +25,9 @@ fun TabPracticeScreen(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            "Tabs - Test OK",
+            "Tabs - loaded=$loaded count=$count",
             color = Color.White,
-            fontSize = 24.sp
+            fontSize = 20.sp
         )
     }
 }
