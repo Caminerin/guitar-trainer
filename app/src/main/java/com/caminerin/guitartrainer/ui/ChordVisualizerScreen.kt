@@ -176,12 +176,6 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            if (showBackButton) {
-                IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(22.dp))
-                }
-            }
-
             // Root selector
             Box(
                 modifier = Modifier
@@ -246,19 +240,6 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     .padding(horizontal = 10.dp, vertical = 8.dp)
             ) {
                 Text("Colores", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-
-            // Go to practice
-            if (onGoToPractice != null) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF4CAF50).copy(alpha = 0.3f))
-                        .clickable { onGoToPractice() }
-                        .padding(horizontal = 10.dp, vertical = 8.dp)
-                ) {
-                    Text("Practicar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
             }
 
             Spacer(modifier = Modifier.weight(1f))

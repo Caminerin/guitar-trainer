@@ -340,10 +340,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
-                }
-
                 // Key selector (Raíz) — always visible
                 Box(
                     modifier = Modifier
@@ -425,19 +421,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                         fontSize = 13.sp, fontWeight = FontWeight.Bold,
                         maxLines = 1
                     )
-                }
-
-                // Go to visualizer
-                if (onGoToVisualizer != null) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF5C6BC0).copy(alpha = 0.3f))
-                            .clickable { onGoToVisualizer() }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text("Visualizar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
                 }
 
                 // Play / Stop button
