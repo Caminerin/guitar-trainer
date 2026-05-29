@@ -681,21 +681,20 @@ private fun ProgressionPlayerScreen(
                     )
                 }
 
-                // Beat indicator dots
-                if (isPlaying && beatInMeasure >= 0) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for (beat in 0 until 4) {
-                            Box(
-                                modifier = Modifier
-                                    .size(10.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (beat <= beatInMeasure) ACCENT
-                                        else Color.White.copy(alpha = 0.15f)
-                                    )
-                            )
-                        }
+                // Beat indicator dots (always visible)
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    for (beat in 0 until 4) {
+                        val active = isPlaying && beatInMeasure >= 0 && beat <= beatInMeasure
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (active) ACCENT
+                                    else Color.White.copy(alpha = 0.15f)
+                                )
+                        )
                     }
                 }
             }
@@ -727,14 +726,14 @@ private fun ProgressionPlayerScreen(
 
                         Box(
                             modifier = Modifier
-                                .width(72.dp)
-                                .height(56.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .width(90.dp)
+                                .height(72.dp)
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(bgColor)
                                 .border(
                                     width = if (isActive) 2.dp else 1.dp,
                                     color = borderColor,
-                                    shape = RoundedCornerShape(8.dp)
+                                    shape = RoundedCornerShape(10.dp)
                                 )
                                 .clickable {
                                     // Jump to this chord
@@ -745,12 +744,12 @@ private fun ProgressionPlayerScreen(
                                 Text(
                                     "${idx + 1}",
                                     color = Color.White.copy(alpha = 0.3f),
-                                    fontSize = 9.sp
+                                    fontSize = 10.sp
                                 )
                                 Text(
                                     name,
                                     color = if (isActive) ACCENT else Color.White,
-                                    fontSize = 16.sp,
+                                    fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
                                     maxLines = 1
                                 )
@@ -766,99 +765,108 @@ private fun ProgressionPlayerScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(TOP_BAR)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Reserve space for Ver/Practicar toggle overlay from MainScreen
-            Spacer(modifier = Modifier.width(150.dp))
+            // Reserve space for Ver/Practicar toggle overlay
+            Spacer(modifier = Modifier.width(155.dp))
 
-            // Loop toggle
-            IconButton(
-                onClick = { loopEnabled = !loopEnabled },
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (loopEnabled) ACCENT.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f)
+            // All controls centered and equidistant in remaining space
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                // Loop toggle
+                IconButton(
+                    onClick = { loopEnabled = !loopEnabled },
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (loopEnabled) ACCENT.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f)
+                        )
+                ) {
+                    Icon(
+                        Icons.Default.Repeat,
+                        contentDescription = "Bucle",
+                        tint = if (loopEnabled) ACCENT else Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(24.dp)
                     )
-            ) {
-                Icon(
-                    Icons.Default.Repeat,
-                    contentDescription = "Bucle",
-                    tint = if (loopEnabled) ACCENT else Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+                }
 
-            // Metronome speaker toggle
-            IconButton(
-                onClick = { metronomeEnabled = !metronomeEnabled },
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (metronomeEnabled) Color(0xFF43A047).copy(alpha = 0.3f)
-                        else Color.White.copy(alpha = 0.08f)
+                // Metronome speaker toggle
+                IconButton(
+                    onClick = { metronomeEnabled = !metronomeEnabled },
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (metronomeEnabled) Color(0xFF43A047).copy(alpha = 0.3f)
+                            else Color.White.copy(alpha = 0.08f)
+                        )
+                ) {
+                    Icon(
+                        if (metronomeEnabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
+                        contentDescription = "Metrónomo",
+                        tint = if (metronomeEnabled) Color(0xFF43A047) else Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(24.dp)
                     )
-            ) {
-                Icon(
-                    if (metronomeEnabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                    contentDescription = "Metrónomo",
-                    tint = if (metronomeEnabled) Color(0xFF43A047) else Color.White.copy(alpha = 0.5f),
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+                }
 
-            Spacer(modifier = Modifier.weight(1f))
+                // BPM controls
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .clickable { bpm = (bpm - 5).coerceAtLeast(30) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text("-5", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            "$bpm",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            "BPM",
+                            color = Color.White.copy(alpha = 0.4f),
+                            fontSize = 10.sp
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color.White.copy(alpha = 0.08f))
+                            .clickable { bpm = (bpm + 5).coerceAtMost(240) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text("+5", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
 
-            // BPM controls
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .clickable { bpm = (bpm - 5).coerceAtLeast(30) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text("-5", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
-            Text(
-                "$bpm",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                "BPM",
-                color = Color.White.copy(alpha = 0.4f),
-                fontSize = 11.sp
-            )
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .clickable { bpm = (bpm + 5).coerceAtMost(240) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text("+5", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Play/Stop
-            IconButton(
-                onClick = { isPlaying = !isPlaying },
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(if (isPlaying) Color(0xFFE53935) else Color(0xFF43A047))
-            ) {
-                Icon(
-                    if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Parar" else "Reproducir",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+                // Play/Stop
+                IconButton(
+                    onClick = { isPlaying = !isPlaying },
+                    modifier = Modifier
+                        .size(52.dp)
+                        .clip(CircleShape)
+                        .background(if (isPlaying) Color(0xFFE53935) else Color(0xFF43A047))
+                ) {
+                    Icon(
+                        if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                        contentDescription = if (isPlaying) "Parar" else "Reproducir",
+                        tint = Color.White,
+                        modifier = Modifier.size(30.dp)
+                    )
+                }
             }
         }
     }
