@@ -126,9 +126,9 @@ object TabRepository {
                 catalog = entries
                 allArtists = entries.map { it.artist }.distinct().sorted()
                 catalogLoaded = true
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 android.util.Log.e("TabData", "Error loading catalog", e)
-                loadError = "Error cargando catálogo: ${e.message}"
+                loadError = "Error cargando catálogo: ${e.javaClass.simpleName}: ${e.message}"
             }
         }
     }
