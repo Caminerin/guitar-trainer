@@ -361,8 +361,23 @@ fun ChordPracticeScreen(
 // ═══════════════════════════════════════════════════════
 @Composable
 private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit) {
-    val grouped = remember {
-        ALL_PROGRESSIONS.groupBy { it.category }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    var degreeSearch by remember { mutableStateOf("") }
+
+    val allCategories = remember {
+        ALL_PROGRESSIONS.map { it.category }.distinct()
+    }
+
+    val filtered = remember(selectedCategory, degreeSearch) {
+        ALL_PROGRESSIONS
+            .filter { prog ->
+                (selectedCategory == null || prog.category == selectedCategory) &&
+                (degreeSearch.isBlank() || prog.degreeLabel.contains(degreeSearch, ignoreCase = true))
+            }
+    }
+
+    val grouped = remember(filtered) {
+        filtered.groupBy { it.category }
             .toList()
             .sortedBy { (cat, _) ->
                 ALL_PROGRESSIONS.indexOfFirst { it.category == cat }
@@ -384,6 +399,105 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit) {
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
+        }
+
+        // Filter: category chips
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1A1A2A))
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // "Todos" chip
+            val allSelected = selectedCategory == null
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (allSelected) ACCENT else Color.White.copy(alpha = 0.08f))
+                    .clickable { selectedCategory = null }
+                    .padding(horizontal = 12.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    "Todos",
+                    color = if (allSelected) Color.Black else Color.White.copy(alpha = 0.6f),
+                    fontSize = 12.sp,
+                    fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal
+                )
+            }
+            // Category chips
+            for (cat in allCategories) {
+                val catColor = ALL_PROGRESSIONS.first { it.category == cat }.categoryColor
+                val isSelected = selectedCategory == cat
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
+                        .clickable { selectedCategory = if (isSelected) null else cat }
+                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                ) {
+                    Text(
+                        cat,
+                        color = if (isSelected) Color.White else catColor,
+                        fontSize = 12.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+
+        // Filter: degree search
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1A1A2A))
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "🔍",
+                fontSize = 14.sp,
+                modifier = Modifier.padding(end = 6.dp)
+            )
+            androidx.compose.foundation.text.BasicTextField(
+                value = degreeSearch,
+                onValueChange = { degreeSearch = it },
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = Color.White,
+                    fontSize = 13.sp
+                ),
+                singleLine = true,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                decorationBox = { innerTextField ->
+                    Box {
+                        if (degreeSearch.isEmpty()) {
+                            Text(
+                                "Buscar grados (ej: I, IV, vi...)",
+                                color = Color.White.copy(alpha = 0.3f),
+                                fontSize = 13.sp
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+            if (degreeSearch.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.1f))
+                        .clickable { degreeSearch = "" }
+                        .padding(4.dp)
+                ) {
+                    Text("✕", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
+                }
+            }
         }
 
         // Table header
