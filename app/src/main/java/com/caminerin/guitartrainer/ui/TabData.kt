@@ -3,10 +3,11 @@ package com.caminerin.guitartrainer.ui
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
 
 data class TabBeat(
     val duration: Int,
@@ -36,8 +37,6 @@ data class TabSong(
     val tempo: Int,
     val tracks: List<TabTrack>
 ) {
-    fun guitarTracks(): List<TabTrack> = tracks.filter { it.type == "guitar" }
-    fun bassTracks(): List<TabTrack> = tracks.filter { it.type == "bass" }
     fun playableTracks(): List<TabTrack> = tracks.filter { it.type in listOf("guitar", "bass") }
 }
 
@@ -53,16 +52,21 @@ data class CatalogEntry(
 object TabRepository {
     private const val REPO_BASE = "https://raw.githubusercontent.com/Caminerin/guitar-tabs-library/main/"
     private const val CATALOG_URL = "${REPO_BASE}catalog.json"
+    private const val CONNECT_TIMEOUT = 15_000
+    private const val READ_TIMEOUT = 30_000
 
     @Volatile private var catalog: List<CatalogEntry> = emptyList()
     @Volatile private var allArtists: List<String> = emptyList()
     @Volatile private var catalogLoaded = false
+    @Volatile var loadError: String? = null
+        private set
 
     fun isLoaded() = catalogLoaded
     fun getCatalog() = catalog
     fun getArtists() = allArtists
 
     fun filter(searchQuery: String = "", artist: String? = null): List<CatalogEntry> {
+        if (searchQuery.isBlank() && artist == null) return catalog
         return catalog.filter { entry ->
             (artist == null || entry.artist.equals(artist, ignoreCase = true)) &&
             (searchQuery.isBlank() ||
@@ -71,15 +75,37 @@ object TabRepository {
         }
     }
 
+    private fun encodePath(path: String): String {
+        return path.split("/").joinToString("/") { segment ->
+            URLEncoder.encode(segment, "UTF-8").replace("+", "%20")
+        }
+    }
+
+    private fun fetchUrl(urlStr: String): String {
+        val conn = URL(urlStr).openConnection() as HttpURLConnection
+        conn.connectTimeout = CONNECT_TIMEOUT
+        conn.readTimeout = READ_TIMEOUT
+        conn.requestMethod = "GET"
+        try {
+            if (conn.responseCode != 200) {
+                throw Exception("HTTP ${conn.responseCode}")
+            }
+            return conn.inputStream.bufferedReader().use { it.readText() }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     suspend fun loadCatalog(context: Context) {
         if (catalogLoaded) return
+        loadError = null
         withContext(Dispatchers.IO) {
             try {
                 val cacheFile = File(context.cacheDir, "tabs_catalog.json")
                 val jsonStr = if (cacheFile.exists() && System.currentTimeMillis() - cacheFile.lastModified() < 86400000) {
                     cacheFile.readText()
                 } else {
-                    val text = URL(CATALOG_URL).readText()
+                    val text = fetchUrl(CATALOG_URL)
                     cacheFile.writeText(text)
                     text
                 }
@@ -102,6 +128,7 @@ object TabRepository {
                 catalogLoaded = true
             } catch (e: Exception) {
                 android.util.Log.e("TabData", "Error loading catalog", e)
+                loadError = "Error cargando catálogo: ${e.message}"
             }
         }
     }
@@ -113,8 +140,8 @@ object TabRepository {
                 val jsonStr = if (cacheFile.exists()) {
                     cacheFile.readText()
                 } else {
-                    val url = REPO_BASE + entry.path
-                    val text = URL(url).readText()
+                    val url = REPO_BASE + encodePath(entry.path)
+                    val text = fetchUrl(url)
                     cacheFile.parentFile?.mkdirs()
                     cacheFile.writeText(text)
                     text
@@ -163,19 +190,24 @@ object TabRepository {
                     beats.add(TabBeat(
                         duration = beatJson.getInt("d"),
                         isDotted = beatJson.optBoolean("dot", false),
-                        isRest = beatJson.optBoolean("r", false),
+                        isRest = notesArr == null || notesArr.length() == 0,
                         notes = notes
                     ))
                 }
                 measures.add(beats)
             }
 
+            val tuningArr = trackJson.optJSONArray("tuning")
+            val tuning = if (tuningArr != null) {
+                (0 until tuningArr.length()).map { tuningArr.getInt(it) }
+            } else {
+                listOf(64, 59, 55, 50, 45, 40)
+            }
+
             tracks.add(TabTrack(
-                name = trackJson.getString("name"),
+                name = trackJson.optString("name", "Track ${t + 1}"),
                 type = trackJson.optString("type", "other"),
-                tuning = (0 until trackJson.getJSONArray("tuning").length()).map {
-                    trackJson.getJSONArray("tuning").getInt(it)
-                },
+                tuning = tuning,
                 totalNotes = trackJson.optInt("notes", 0),
                 measures = measures
             ))
