@@ -153,16 +153,6 @@ fun MainScreen(
                         }
                     }
                 }
-
-                // Floating metronome FAB for practice screens
-                val showFab = selectedNav in listOf(0, 1, 2, 3)
-                if (showFab) {
-                    FloatingMetronomeFab(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 12.dp, bottom = 8.dp)
-                    )
-                }
             }
 
             // Bottom Navigation Bar
@@ -170,7 +160,7 @@ fun MainScreen(
                 containerColor = AppColors.navBar,
                 contentColor = AppColors.text,
                 tonalElevation = 0.dp,
-                modifier = Modifier.height(56.dp)
+                modifier = Modifier.height(52.dp)
             ) {
                 destinations.forEachIndexed { index, dest ->
                     NavigationBarItem(
@@ -178,14 +168,15 @@ fun MainScreen(
                             Icon(
                                 dest.icon,
                                 contentDescription = dest.label,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         },
                         label = {
                             Text(
                                 dest.label,
-                                fontSize = 9.sp,
+                                fontSize = 8.sp,
                                 maxLines = 1,
+                                lineHeight = 9.sp,
                                 fontWeight = if (selectedNav == index) FontWeight.Bold else FontWeight.Normal
                             )
                         },
@@ -208,14 +199,17 @@ fun MainScreen(
             }
         }
 
-        // Settings button — top right corner overlay
-        IconButton(
-            onClick = { showSettings = true },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 4.dp, top = 4.dp)
-        ) {
-            Icon(Icons.Default.Settings, "Ajustes", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+        // Settings button — hide on Quiz to avoid overlapping score
+        val isQuizScreen = selectedNav == NavDestination.QUIZ.ordinal
+        if (!isQuizScreen) {
+            IconButton(
+                onClick = { showSettings = true },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(end = 4.dp, top = 4.dp)
+            ) {
+                Icon(Icons.Default.Settings, "Ajustes", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            }
         }
 
         if (showSettings) {
