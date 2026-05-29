@@ -60,8 +60,8 @@ import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.ChordSynth
 import com.caminerin.guitartrainer.audio.StrumEngine
 import com.caminerin.guitartrainer.audio.StrumPatternLibrary
-import com.caminerin.guitartrainer.audio.StrumPattern
-import com.caminerin.guitartrainer.audio.TickPlayer
+
+
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -133,11 +133,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     var showBeatsSelector by remember { mutableStateOf(false) }
     var selectedSlotChordId by remember { mutableStateOf<String?>(null) }
     var selectedPattern by remember { mutableStateOf(StrumPatternLibrary.default) }
-    var showPatternPicker by remember { mutableStateOf(false) }
 
 
     var isPlaying by remember { mutableStateOf(false) }
-    var metronomeOn by remember { mutableStateOf(true) }
+
     var useTargetBpm by remember { mutableStateOf(false) }
     var currentMeasure by remember { mutableIntStateOf(-1) }
     var currentSub by remember { mutableIntStateOf(-1) }
@@ -145,13 +144,10 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     // Section-based playback state
     var currentSectionIdx by remember { mutableIntStateOf(-1) }
     var loopSectionIdx by remember { mutableIntStateOf(-1) } // -1 = play all, >= 0 = loop that section
-    var speedTrainerOn by remember { mutableStateOf(false) }
-    var speedTrainerBpm by remember { mutableIntStateOf(60) }
-    val speedTrainerStep = 5 // BPM increment per repetition
 
-    val tickPlayer = remember { TickPlayer() }
+
     DisposableEffect(Unit) {
-        onDispose { tickPlayer.release(); StrumEngine.stop() }
+        onDispose { StrumEngine.mute() }
     }
 
     val measuresState = rememberUpdatedState(measures.toList())
@@ -159,8 +155,7 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
     val useTargetBpmState = rememberUpdatedState(useTargetBpm)
     val currentSongState = rememberUpdatedState(currentSong)
     val loopSectionState = rememberUpdatedState(loopSectionIdx)
-    val speedTrainerOnState = rememberUpdatedState(speedTrainerOn)
-    val speedTrainerBpmState = rememberUpdatedState(speedTrainerBpm)
+
 
     val songHasSwing = currentSong?.swing == true ||
         currentSong?.feel?.contains("shuffle", ignoreCase = true) == true ||
@@ -184,7 +179,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 val loopIdx = loopSectionState.value
 
                 val effectiveBpm = when {
-                    speedTrainerOnState.value -> speedTrainerBpmState.value
                     useTargetBpmState.value && song != null -> song.bpmTarget
                     else -> bpmState.value
                 }
@@ -300,19 +294,11 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                                 }
                             }
                         }
-                        if (metronomeOn) tickPlayer.tick()
                         delay(finalSubMs)
                     }
                 }
 
-                // Speed trainer: increase BPM after each full pass
-                if (speedTrainerOnState.value && song != null) {
-                    val newBpm = (speedTrainerBpmState.value + speedTrainerStep).coerceAtMost(song.bpmTarget)
-                    speedTrainerBpm = newBpm
-                    if (newBpm >= song.bpmTarget) {
-                        speedTrainerOn = false
-                    }
-                }
+
             }
         } finally {
             StrumEngine.mute()
@@ -454,36 +440,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                     }
                 }
 
-                // Strum pattern selector
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFFE65100).copy(alpha = 0.35f))
-                        .clickable { showPatternPicker = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        selectedPattern.nameEs,
-                        color = Color(0xFFFFCC80),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1
-                    )
-                }
-
-                // Metronome toggle
-                IconButton(
-                    onClick = { metronomeOn = !metronomeOn },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        if (metronomeOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                        if (metronomeOn) "Metrónomo ON" else "Metrónomo OFF",
-                        tint = if (metronomeOn) Color(0xFF80CBC4) else Color.White.copy(alpha = 0.3f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
                 // Play / Stop button
                 IconButton(
                     onClick = { isPlaying = !isPlaying },
@@ -522,45 +478,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             Text("Cejilla: traste ${song.capo} \u2022 ${song.key}$feelLabel",
                                 color = Color.White.copy(alpha = 0.5f), fontSize = 11.sp, maxLines = 1)
                         }
-                        // BPM target toggle
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (useTargetBpm) Color(0xFF43A047).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
-                                .clickable {
-                                    useTargetBpm = !useTargetBpm
-                                    speedTrainerOn = false
-                                    bpm = if (useTargetBpm) song.bpmTarget else song.bpmStart
-                                }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                if (useTargetBpm) "\u266A ${song.bpmTarget}" else "\uD83C\uDFEB ${song.bpmStart}",
-                                color = if (useTargetBpm) Color(0xFF81C784) else Color.White.copy(alpha = 0.5f),
-                                fontSize = 11.sp
-                            )
-                        }
-                        // Speed trainer toggle
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (speedTrainerOn) Color(0xFFFF9800).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
-                                .clickable {
-                                    speedTrainerOn = !speedTrainerOn
-                                    if (speedTrainerOn) {
-                                        useTargetBpm = false
-                                        speedTrainerBpm = song.bpmStart
-                                        bpm = song.bpmStart
-                                    }
-                                }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                if (speedTrainerOn) "\u23F1 $speedTrainerBpm" else "\u23F1",
-                                color = if (speedTrainerOn) Color(0xFFFFCC80) else Color.White.copy(alpha = 0.3f),
-                                fontSize = 11.sp
-                            )
-                        }
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
@@ -568,7 +485,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                                 .clickable {
                                     currentSong = null
                                     loopSectionIdx = -1
-                                    speedTrainerOn = false
                                 }
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
@@ -774,11 +690,9 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                 songs = SongRepository.getSongs(),
                 onPick = { song ->
                     currentSong = song
-                    bpm = song.bpmStart
-                    useTargetBpm = false
+                    bpm = song.bpmTarget
+                    useTargetBpm = true
                     loopSectionIdx = -1
-                    speedTrainerOn = false
-                    speedTrainerBpm = song.bpmStart
                     val songBeats = song.meter.split("/").firstOrNull()?.trim()?.toIntOrNull() ?: 4
                     beatsPerMeasure = songBeats
                     val subdivs = song.subdivisions.coerceIn(1, 8)
@@ -880,95 +794,6 @@ fun ChordPracticeScreen(onBack: () -> Unit, onGoToVisualizer: (() -> Unit)? = nu
                             contentAlignment = Alignment.Center
                         ) {
                             Text("$beats/4", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Pattern picker overlay
-        if (showPatternPicker) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.7f))
-                    .clickable { showPatternPicker = false },
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth(0.88f)
-                        .fillMaxHeight(0.7f)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFF2A2A2A))
-                        .clickable(enabled = false) {}
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState()),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Patrón de rasgueo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    StrumPatternLibrary.ALL.forEach { pat ->
-                        val isSelected = pat.id == selectedPattern.id
-                        val patSymbols = pat.strokes.joinToString(" ") { stroke ->
-                            when (stroke.direction) {
-                                StrumEngine.Direction.DOWN -> if (stroke.accent) "\u2193\u2193" else "\u2193"
-                                StrumEngine.Direction.UP -> if (stroke.ghost) "(\u2191)" else "\u2191"
-                                StrumEngine.Direction.MUTE -> "x"
-                                StrumEngine.Direction.DEAD -> "\u2022"
-                                StrumEngine.Direction.REST -> "\u2014"
-                            }
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(
-                                    if (isSelected) Color(0xFFE65100).copy(alpha = 0.4f)
-                                    else Color.Transparent
-                                )
-                                .clickable {
-                                    selectedPattern = pat
-                                    showPatternPicker = false
-                                }
-                                .padding(horizontal = 12.dp, vertical = 10.dp)
-                        ) {
-                            Column {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(
-                                        pat.nameEs,
-                                        color = if (isSelected) Color(0xFFFFCC80) else Color.White,
-                                        fontSize = 15.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                    Text(
-                                        pat.genre,
-                                        color = Color.White.copy(alpha = 0.4f),
-                                        fontSize = 11.sp
-                                    )
-                                    Text(
-                                        pat.timeSignature,
-                                        color = Color.White.copy(alpha = 0.3f),
-                                        fontSize = 11.sp
-                                    )
-                                }
-                                Text(
-                                    patSymbols,
-                                    color = Color(0xFF80CBC4),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                if (pat.description.isNotBlank()) {
-                                    Text(
-                                        pat.description,
-                                        color = Color.White.copy(alpha = 0.4f),
-                                        fontSize = 11.sp
-                                    )
-                                }
-                            }
                         }
                     }
                 }
