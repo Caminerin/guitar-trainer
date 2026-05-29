@@ -106,6 +106,7 @@ fun RiffPracticeScreen(onBack: () -> Unit) {
     var dataLoaded by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         RiffRepository.load(context)
+        RiffSynth.init(context)
         dataLoaded = true
     }
 
