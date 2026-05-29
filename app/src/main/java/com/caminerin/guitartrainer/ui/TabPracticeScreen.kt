@@ -3,6 +3,7 @@ package com.caminerin.guitartrainer.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,18 +22,19 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -55,6 +57,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -80,8 +83,9 @@ fun TabPracticeScreen(
     var loadError by remember { mutableStateOf<String?>(null) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedArtist by remember { mutableStateOf<String?>(null) }
-    var showArtistFilter by remember { mutableStateOf(false) }
+    var showFilterOverlay by remember { mutableStateOf(false) }
     var selectedEntry by remember { mutableStateOf<CatalogEntry?>(null) }
+    var bpmRange by remember { mutableStateOf(30f..300f) }
 
     LaunchedEffect(Unit) {
         try {
@@ -97,6 +101,19 @@ fun TabPracticeScreen(
         TabPlayerScreen(
             entry = selectedEntry!!,
             onBack = { selectedEntry = null }
+        )
+        return
+    }
+
+    if (showFilterOverlay) {
+        FilterOverlay(
+            artists = TabRepository.getArtists(),
+            selectedArtist = selectedArtist,
+            bpmRange = bpmRange,
+            onArtistSelected = { selectedArtist = it },
+            onBpmRangeChanged = { bpmRange = it },
+            onClear = { selectedArtist = null; bpmRange = 30f..300f },
+            onDismiss = { showFilterOverlay = false }
         )
         return
     }
@@ -128,66 +145,73 @@ fun TabPracticeScreen(
             )
             Spacer(Modifier.weight(1f))
             if (!loading) {
+                val bpmActive = bpmRange.start > 30f || bpmRange.endInclusive < 300f
+                val filtersActive = selectedArtist != null || bpmActive
                 Text(
-                    "${TabRepository.getCatalog().size} canciones",
+                    "${TabRepository.filter(searchQuery, selectedArtist,
+                        if (bpmActive) bpmRange.start.toInt() else null,
+                        if (bpmActive) bpmRange.endInclusive.toInt() else null
+                    ).size} canciones",
                     color = AppColors.textSecondary,
                     fontSize = 12.sp
                 )
+                if (filtersActive) {
+                    Spacer(Modifier.width(4.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(AppColors.tertiary)
+                    )
+                }
             }
         }
 
-        // Search bar
-        TextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Buscar canción o artista...", color = AppColors.textSecondary) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = AppColors.textSecondary) },
-            trailingIcon = {
-                IconButton(onClick = { showArtistFilter = true }) {
-                    Icon(Icons.Default.FilterList, "Filtrar", tint = AppColors.textSecondary)
-                }
-                DropdownMenu(
-                    expanded = showArtistFilter,
-                    onDismissRequest = { showArtistFilter = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Todos los artistas") },
-                        onClick = { selectedArtist = null; showArtistFilter = false }
-                    )
-                    TabRepository.getArtists().take(50).forEach { artist ->
-                        DropdownMenuItem(
-                            text = { Text(artist) },
-                            onClick = { selectedArtist = artist; showArtistFilter = false }
-                        )
-                    }
-                }
-            },
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = AppColors.surface,
-                unfocusedContainerColor = AppColors.surface,
-                focusedTextColor = AppColors.text,
-                unfocusedTextColor = AppColors.text
-            ),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-        )
+        // Search bar + filter button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Buscar canción o artista...", color = AppColors.textSecondary) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = AppColors.textSecondary) },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = AppColors.surface,
+                    unfocusedContainerColor = AppColors.surface,
+                    focusedTextColor = AppColors.text,
+                    unfocusedTextColor = AppColors.text
+                ),
+                singleLine = true,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = { showFilterOverlay = true }) {
+                Icon(Icons.Default.FilterList, "Filtros", tint = AppColors.tertiary)
+            }
+        }
 
-        // Artist filter chip
-        if (selectedArtist != null) {
+        // Active filter chips
+        val bpmActive = bpmRange.start > 30f || bpmRange.endInclusive < 300f
+        if (selectedArtist != null || bpmActive) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(AppColors.tertiary)
-                        .clickable { selectedArtist = null }
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                ) {
-                    Text("$selectedArtist  ✕", color = Color.White, fontSize = 12.sp)
+                if (selectedArtist != null) {
+                    FilterChip(
+                        text = selectedArtist!!,
+                        onRemove = { selectedArtist = null }
+                    )
+                }
+                if (bpmActive) {
+                    FilterChip(
+                        text = "${bpmRange.start.toInt()}-${bpmRange.endInclusive.toInt()} BPM",
+                        onRemove = { bpmRange = 30f..300f }
+                    )
                 }
             }
         }
@@ -197,11 +221,7 @@ fun TabPracticeScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    "Cargando catálogo...",
-                    color = AppColors.textSecondary,
-                    fontSize = 16.sp
-                )
+                Text("Cargando catálogo...", color = AppColors.textSecondary, fontSize = 16.sp)
             }
         } else if (loadError != null) {
             Box(
@@ -209,34 +229,19 @@ fun TabPracticeScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        "Error cargando catálogo",
-                        color = AppColors.error,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Error cargando catálogo", color = AppColors.error, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(8.dp))
-                    Text(
-                        loadError!!,
-                        color = AppColors.textSecondary,
-                        fontSize = 12.sp
-                    )
+                    Text(loadError!!, color = AppColors.textSecondary, fontSize = 12.sp)
                     Spacer(Modifier.height(16.dp))
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(AppColors.tertiary)
                             .clickable {
-                                loading = true
-                                loadError = null
+                                loading = true; loadError = null
                                 scope.launch {
-                                    try {
-                                        TabRepository.reset()
-                                        TabRepository.loadCatalog(context)
-                                        loadError = TabRepository.loadError
-                                    } catch (e: Throwable) {
-                                        loadError = "${e.javaClass.simpleName}: ${e.message}"
-                                    }
+                                    try { TabRepository.reset(); TabRepository.loadCatalog(context); loadError = TabRepository.loadError }
+                                    catch (e: Throwable) { loadError = "${e.javaClass.simpleName}: ${e.message}" }
                                     loading = false
                                 }
                             }
@@ -247,7 +252,11 @@ fun TabPracticeScreen(
                 }
             }
         } else {
-            val filteredEntries = TabRepository.filter(searchQuery, selectedArtist)
+            val filteredEntries = TabRepository.filter(
+                searchQuery, selectedArtist,
+                if (bpmActive) bpmRange.start.toInt() else null,
+                if (bpmActive) bpmRange.endInclusive.toInt() else null
+            )
             val listState = rememberLazyListState()
 
             LazyColumn(
@@ -266,19 +275,32 @@ fun TabPracticeScreen(
 }
 
 @Composable
+private fun FilterChip(text: String, onRemove: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(AppColors.tertiary)
+            .clickable(onClick = onRemove)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text("$text  ✕", color = Color.White, fontSize = 12.sp)
+    }
+}
+
+@Composable
 private fun SongListItem(entry: CatalogEntry, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 entry.song,
                 color = AppColors.text,
-                fontSize = 15.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -286,18 +308,176 @@ private fun SongListItem(entry: CatalogEntry, onClick: () -> Unit) {
             Text(
                 entry.artist,
                 color = AppColors.textSecondary,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Column(horizontalAlignment = Alignment.End) {
-            Text("${entry.tempo} BPM", color = AppColors.textSecondary, fontSize = 11.sp)
+        Column(
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.padding(start = 8.dp)
+        ) {
+            Text("${entry.tempo} BPM", color = AppColors.textSecondary, fontSize = 10.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (entry.guitarTracks > 0) {
+                    Text(
+                        "${entry.guitarTracks} gtr",
+                        color = Color(0xFF4CAF50),
+                        fontSize = 10.sp
+                    )
+                }
+                if (entry.bassTracks > 0) {
+                    Text(
+                        "${entry.bassTracks} bass",
+                        color = Color(0xFFFF9800),
+                        fontSize = 10.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ===================== FILTER OVERLAY =====================
+@Composable
+private fun FilterOverlay(
+    artists: List<String>,
+    selectedArtist: String?,
+    bpmRange: ClosedFloatingPointRange<Float>,
+    onArtistSelected: (String?) -> Unit,
+    onBpmRangeChanged: (ClosedFloatingPointRange<Float>) -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var artistSearch by remember { mutableStateOf("") }
+    var localBpmRange by remember { mutableStateOf(bpmRange) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(AppColors.background)
+    ) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AppColors.surface)
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onDismiss) {
+                Icon(Icons.Default.Close, "Cerrar", tint = AppColors.text)
+            }
+            Text("Filtros", color = AppColors.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.weight(1f))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AppColors.error.copy(alpha = 0.2f))
+                    .clickable { onClear(); onDismiss() }
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text("Limpiar", color = AppColors.error, fontSize = 12.sp)
+            }
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AppColors.tertiary)
+                    .clickable { onBpmRangeChanged(localBpmRange); onDismiss() }
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text("Aplicar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
+            // BPM range
+            Text("Rango de BPM", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
             Text(
-                "${entry.guitarTracks} gtr",
-                color = AppColors.success,
-                fontSize = 11.sp
+                "${localBpmRange.start.toInt()} – ${localBpmRange.endInclusive.toInt()} BPM",
+                color = AppColors.tertiary,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
             )
+            RangeSlider(
+                value = localBpmRange,
+                onValueChange = { localBpmRange = it },
+                valueRange = 30f..300f,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(20.dp))
+
+            // Artist filter
+            Text("Artista", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            TextField(
+                value = artistSearch,
+                onValueChange = { artistSearch = it },
+                placeholder = { Text("Buscar artista...", color = AppColors.textSecondary) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = AppColors.textSecondary) },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = AppColors.surface,
+                    unfocusedContainerColor = AppColors.surface,
+                    focusedTextColor = AppColors.text,
+                    unfocusedTextColor = AppColors.text
+                ),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(8.dp))
+
+            if (selectedArtist != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(AppColors.tertiary.copy(alpha = 0.2f))
+                        .clickable { onArtistSelected(null) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(selectedArtist, color = AppColors.tertiary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.weight(1f))
+                    Text("✕", color = AppColors.tertiary, fontSize = 14.sp)
+                }
+                Spacer(Modifier.height(4.dp))
+            }
+
+            val filteredArtists = if (artistSearch.isBlank()) artists
+                else artists.filter { it.contains(artistSearch, ignoreCase = true) }
+
+            filteredArtists.take(100).forEach { artist ->
+                val isSelected = artist == selectedArtist
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onArtistSelected(if (isSelected) null else artist) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        artist,
+                        color = if (isSelected) AppColors.tertiary else AppColors.text,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+            if (filteredArtists.size > 100) {
+                Text(
+                    "... y ${filteredArtists.size - 100} más (usa el buscador)",
+                    color = AppColors.textMuted,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
         }
     }
 }
@@ -379,27 +559,30 @@ fun TabPlayerScreen(
         return events to timeMs
     }
 
-    fun startPlayback() {
+    fun startPlayback(fromMeasure: Int? = null) {
         if (song == null) return
         val track = song!!.tracks[selectedTrackIndex]
         isPlaying = true
+        if (fromMeasure != null) {
+            currentMeasure = fromMeasure
+            currentBeatInMeasure = 0
+        }
 
         playJob = scope.launch {
             withContext(Dispatchers.Default) {
                 RiffSynth.init(context)
                 val baseTempo = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300)
 
-                val startMeasure = if (loopEnabled && loopStart >= 0) loopStart else currentMeasure
+                val startMeasure = if (fromMeasure != null) fromMeasure
+                    else if (loopEnabled && loopStart >= 0) loopStart
+                    else currentMeasure
                 val endMeasure = if (loopEnabled && loopEnd >= 0) (loopEnd + 1).coerceAtMost(track.measures.size) else track.measures.size
 
                 var mi = startMeasure
                 while (isActive && isPlaying) {
                     if (mi >= endMeasure) {
-                        if (loopEnabled) {
-                            mi = startMeasure
-                        } else {
-                            break
-                        }
+                        if (loopEnabled) mi = if (loopStart >= 0) loopStart else startMeasure
+                        else break
                     }
 
                     currentMeasure = mi
@@ -475,10 +658,11 @@ fun TabPlayerScreen(
         } else if (song != null) {
             val track = song!!.tracks[selectedTrackIndex]
 
-            // Track selector
+            // Track selector (scrollable)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = 12.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -493,6 +677,13 @@ fun TabPlayerScreen(
                         "keys" -> Color(0xFF2196F3)
                         else -> AppColors.textSecondary
                     }
+                    val typeLabel = when (t.type) {
+                        "guitar" -> "🎸"
+                        "bass" -> "🎸"
+                        "drums" -> "🥁"
+                        "keys" -> "🎹"
+                        else -> ""
+                    }
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
@@ -504,16 +695,17 @@ fun TabPlayerScreen(
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
                         Text(
-                            t.name.take(15),
+                            "$typeLabel ${t.name.take(20)}",
                             color = if (isSelected) Color.White else trackColor,
                             fontSize = 11.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1
                         )
                     }
                 }
             }
 
-            // Tab viewer
+            // Tab viewer (takes remaining space)
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -533,20 +725,25 @@ fun TabPlayerScreen(
                             } else {
                                 loopEnd = measure.coerceAtLeast(loopStart)
                             }
+                        } else {
+                            stopPlayback()
+                            currentMeasure = measure
+                            currentBeatInMeasure = 0
+                            startPlayback(fromMeasure = measure)
                         }
                     },
                     tempo = (entry.tempo * bpmFactor).toInt()
                 )
             }
 
-            // Controls
+            // Compact controls
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(AppColors.surface)
-                    .padding(8.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                // BPM control
+                // BPM + presets in compact row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -554,9 +751,9 @@ fun TabPlayerScreen(
                     Text(
                         "${(entry.tempo * bpmFactor).toInt()} BPM",
                         color = AppColors.text,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.width(75.dp)
+                        modifier = Modifier.width(65.dp)
                     )
                     Slider(
                         value = bpmFactor,
@@ -571,21 +768,21 @@ fun TabPlayerScreen(
                     listOf("50%" to 0.5f, "75%" to 0.75f, "100%" to 1f).forEach { (label, factor) ->
                         Box(
                             modifier = Modifier
-                                .padding(horizontal = 2.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .padding(start = 2.dp)
+                                .clip(RoundedCornerShape(6.dp))
                                 .background(
                                     if (bpmFactor == factor) AppColors.tertiary
                                     else Color.White.copy(alpha = 0.08f)
                                 )
                                 .clickable { bpmFactor = factor }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
                         ) {
-                            Text(label, fontSize = 11.sp, color = AppColors.text)
+                            Text(label, fontSize = 10.sp, color = AppColors.text)
                         }
                     }
                 }
 
-                // Measure info + playback controls
+                // Playback controls
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
@@ -594,7 +791,7 @@ fun TabPlayerScreen(
                     Text(
                         "Compás ${currentMeasure + 1}/${track.measures.size}",
                         color = AppColors.textSecondary,
-                        fontSize = 12.sp
+                        fontSize = 11.sp
                     )
 
                     IconButton(onClick = {
@@ -604,7 +801,7 @@ fun TabPlayerScreen(
                         Icon(
                             Icons.Default.Repeat, "Loop",
                             tint = if (loopEnabled) AppColors.tertiary else AppColors.textSecondary,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
 
@@ -612,7 +809,7 @@ fun TabPlayerScreen(
                         Text(
                             "Loop: ${loopStart + 1}-${if (loopEnd >= 0) "${loopEnd + 1}" else "?"}",
                             color = AppColors.tertiary,
-                            fontSize = 11.sp
+                            fontSize = 10.sp
                         )
                     }
 
@@ -621,7 +818,7 @@ fun TabPlayerScreen(
                             if (isPlaying) stopPlayback() else startPlayback()
                         },
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(44.dp)
                             .clip(CircleShape)
                             .background(if (isPlaying) AppColors.error else AppColors.tertiary)
                     ) {
@@ -629,7 +826,7 @@ fun TabPlayerScreen(
                             if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
                             "Play",
                             tint = Color.White,
-                            modifier = Modifier.size(28.dp)
+                            modifier = Modifier.size(26.dp)
                         )
                     }
 
@@ -638,7 +835,7 @@ fun TabPlayerScreen(
                         currentMeasure = if (loopEnabled && loopStart >= 0) loopStart else 0
                         currentBeatInMeasure = 0
                     }) {
-                        Icon(Icons.Default.Refresh, "Reiniciar", tint = AppColors.textSecondary, modifier = Modifier.size(24.dp))
+                        Icon(Icons.Default.Refresh, "Reiniciar", tint = AppColors.textSecondary, modifier = Modifier.size(22.dp))
                     }
                 }
             }
@@ -663,10 +860,10 @@ fun TabViewer(
         else if (numStrings == 4) listOf("G", "D", "A", "E")
         else (1..numStrings).map { "S$it" }
 
-    val lineSpacing = 28.dp
-    val beatWidth = 40.dp
-    val measurePadding = 20.dp
-    val headerWidth = 24.dp
+    val lineSpacing = 32.dp
+    val beatWidth = 48.dp
+    val measurePadding = 24.dp
+    val headerWidth = 28.dp
 
     var totalWidth = headerWidth.value
     for (measure in track.measures) {
@@ -686,6 +883,23 @@ fun TabViewer(
         modifier = Modifier
             .fillMaxSize()
             .horizontalScroll(scrollState)
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    val density = 2.75f
+                    val headerW = headerWidth.value * density
+                    val beatW = beatWidth.value * density
+                    val measPad = measurePadding.value * density
+                    var xOffset = headerW
+                    for (mi in track.measures.indices) {
+                        val measureWidth = track.measures[mi].size * beatW + measPad
+                        if (offset.x >= xOffset && offset.x < xOffset + measureWidth) {
+                            onMeasureTap(mi)
+                            break
+                        }
+                        xOffset += measureWidth
+                    }
+                }
+            }
     ) {
         Canvas(
             modifier = Modifier
@@ -697,6 +911,8 @@ fun TabViewer(
             val measPad = measurePadding.toPx()
             val headerW = headerWidth.toPx()
             val topOffset = 30f
+            val noteFontSize = 36f
+            val labelFontSize = 30f
 
             for (i in 0 until numStrings) {
                 val y = topOffset + i * stringSpacing
@@ -705,7 +921,7 @@ fun TabViewer(
                     4f, y + 5f,
                     android.graphics.Paint().apply {
                         color = 0xFF888888.toInt()
-                        textSize = 28f
+                        textSize = labelFontSize
                         isAntiAlias = true
                     }
                 )
@@ -739,7 +955,7 @@ fun TabViewer(
                     xOffset + 2f, topOffset - 4f,
                     android.graphics.Paint().apply {
                         color = if (isCurrentMeasure) 0xFFFFAB40.toInt() else 0xFF666666.toInt()
-                        textSize = 22f
+                        textSize = 24f
                         isAntiAlias = true
                     }
                 )
@@ -771,7 +987,7 @@ fun TabViewer(
                             bx, topOffset + (numStrings / 2) * stringSpacing + 5f,
                             android.graphics.Paint().apply {
                                 color = 0xFF555555.toInt()
-                                textSize = 32f
+                                textSize = 36f
                                 textAlign = android.graphics.Paint.Align.CENTER
                                 isAntiAlias = true
                             }
@@ -798,7 +1014,7 @@ fun TabViewer(
                                 bx, y + 8f,
                                 android.graphics.Paint().apply {
                                     color = noteColor.toArgb()
-                                    textSize = 30f
+                                    textSize = noteFontSize
                                     textAlign = android.graphics.Paint.Align.CENTER
                                     isAntiAlias = true
                                     isFakeBoldText = true
@@ -817,10 +1033,10 @@ fun TabViewer(
                             if (effectText != null) {
                                 drawContext.canvas.nativeCanvas.drawText(
                                     effectText,
-                                    bx + 14f, y - 4f,
+                                    bx + 16f, y - 4f,
                                     android.graphics.Paint().apply {
                                         color = noteColor.toArgb()
-                                        textSize = 18f
+                                        textSize = 20f
                                         isAntiAlias = true
                                     }
                                 )
