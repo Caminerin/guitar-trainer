@@ -26,8 +26,11 @@ object StrumEngine {
 
     private val samples = mutableMapOf<String, ShortArray>()
     @Volatile private var samplesLoaded = false
-    private var currentTrack: AudioTrack? = null
     private val rng = java.util.Random()
+
+    // Pool of active AudioTracks — old strums fade naturally while new ones start
+    private val activeTracks = mutableListOf<AudioTrack>()
+    private const val MAX_ACTIVE_TRACKS = 4
 
     private val audioAttrs = AudioAttributes.Builder()
         .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -55,12 +58,9 @@ object StrumEngine {
         direction: Direction,
         velocity: Float = 0.8f,
         durationMs: Int = 1500,
-        muteGapMs: Int = 25
+        muteGapMs: Int = 0
     ) {
         if (!samplesLoaded || direction == Direction.REST) return
-
-        // Stop previous sound with a quick fade
-        stopCurrent()
 
         val rendered = when (direction) {
             Direction.MUTE -> renderPalmMute(frets, velocity)
@@ -70,29 +70,24 @@ object StrumEngine {
 
         if (rendered.isEmpty()) return
 
-        // Prepend silence gap for chord transitions
-        val gapSamples = (SAMPLE_RATE * muteGapMs / 1000).coerceAtLeast(0)
-        val finalBuf = if (gapSamples > 0) {
-            ShortArray(gapSamples + rendered.size).also {
-                rendered.copyInto(it, gapSamples)
-            }
-        } else rendered
+        // Evict oldest tracks if we're at capacity
+        pruneOldTracks()
 
-        playBuffer(finalBuf)
+        playBuffer(rendered)
     }
 
-    fun mute() { stopCurrent() }
+    fun mute() { stopAll() }
 
-    fun stop() { stopCurrent() }
+    fun stop() { stopAll() }
 
     fun release() {
-        stopCurrent()
+        stopAll()
         samples.clear()
         samplesLoaded = false
     }
 
     /* ================================================================
-     *  PLAYBACK — static AudioTrack per strum
+     *  PLAYBACK — overlapping static AudioTracks
      * ============================================================= */
 
     private fun playBuffer(buf: ShortArray) {
@@ -110,20 +105,38 @@ object StrumEngine {
             track.setPlaybackPositionUpdateListener(object : AudioTrack.OnPlaybackPositionUpdateListener {
                 override fun onMarkerReached(t: AudioTrack?) {
                     try { t?.stop(); t?.release() } catch (_: Exception) {}
+                    synchronized(activeTracks) { activeTracks.remove(t) }
                 }
                 override fun onPeriodicNotification(t: AudioTrack?) {}
             })
-            currentTrack = track
+            synchronized(activeTracks) { activeTracks.add(track) }
             track.play()
         } catch (_: Exception) {}
     }
 
-    private fun stopCurrent() {
-        try {
-            currentTrack?.stop()
-            currentTrack?.release()
-        } catch (_: Exception) {}
-        currentTrack = null
+    private fun pruneOldTracks() {
+        synchronized(activeTracks) {
+            // Remove already-finished tracks
+            activeTracks.removeAll { t ->
+                try {
+                    t.playState != AudioTrack.PLAYSTATE_PLAYING
+                } catch (_: Exception) { true }
+            }
+            // If still too many, stop the oldest ones
+            while (activeTracks.size >= MAX_ACTIVE_TRACKS) {
+                val oldest = activeTracks.removeFirstOrNull() ?: break
+                try { oldest.stop(); oldest.release() } catch (_: Exception) {}
+            }
+        }
+    }
+
+    private fun stopAll() {
+        synchronized(activeTracks) {
+            for (t in activeTracks) {
+                try { t.stop(); t.release() } catch (_: Exception) {}
+            }
+            activeTracks.clear()
+        }
     }
 
     /* ================================================================
