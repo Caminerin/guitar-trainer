@@ -449,19 +449,32 @@ private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
 private fun UnifiedChordsScreen() {
     var isViewMode by rememberSaveable { mutableStateOf(true) }
 
-    // No overlay toggle needed — ChordPracticeScreen already has
-    // internal [Digitaciones|Progresiones|Canciones|Visualizar] tabs
-    if (isViewMode) {
-        ChordVisualizerScreen(
-            onBack = {},
-            onGoToPractice = { isViewMode = false },
-            showBackButton = false
-        )
-    } else {
-        ChordPracticeScreen(
-            onBack = { isViewMode = true },
-            onGoToVisualizer = { isViewMode = true }
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isViewMode) {
+            ChordVisualizerScreen(
+                onBack = {},
+                onGoToPractice = { isViewMode = false },
+                showBackButton = false
+            )
+        } else {
+            ChordPracticeScreen(
+                onBack = { isViewMode = true },
+                onGoToVisualizer = { isViewMode = true }
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 8.dp, bottom = 6.dp)
+        ) {
+            ModeToggle(
+                leftLabel = "Ver",
+                rightLabel = "Practicar",
+                isLeftSelected = isViewMode,
+                onToggle = { isViewMode = it }
+            )
+        }
     }
 }
 
