@@ -743,37 +743,43 @@ fun TabPlayerScreen(
 
                 do {
                     val baseTempo = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300)
-                    val startMeasure = if (fromMeasure != null && !loopEnabled) fromMeasure
+                    val playStart = if (fromMeasure != null && !loopEnabled) fromMeasure
                         else if (loopEnabled && loopStart >= 0) loopStart
                         else currentMeasure
-                    val endMeasure = if (loopEnabled && loopEnd >= 0) (loopEnd + 1).coerceAtMost(track.measures.size)
+                    val playEnd = if (loopEnabled && loopEnd >= 0) (loopEnd + 1).coerceAtMost(track.measures.size)
                         else track.measures.size
 
-                    if (startMeasure >= endMeasure) break
+                    if (playStart >= playEnd) break
 
-                    val (notes, measureOffsets, totalDurationMs) = buildContinuousSequence(
-                        track, startMeasure, endMeasure, baseTempo
-                    )
-
-                    if (notes.isNotEmpty()) {
-                        RiffSynth.playSequence(notes, "crunch")
-                    }
-
-                    val playStartTime = System.currentTimeMillis()
+                    val chunkSize = 8
                     val beatDurationMs = 60_000.0 / baseTempo
+                    var chunkStart = playStart
 
-                    for (mi in startMeasure until endMeasure) {
-                        if (!isActive || !isPlaying) break
-                        currentMeasure = mi
+                    while (chunkStart < playEnd && isActive && isPlaying) {
+                        val chunkEnd = (chunkStart + chunkSize).coerceAtMost(playEnd)
+                        val (notes, _, _) = buildContinuousSequence(
+                            track, chunkStart, chunkEnd, baseTempo
+                        )
 
-                        val measureBeats = track.measures[mi]
-                        for ((bi, beat) in measureBeats.withIndex()) {
-                            if (!isActive || !isPlaying) break
-                            currentBeatInMeasure = bi
-                            val dur = beatDurationMs * (4.0 / beat.duration)
-                            val waitMs = if (beat.isDotted) (dur * 1.5).toLong() else dur.toLong()
-                            delay(waitMs.coerceAtLeast(20))
+                        if (notes.isNotEmpty()) {
+                            RiffSynth.playSequence(notes, "crunch")
                         }
+
+                        for (mi in chunkStart until chunkEnd) {
+                            if (!isActive || !isPlaying) break
+                            currentMeasure = mi
+
+                            val measureBeats = track.measures[mi]
+                            for ((bi, beat) in measureBeats.withIndex()) {
+                                if (!isActive || !isPlaying) break
+                                currentBeatInMeasure = bi
+                                val dur = beatDurationMs * (4.0 / beat.duration)
+                                val waitMs = if (beat.isDotted) (dur * 1.5).toLong() else dur.toLong()
+                                delay(waitMs.coerceAtLeast(20))
+                            }
+                        }
+
+                        chunkStart = chunkEnd
                     }
 
                     if (!isActive || !isPlaying) break
