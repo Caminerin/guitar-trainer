@@ -42,9 +42,6 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -148,53 +145,52 @@ fun MainScreen(
                 }
             }
 
-            // Bottom Navigation Bar
-            NavigationBar(
-                containerColor = AppColors.navBar,
-                contentColor = AppColors.text,
-                tonalElevation = 0.dp,
-                modifier = Modifier.height(52.dp)
+            // Bottom Navigation Bar — custom compact row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                    .background(AppColors.navBar),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 destinations.forEachIndexed { index, dest ->
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                dest.icon,
-                                contentDescription = dest.label,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        },
-                        label = {
-                            Text(
-                                dest.label,
-                                fontSize = 8.sp,
-                                maxLines = 1,
-                                lineHeight = 9.sp,
-                                fontWeight = if (selectedNav == index) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        selected = selectedNav == index,
-                        onClick = {
-                            hapticTick(context)
-                            previousNav = selectedNav
-                            selectedNav = index
-                            AppPreferences.saveTab(index, context)
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = AppColors.navSelected,
-                            selectedTextColor = AppColors.navSelected,
-                            unselectedIconColor = AppColors.navUnselected,
-                            unselectedTextColor = AppColors.navUnselected,
-                            indicatorColor = AppColors.navSelected.copy(alpha = 0.12f)
+                    val isSelected = selectedNav == index
+                    val itemColor = if (isSelected) AppColors.navSelected else AppColors.navUnselected
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                hapticTick(context)
+                                previousNav = selectedNav
+                                selectedNav = index
+                                AppPreferences.saveTab(index, context)
+                            }
+                            .padding(vertical = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            dest.icon,
+                            contentDescription = dest.label,
+                            tint = itemColor,
+                            modifier = Modifier.size(18.dp)
                         )
-                    )
+                        Text(
+                            dest.label,
+                            color = itemColor,
+                            fontSize = 9.sp,
+                            maxLines = 1,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
                 }
             }
         }
 
-        // Settings button — hide on Quiz/Riffs to avoid overlapping UI elements
-        val hideSettings = selectedNav in listOf(NavDestination.QUIZ.ordinal, NavDestination.RIFFS.ordinal)
-        if (!hideSettings) {
+        // Settings button — only on Tuner/Metronome (other screens have top-right UI)
+        val showSettingsBtn = selectedNav in listOf(NavDestination.TUNER.ordinal, NavDestination.METRONOME.ordinal)
+        if (showSettingsBtn) {
             IconButton(
                 onClick = { showSettings = true },
                 modifier = Modifier
@@ -433,11 +429,11 @@ private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
             CagedPracticeScreen(onBack = { isViewMode = true }, pitchResult = pitchResult)
         }
 
-        // Toggle overlay at top center
+        // Toggle at bottom-left to avoid conflicting with screen controls at top
         Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 6.dp)
+                .align(Alignment.BottomStart)
+                .padding(start = 8.dp, bottom = 6.dp)
         ) {
             ModeToggle(
                 leftLabel = "Ver",
@@ -453,33 +449,19 @@ private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
 private fun UnifiedChordsScreen() {
     var isViewMode by rememberSaveable { mutableStateOf(true) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isViewMode) {
-            ChordVisualizerScreen(
-                onBack = {},
-                onGoToPractice = { isViewMode = false },
-                showBackButton = false
-            )
-        } else {
-            ChordPracticeScreen(
-                onBack = { isViewMode = true },
-                onGoToVisualizer = { isViewMode = true }
-            )
-        }
-
-        // Toggle overlay at top center
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 6.dp)
-        ) {
-            ModeToggle(
-                leftLabel = "Digitaciones",
-                rightLabel = "Progresiones",
-                isLeftSelected = isViewMode,
-                onToggle = { isViewMode = it }
-            )
-        }
+    // No overlay toggle needed — ChordPracticeScreen already has
+    // internal [Digitaciones|Progresiones|Canciones|Visualizar] tabs
+    if (isViewMode) {
+        ChordVisualizerScreen(
+            onBack = {},
+            onGoToPractice = { isViewMode = false },
+            showBackButton = false
+        )
+    } else {
+        ChordPracticeScreen(
+            onBack = { isViewMode = true },
+            onGoToVisualizer = { isViewMode = true }
+        )
     }
 }
 
