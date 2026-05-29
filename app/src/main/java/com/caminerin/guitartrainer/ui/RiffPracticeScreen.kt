@@ -32,8 +32,7 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.VolumeOff
-import androidx.compose.material.icons.filled.VolumeUp
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -65,7 +64,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.RiffSynth
-import com.caminerin.guitartrainer.audio.TickPlayer
+
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
@@ -412,18 +411,15 @@ private fun SmallTag(text: String, color: Color) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun RiffPlayerView(riff: Riff, onBack: () -> Unit) {
-    var bpm by rememberSaveable { mutableIntStateOf(riff.bpmStart) }
+    var bpm by rememberSaveable { mutableIntStateOf(riff.bpmTarget) }
     var isPlaying by remember { mutableStateOf(false) }
     var loopEnabled by remember { mutableStateOf(true) }
-    var metronomeOn by remember { mutableStateOf(true) }
     var currentMeasureIdx by remember { mutableIntStateOf(-1) }
     var currentSubIdx by remember { mutableIntStateOf(-1) }
     var showBpmSlider by remember { mutableStateOf(false) }
 
-    val tickPlayer = remember { TickPlayer() }
     DisposableEffect(Unit) {
         onDispose {
-            tickPlayer.release()
             RiffSynth.stop()
         }
     }
@@ -438,7 +434,6 @@ private fun RiffPlayerView(riff: Riff, onBack: () -> Unit) {
 
     val bpmState = rememberUpdatedState(bpm)
     val loopState = rememberUpdatedState(loopEnabled)
-    val metronomeState = rememberUpdatedState(metronomeOn)
 
     // Playback engine
     LaunchedEffect(isPlaying) {
@@ -470,7 +465,7 @@ private fun RiffPlayerView(riff: Riff, onBack: () -> Unit) {
                                 string = note.string,
                                 fret = note.fret,
                                 startMs = noteStartMs,
-                                durationMs = noteDurMs.coerceAtMost(2000),
+                                durationMs = noteDurMs,
                                 technique = note.technique
                             )
                         )
@@ -487,10 +482,6 @@ private fun RiffPlayerView(riff: Riff, onBack: () -> Unit) {
                         if (!isActive) break
                         currentMeasureIdx = mi
                         currentSubIdx = sub
-
-                        if (metronomeState.value && sub == 1) {
-                            tickPlayer.tick()
-                        }
 
                         delay(subMs)
                     }
@@ -664,14 +655,13 @@ private fun RiffPlayerView(riff: Riff, onBack: () -> Unit) {
                 }
 
                 // Target BPM indicator
-                val bpmRatio = (bpm.toFloat() - riff.bpmStart) / (riff.bpmTarget - riff.bpmStart).toFloat().coerceAtLeast(1f)
                 val bpmColor = when {
-                    bpmRatio >= 1f -> Color(0xFF4CAF50)
-                    bpmRatio >= 0.5f -> Color(0xFFFFC107)
+                    bpm >= riff.bpmTarget -> Color(0xFF4CAF50)
+                    bpm >= riff.bpmTarget * 3 / 4 -> Color(0xFFFFC107)
                     else -> Color(0xFFFF5722)
                 }
                 Text(
-                    "Obj: ${riff.bpmTarget}",
+                    "Original: ${riff.bpmTarget}",
                     color = bpmColor,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -694,7 +684,7 @@ private fun RiffPlayerView(riff: Riff, onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    listOf(riff.bpmStart to "Inicio", riff.bpmTarget to "Objetivo").forEach { (target, label) ->
+                    listOf((riff.bpmTarget * 3 / 4) to "75%", riff.bpmTarget to "Original").forEach { (target, label) ->
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
@@ -728,16 +718,6 @@ private fun RiffPlayerView(riff: Riff, onBack: () -> Unit) {
                 Icon(
                     Icons.Default.Repeat, "Loop",
                     tint = if (loopEnabled) RP_ACCENT else Color.White.copy(alpha = 0.4f),
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            // Metronome toggle
-            IconButton(onClick = { metronomeOn = !metronomeOn }) {
-                Icon(
-                    if (metronomeOn) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                    "Metrónomo",
-                    tint = if (metronomeOn) Color.White else Color.White.copy(alpha = 0.4f),
                     modifier = Modifier.size(28.dp)
                 )
             }
