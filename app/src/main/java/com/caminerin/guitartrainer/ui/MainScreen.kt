@@ -127,15 +127,8 @@ fun MainScreen(
                 ) { navIndex ->
                     val dest = destinations[navIndex]
                     when (dest) {
-                        NavDestination.SCALES -> ScaleFretboardScreen(
-                            onBack = { selectedNav = 0 },
-                            showBackButton = false
-                        )
-                        NavDestination.CHORDS -> ChordVisualizerScreen(
-                            onBack = { selectedNav = 0 },
-                            onGoToPractice = { selectedNav = 1 },
-                            showBackButton = false
-                        )
+                        NavDestination.SCALES -> UnifiedScalesScreen(pitchResult = pitchResult)
+                        NavDestination.CHORDS -> UnifiedChordsScreen()
                         NavDestination.RIFFS -> RiffPracticeScreen(
                             onBack = { selectedNav = 0 },
                             showBackButton = false
@@ -153,16 +146,6 @@ fun MainScreen(
                         }
                     }
                 }
-
-                // Floating metronome FAB for practice screens
-                val showFab = selectedNav in listOf(0, 1, 2, 3)
-                if (showFab) {
-                    FloatingMetronomeFab(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 12.dp, bottom = 8.dp)
-                    )
-                }
             }
 
             // Bottom Navigation Bar
@@ -170,7 +153,7 @@ fun MainScreen(
                 containerColor = AppColors.navBar,
                 contentColor = AppColors.text,
                 tonalElevation = 0.dp,
-                modifier = Modifier.height(56.dp)
+                modifier = Modifier.height(52.dp)
             ) {
                 destinations.forEachIndexed { index, dest ->
                     NavigationBarItem(
@@ -178,14 +161,15 @@ fun MainScreen(
                             Icon(
                                 dest.icon,
                                 contentDescription = dest.label,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(18.dp)
                             )
                         },
                         label = {
                             Text(
                                 dest.label,
-                                fontSize = 9.sp,
+                                fontSize = 8.sp,
                                 maxLines = 1,
+                                lineHeight = 9.sp,
                                 fontWeight = if (selectedNav == index) FontWeight.Bold else FontWeight.Normal
                             )
                         },
@@ -208,14 +192,17 @@ fun MainScreen(
             }
         }
 
-        // Settings button — top right corner overlay
-        IconButton(
-            onClick = { showSettings = true },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 4.dp, top = 4.dp)
-        ) {
-            Icon(Icons.Default.Settings, "Ajustes", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+        // Settings button — hide on Quiz/Riffs to avoid overlapping UI elements
+        val hideSettings = selectedNav in listOf(NavDestination.QUIZ.ordinal, NavDestination.RIFFS.ordinal)
+        if (!hideSettings) {
+            IconButton(
+                onClick = { showSettings = true },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(end = 4.dp, top = 4.dp)
+            ) {
+                Icon(Icons.Default.Settings, "Ajustes", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+            }
         }
 
         if (showSettings) {
@@ -384,6 +371,114 @@ private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
             ) {
                 Text("Cerrar", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
+        }
+    }
+}
+
+// ===== UNIFIED SCREENS WITH TOGGLE =====
+
+@Composable
+private fun ModeToggle(
+    leftLabel: String,
+    rightLabel: String,
+    isLeftSelected: Boolean,
+    onToggle: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(AppColors.surfaceVariant)
+            .padding(2.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (isLeftSelected) AppColors.primary else Color.Transparent)
+                .clickable { onToggle(true) }
+                .padding(horizontal = 14.dp, vertical = 5.dp)
+        ) {
+            Text(
+                leftLabel,
+                color = if (isLeftSelected) AppColors.onPrimary else AppColors.textMuted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(if (!isLeftSelected) AppColors.primary else Color.Transparent)
+                .clickable { onToggle(false) }
+                .padding(horizontal = 14.dp, vertical = 5.dp)
+        ) {
+            Text(
+                rightLabel,
+                color = if (!isLeftSelected) AppColors.onPrimary else AppColors.textMuted,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
+    var isViewMode by rememberSaveable { mutableStateOf(true) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isViewMode) {
+            ScaleFretboardScreen(onBack = {}, showBackButton = false)
+        } else {
+            CagedPracticeScreen(onBack = { isViewMode = true }, pitchResult = pitchResult)
+        }
+
+        // Toggle overlay at top center
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 6.dp)
+        ) {
+            ModeToggle(
+                leftLabel = "Ver",
+                rightLabel = "Practicar",
+                isLeftSelected = isViewMode,
+                onToggle = { isViewMode = it }
+            )
+        }
+    }
+}
+
+@Composable
+private fun UnifiedChordsScreen() {
+    var isViewMode by rememberSaveable { mutableStateOf(true) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isViewMode) {
+            ChordVisualizerScreen(
+                onBack = {},
+                onGoToPractice = { isViewMode = false },
+                showBackButton = false
+            )
+        } else {
+            ChordPracticeScreen(
+                onBack = { isViewMode = true },
+                onGoToVisualizer = { isViewMode = true }
+            )
+        }
+
+        // Toggle overlay at top center
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 6.dp)
+        ) {
+            ModeToggle(
+                leftLabel = "Digitaciones",
+                rightLabel = "Progresiones",
+                isLeftSelected = isViewMode,
+                onToggle = { isViewMode = it }
+            )
         }
     }
 }
