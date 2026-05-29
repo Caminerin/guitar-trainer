@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -235,7 +236,10 @@ fun TabPracticeScreen(
                 modifier = Modifier
                     .padding(horizontal = 12.dp)
                     .size(24.dp)
-                    .clickable { showFilterOverlay = true }
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) { showFilterOverlay = true }
             )
         }
 
@@ -1088,7 +1092,7 @@ fun TabViewer(
             val beatW = beatWidth.toPx()
             val measPad = measurePadding.toPx()
             val headerW = headerWidth.toPx()
-            val topOffset = 40f
+            val topOffset = 10f
             val noteFontSize = 42f
             val labelFontSize = 48f
 
