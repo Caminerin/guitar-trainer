@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -57,8 +58,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.TickPlayer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 
 // ─── Theme ───
 private val BG = Color(0xFF121212)
@@ -522,22 +525,28 @@ private fun ProgressionPlayerScreen(
     else
         chordNames.firstOrNull() ?: "—"
 
+    // Single TickPlayer instance, reused across play/stop cycles
+    val tickPlayer = remember { TickPlayer() }
+    DisposableEffect(Unit) { onDispose { tickPlayer.release() } }
+
     // Metronome playback loop
     LaunchedEffect(isPlaying) {
         if (!isPlaying) {
             currentBeatGlobal = -1
             return@LaunchedEffect
         }
-        val tickPlayer = TickPlayer()
         var beat = 0
         try {
             while (isActive) {
                 currentBeatGlobal = beat
                 if (metronomeState.value) {
-                    tickPlayer.tick()
+                    val currentBpm = bpmState.value
+                    withContext(Dispatchers.IO) {
+                        tickPlayer.playBeat(currentBpm)
+                    }
+                } else {
+                    delay(60_000L / bpmState.value.toLong())
                 }
-                val beatMs = 60_000L / bpmState.value.toLong()
-                delay(beatMs)
                 beat++
                 if (beat >= totalBeats) {
                     if (loopState.value) {
@@ -548,7 +557,6 @@ private fun ProgressionPlayerScreen(
                 }
             }
         } finally {
-            tickPlayer.release()
             currentBeatGlobal = -1
             isPlaying = false
         }
@@ -762,6 +770,9 @@ private fun ProgressionPlayerScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Reserve space for Ver/Practicar toggle overlay from MainScreen
+            Spacer(modifier = Modifier.width(150.dp))
+
             // Loop toggle
             IconButton(
                 onClick = { loopEnabled = !loopEnabled },
