@@ -104,7 +104,7 @@ private val LEVEL_COLORS = mapOf(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = null) {
+fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = null, showBackButton: Boolean = true) {
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -176,8 +176,10 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(22.dp))
+            if (showBackButton) {
+                IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(22.dp))
+                }
             }
 
             // Root selector

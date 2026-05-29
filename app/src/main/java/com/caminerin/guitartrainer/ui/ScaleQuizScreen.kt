@@ -93,7 +93,7 @@ data class QuizResult(
 )
 
 @Composable
-fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? = null) {
+fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? = null, showBackButton: Boolean = true) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex) }
@@ -158,8 +158,10 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
+                if (showBackButton) {
+                    IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
                 }
 
                 // Key selector -> chromatic circle

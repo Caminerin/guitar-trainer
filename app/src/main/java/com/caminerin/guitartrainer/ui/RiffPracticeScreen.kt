@@ -101,7 +101,7 @@ private val SOUND_COLORS = mapOf(
 )
 
 @Composable
-fun RiffPracticeScreen(onBack: () -> Unit) {
+fun RiffPracticeScreen(onBack: () -> Unit, showBackButton: Boolean = true) {
     val context = LocalContext.current
     var dataLoaded by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -126,7 +126,8 @@ fun RiffPracticeScreen(onBack: () -> Unit) {
         RiffCatalogView(
             onSelectRiff = { selectedRiff = it },
             onBack = onBack,
-            dataLoaded = dataLoaded
+            dataLoaded = dataLoaded,
+            showBackButton = showBackButton
         )
     }
 }
@@ -137,7 +138,8 @@ fun RiffPracticeScreen(onBack: () -> Unit) {
 private fun RiffCatalogView(
     onSelectRiff: (Riff) -> Unit,
     onBack: () -> Unit,
-    dataLoaded: Boolean
+    dataLoaded: Boolean,
+    showBackButton: Boolean = true
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var selectedLevel by rememberSaveable { mutableIntStateOf(0) } // 0 = all
@@ -165,8 +167,10 @@ private fun RiffCatalogView(
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White)
+            if (showBackButton) {
+                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White)
+                }
             }
             Text(
                 "Riffs",
