@@ -24,6 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Stop
@@ -57,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.caminerin.guitartrainer.audio.TickPlayer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -363,6 +366,7 @@ fun ChordPracticeScreen(
 private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit) {
     var selectedCategory by remember { mutableStateOf<String?>(null) }
     var degreeSearch by remember { mutableStateOf("") }
+    var showFilterOverlay by remember { mutableStateOf(false) }
 
     val allCategories = remember {
         ALL_PROGRESSIONS.map { it.category }.distinct()
@@ -384,8 +388,81 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit) {
             }
     }
 
+    // Filter overlay
+    if (showFilterOverlay) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(10f)
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable { showFilterOverlay = false },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF2A2A2A))
+                    .clickable(enabled = false) {}
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Filtrar por sentimiento", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = { showFilterOverlay = false }) {
+                        Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                // "Todos" option
+                val allSelected = selectedCategory == null
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (allSelected) ACCENT else Color.White.copy(alpha = 0.08f))
+                        .clickable { selectedCategory = null; showFilterOverlay = false }
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        "Todos",
+                        color = if (allSelected) Color.Black else Color.White.copy(alpha = 0.6f),
+                        fontSize = 14.sp,
+                        fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                for (cat in allCategories) {
+                    val catColor = ALL_PROGRESSIONS.first { it.category == cat }.categoryColor
+                    val isSelected = selectedCategory == cat
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
+                            .clickable { selectedCategory = cat; showFilterOverlay = false }
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Text(
+                            cat,
+                            color = if (isSelected) Color.White else catColor,
+                            fontSize = 14.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(6.dp))
+                }
+            }
+        }
+        return
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
+        // Header with filter button
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -399,52 +476,31 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit) {
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
-        }
-
-        // Filter: category chips
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF1A1A2A))
-                .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // "Todos" chip
-            val allSelected = selectedCategory == null
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(if (allSelected) ACCENT else Color.White.copy(alpha = 0.08f))
-                    .clickable { selectedCategory = null }
-                    .padding(horizontal = 12.dp, vertical = 5.dp)
-            ) {
-                Text(
-                    "Todos",
-                    color = if (allSelected) Color.Black else Color.White.copy(alpha = 0.6f),
-                    fontSize = 12.sp,
-                    fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal
-                )
-            }
-            // Category chips
-            for (cat in allCategories) {
-                val catColor = ALL_PROGRESSIONS.first { it.category == cat }.categoryColor
-                val isSelected = selectedCategory == cat
+            Spacer(modifier = Modifier.weight(1f))
+            if (selectedCategory != null) {
+                val catColor = ALL_PROGRESSIONS.first { it.category == selectedCategory }.categoryColor
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
-                        .clickable { selectedCategory = if (isSelected) null else cat }
-                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                        .background(catColor.copy(alpha = 0.3f))
+                        .clickable { selectedCategory = null }
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Text(
-                        cat,
-                        color = if (isSelected) Color.White else catColor,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(selectedCategory!!, color = catColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("\u2715", color = catColor.copy(alpha = 0.6f), fontSize = 10.sp)
+                    }
                 }
+                Spacer(modifier = Modifier.width(8.dp))
             }
+            Icon(
+                Icons.Default.FilterList, "Filtros",
+                tint = if (selectedCategory != null) ACCENT else Color.White.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .size(28.dp)
+                    .clickable { showFilterOverlay = true }
+            )
         }
 
         // Filter: degree search

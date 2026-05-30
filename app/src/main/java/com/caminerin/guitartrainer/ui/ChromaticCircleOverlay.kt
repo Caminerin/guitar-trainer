@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -44,6 +45,7 @@ fun ChromaticCircleOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.7f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center

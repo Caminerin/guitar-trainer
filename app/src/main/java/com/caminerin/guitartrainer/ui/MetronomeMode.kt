@@ -136,7 +136,7 @@ fun MetronomeMode(
             // Left: Play + BPM + slider (compact, no scroll)
             Column(
                 modifier = Modifier
-                    .weight(0.35f)
+                    .weight(0.45f)
                     .fillMaxHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -191,9 +191,8 @@ fun MetronomeMode(
             // Right: settings + cards
             Column(
                 modifier = Modifier
-                    .weight(0.6f)
+                    .weight(0.55f)
                     .fillMaxHeight()
-                    .verticalScroll(rememberScrollState())
                     .padding(vertical = 4.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -211,7 +210,7 @@ fun MetronomeMode(
                     onSoundMenuToggle = { soundMenuExpanded = it },
                     onSoundSelected = { sound = it; soundMenuExpanded = false }
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 MetronomeCards(
                     isPlaying = isPlaying,
                     currentBpm = currentBpm,
@@ -605,7 +604,7 @@ private fun MetronomeCards(
         }
     }
 
-    Spacer(modifier = Modifier.height(10.dp))
+    Spacer(modifier = Modifier.height(4.dp))
 
     FeatureCard(
         icon = Icons.Default.Timer,
@@ -640,7 +639,7 @@ private fun MetronomeCards(
             Spacer(modifier = Modifier.width(8.dp))
             Pill("Tiempo", timerMode == "time") { onTimerModeChange("time") }
         }
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         if (timerMode == "measures") {
             BigValueSelector("$timerMeasures", "compases",
                 onMinus = { onTimerMeasuresChange((timerMeasures - 4).coerceAtLeast(4)) },
@@ -715,6 +714,10 @@ private fun FeatureCard(
         label = "border"
     )
 
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val cardPadding = if (isLandscape) 8.dp else 14.dp
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -731,7 +734,7 @@ private fun FeatureCard(
         ),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(cardPadding)) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -742,12 +745,12 @@ private fun FeatureCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = if (enabled) activeColor else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(if (isLandscape) 16.dp else 20.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(if (isLandscape) 4.dp else 8.dp))
                 Text(
                     text = title,
-                    fontSize = 15.sp,
+                    fontSize = if (isLandscape) 13.sp else 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (enabled) activeColor else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -756,7 +759,7 @@ private fun FeatureCard(
             }
 
             if (enabled) {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(if (isLandscape) 6.dp else 12.dp))
                 content()
             }
         }
