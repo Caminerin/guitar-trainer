@@ -25,8 +25,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -64,6 +66,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.caminerin.guitartrainer.audio.RiffSynth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -94,6 +99,38 @@ fun TabPracticeScreen(
     var sortKeys by remember { mutableStateOf(listOf<SortKey>()) }
     var minGuitars by remember { mutableIntStateOf(0) }
     var minBass by remember { mutableIntStateOf(0) }
+    var catalogRefresh by remember { mutableIntStateOf(0) }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            scope.launch {
+                try {
+                    val contentResolver = context.contentResolver
+                    val fileName = run {
+                        val cursor = contentResolver.query(uri, null, null, null, null)
+                        val name = cursor?.use {
+                            val idx = it.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                            if (it.moveToFirst() && idx >= 0) it.getString(idx) else null
+                        }
+                        name ?: uri.lastPathSegment ?: "tab_file"
+                    }
+                    val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                    if (bytes != null) {
+                        withContext(Dispatchers.IO) {
+                            TabRepository.importUserTab(context, fileName, bytes)
+                        }
+                        TabRepository.reset()
+                        TabRepository.loadCatalog(context)
+                        catalogRefresh++
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("TabPractice", "Error importing tab", e)
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         try {
@@ -195,7 +232,7 @@ fun TabPracticeScreen(
                     "${TabRepository.filter(searchQuery, selectedArtist,
                         if (bpmActive) bpmRange.start.toInt() else null,
                         if (bpmActive) bpmRange.endInclusive.toInt() else null
-                    ).size} canciones",
+                    ).size} tabs",
                     color = AppColors.textSecondary,
                     fontSize = 12.sp
                 )
@@ -219,22 +256,39 @@ fun TabPracticeScreen(
             TextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Buscar canción o artista...", color = AppColors.textSecondary) },
+                placeholder = { Text("Buscar tab...", color = AppColors.textSecondary) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = AppColors.textSecondary) },
                 colors = TextFieldDefaults.colors(
-                    focusedContainerColor = AppColors.surface,
-                    unfocusedContainerColor = AppColors.surface,
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
                     focusedTextColor = AppColors.text,
-                    unfocusedTextColor = AppColors.text
+                    unfocusedTextColor = AppColors.text,
+                    focusedIndicatorColor = AppColors.tertiary,
+                    unfocusedIndicatorColor = AppColors.divider
                 ),
                 singleLine = true,
                 modifier = Modifier.weight(1f)
             )
             Icon(
+                Icons.Default.Add, "Importar tab",
+                tint = AppColors.success,
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .size(26.dp)
+                    .clickable(
+                        indication = null,
+                        interactionSource = remember { MutableInteractionSource() }
+                    ) {
+                        filePickerLauncher.launch(arrayOf(
+                            "*/*"
+                        ))
+                    }
+            )
+            Icon(
                 Icons.Default.FilterList, "Filtros",
                 tint = AppColors.tertiary,
                 modifier = Modifier
-                    .padding(horizontal = 12.dp)
+                    .padding(horizontal = 8.dp)
                     .size(24.dp)
                     .clickable(
                         indication = null,
@@ -323,10 +377,8 @@ fun TabPracticeScreen(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SortableHeader("Canción", "song", sortKeys, Modifier.weight(1.4f)) { toggleSort("song") }
-                SortableHeader("Artista", "artist", sortKeys, Modifier.weight(1f)) { toggleSort("artist") }
-                SortableHeader("Gtr", "gtr", sortKeys, Modifier.width(36.dp)) { toggleSort("gtr") }
-                SortableHeader("Bajo", "bass", sortKeys, Modifier.width(36.dp)) { toggleSort("bass") }
+                SortableHeader("Nombre", "song", sortKeys, Modifier.weight(1.4f)) { toggleSort("song") }
+                SortableHeader("Categoría", "artist", sortKeys, Modifier.weight(1f)) { toggleSort("artist") }
                 SortableHeader("BPM", "bpm", sortKeys, Modifier.width(44.dp)) { toggleSort("bpm") }
             }
 
@@ -353,25 +405,11 @@ fun TabPracticeScreen(
                         )
                         Text(
                             entry.artist,
-                            color = AppColors.textSecondary,
+                            color = if (entry.isUserTab) AppColors.success else AppColors.textSecondary,
                             fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            "${entry.guitarTracks}",
-                            color = Color(0xFF4CAF50),
-                            fontSize = 13.sp,
-                            modifier = Modifier.width(36.dp),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                        )
-                        Text(
-                            "${entry.bassTracks}",
-                            color = Color(0xFFFF9800),
-                            fontSize = 13.sp,
-                            modifier = Modifier.width(36.dp),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         Text(
                             "${entry.tempo}",
@@ -380,6 +418,23 @@ fun TabPracticeScreen(
                             modifier = Modifier.width(44.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
+                        if (entry.isUserTab) {
+                            Icon(
+                                Icons.Default.Delete, "Eliminar",
+                                tint = AppColors.error.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable {
+                                        val tabId = entry.path.removePrefix("user://")
+                                        TabRepository.deleteUserTab(context, tabId)
+                                        scope.launch {
+                                            TabRepository.reset()
+                                            TabRepository.loadCatalog(context)
+                                            catalogRefresh++
+                                        }
+                                    }
+                            )
+                        }
                     }
                 }
             }
@@ -448,10 +503,7 @@ private fun FilterOverlay(
     onClear: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    var artistSearch by remember { mutableStateOf("") }
     var localBpmRange by remember { mutableStateOf(bpmRange) }
-    var localMinGuitars by remember { mutableIntStateOf(minGuitars) }
-    var localMinBass by remember { mutableIntStateOf(minBass) }
 
     Column(
         modifier = Modifier
@@ -485,7 +537,7 @@ private fun FilterOverlay(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .background(AppColors.tertiary)
-                    .clickable { onBpmRangeChanged(localBpmRange); onMinGuitarsChanged(localMinGuitars); onMinBassChanged(localMinBass); onDismiss() }
+                    .clickable { onBpmRangeChanged(localBpmRange); onDismiss() }
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text("Aplicar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -515,119 +567,31 @@ private fun FilterOverlay(
             )
             Spacer(Modifier.height(20.dp))
 
-            // Min guitars
-            Text("Mínimo guitarras", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(4.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                listOf(0, 1, 2, 3, 4).forEach { n ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (localMinGuitars == n) Color(0xFF4CAF50) else AppColors.surface)
-                            .clickable { localMinGuitars = n }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            if (n == 0) "Todas" else "$n+",
-                            color = if (localMinGuitars == n) Color.White else AppColors.text,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-
-            // Min bass
-            Text("Mínimo bajos", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(4.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                listOf(0, 1, 2).forEach { n ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (localMinBass == n) Color(0xFFFF9800) else AppColors.surface)
-                            .clickable { localMinBass = n }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            if (n == 0) "Todas" else "$n+",
-                            color = if (localMinBass == n) Color.White else AppColors.text,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-
-            // Artist filter
-            Text("Artista", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            // Category filter
+            Text("Categoría", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            TextField(
-                value = artistSearch,
-                onValueChange = { artistSearch = it },
-                placeholder = { Text("Buscar artista...", color = AppColors.textSecondary) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = AppColors.textSecondary) },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = AppColors.surface,
-                    unfocusedContainerColor = AppColors.surface,
-                    focusedTextColor = AppColors.text,
-                    unfocusedTextColor = AppColors.text
-                ),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(8.dp))
-
-            if (selectedArtist != null) {
+            artists.forEach { category ->
+                val isSelected = category == selectedArtist
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(AppColors.tertiary.copy(alpha = 0.2f))
-                        .clickable { onArtistSelected(null) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(selectedArtist, color = AppColors.tertiary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.weight(1f))
-                    Text("✕", color = AppColors.tertiary, fontSize = 14.sp)
-                }
-                Spacer(Modifier.height(4.dp))
-            }
-
-            val filteredArtists = if (artistSearch.isBlank()) artists
-                else artists.filter { it.contains(artistSearch, ignoreCase = true) }
-
-            filteredArtists.take(100).forEach { artist ->
-                val isSelected = artist == selectedArtist
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onArtistSelected(if (isSelected) null else artist) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .background(if (isSelected) AppColors.tertiary.copy(alpha = 0.2f) else Color.Transparent)
+                        .clickable { onArtistSelected(if (isSelected) null else category) }
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        artist,
+                        category,
                         color = if (isSelected) AppColors.tertiary else AppColors.text,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                     )
+                    if (isSelected) {
+                        Spacer(Modifier.weight(1f))
+                        Text("✕", color = AppColors.tertiary, fontSize = 14.sp)
+                    }
                 }
-            }
-            if (filteredArtists.size > 100) {
-                Text(
-                    "... y ${filteredArtists.size - 100} más (usa el buscador)",
-                    color = AppColors.textMuted,
-                    fontSize = 11.sp,
-                    modifier = Modifier.padding(12.dp)
-                )
             }
         }
     }
@@ -920,21 +884,21 @@ fun TabPlayerScreen(
                 )
             }
 
-            // Single-line controls: BPM slider left, 4 buttons right
+            // Single-line controls: BPM + buttons compact
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(AppColors.surface)
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // BPM label + slider (left half)
+                // BPM label + compact slider
                 Text(
                     "${(entry.tempo * bpmFactor).toInt()}",
                     color = AppColors.text,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(30.dp)
+                    modifier = Modifier.width(28.dp)
                 )
                 Slider(
                     value = bpmFactor,
@@ -944,14 +908,13 @@ fun TabPlayerScreen(
                         thumbColor = AppColors.tertiary,
                         activeTrackColor = AppColors.tertiary
                     ),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).height(24.dp)
                 )
 
-                // 4 control buttons (right, equidistant)
+                // Control buttons
                 Row(
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.width(200.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Measure counter
                     Text(
@@ -1042,10 +1005,10 @@ fun TabViewer(
         else if (numStrings == 4) listOf("G", "D", "A", "E")
         else (1..numStrings).map { "S$it" }
 
-    val lineSpacing = 40.dp
+    val lineSpacing = 34.dp
     val beatWidth = 48.dp
     val measurePadding = 24.dp
-    val headerWidth = 48.dp
+    val headerWidth = 44.dp
 
     var totalWidth = headerWidth.value
     for (measure in track.measures) {
