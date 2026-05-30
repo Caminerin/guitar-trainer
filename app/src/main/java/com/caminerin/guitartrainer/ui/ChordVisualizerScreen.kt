@@ -11,12 +11,16 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -51,6 +55,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.caminerin.guitartrainer.audio.ChordSynth
 
 private val CHORD_BG = SHARED_BG
@@ -128,6 +133,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
     var showDisplaySelector by remember { mutableStateOf(false) }
     var showColorSelector by remember { mutableStateOf(false) }
     var showScaleSelector by remember { mutableStateOf(false) }
+    var showShapeSelector by remember { mutableStateOf(false) }
     var scaleFilterEnabled by rememberSaveable { mutableStateOf(AppPreferences.chordScaleEnabled) }
     var selectedScaleName by rememberSaveable { mutableStateOf(AppPreferences.chordScaleName) }
 
@@ -270,34 +276,36 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             }
         }
 
-        // Shape selector row
-        if (filteredChords.isNotEmpty()) {
+        // Shape selector button (replaces old horizontal bar)
+        if (filteredChords.size > 1) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(Color(0xFF252525))
-                    .horizontalScroll(rememberScrollState())
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                filteredChords.forEachIndexed { idx, chord ->
-                    val isSelected = idx == safeIndex
-                    val color = QUALITY_COLORS[selectedQuality] ?: Color.Gray
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) color else color.copy(alpha = 0.15f))
-                            .clickable { selectedChordIndex = idx }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            chord.shortLabel,
-                            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
+                val color = QUALITY_COLORS[selectedQuality] ?: Color.Gray
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(color.copy(alpha = 0.3f))
+                        .clickable { showShapeSelector = true }
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        currentChord?.shortLabel ?: "Posición",
+                        color = Color.White,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "${safeIndex + 1}/${filteredChords.size} posiciones",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 12.sp
+                )
             }
         }
 
@@ -398,6 +406,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .zIndex(10f)
                 .background(Color.Black.copy(alpha = 0.7f))
                 .clickable { showQualitySelector = false },
             contentAlignment = Alignment.Center
@@ -460,6 +469,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .zIndex(10f)
                 .background(Color.Black.copy(alpha = 0.7f))
                 .clickable { showLevelSelector = false },
             contentAlignment = Alignment.Center
@@ -551,6 +561,83 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             },
             onDismiss = { showScaleSelector = false }
         )
+    }
+
+    // Shape/position selector overlay
+    if (showShapeSelector && filteredChords.isNotEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(10f)
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable { showShapeSelector = false },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .fillMaxHeight(0.8f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF2A2A2A))
+                    .clickable(enabled = false) {}
+                    .padding(20.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Posiciones", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    IconButton(onClick = { showShapeSelector = false }) {
+                        Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    itemsIndexed(filteredChords) { idx, chord ->
+                        val isSelected = idx == safeIndex
+                        val color = QUALITY_COLORS[selectedQuality] ?: Color.Gray
+                        val minFret = chord.frets.filterNotNull().filter { it > 0 }.minOrNull()
+                        val maxFretVal = chord.frets.filterNotNull().filter { it > 0 }.maxOrNull()
+                        val fretRange = if (minFret != null && maxFretVal != null) "Trastes $minFret-$maxFretVal" else "Abierto"
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) color else color.copy(alpha = 0.15f))
+                                .clickable {
+                                    selectedChordIndex = idx
+                                    showShapeSelector = false
+                                }
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    chord.shortLabel,
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    fretRange,
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    fontSize = 11.sp
+                                )
+                            }
+                            Text(
+                                "${idx + 1}/${filteredChords.size}",
+                                color = Color.White.copy(alpha = 0.4f),
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

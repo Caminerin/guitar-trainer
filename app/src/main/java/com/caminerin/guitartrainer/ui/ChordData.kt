@@ -88,13 +88,16 @@ data class ChordShape(
                 shapeName.contains("D_shape") -> "Forma D"
                 else -> ""
             }
-            return when {
+            val minFret = frets.filterNotNull().filter { it > 0 }.minOrNull()
+            val fretTag = if (minFret != null && minFret > 0) "tr.$minFret" else ""
+            val base = when {
                 cagedLetter.isNotEmpty() && inv.isNotEmpty() -> "$cagedLetter $inv"
                 cagedLetter.isNotEmpty() -> cagedLetter
                 inv.isNotEmpty() -> inv
                 shape.length <= 20 -> shape
                 else -> "Pos ${priority}"
             }
+            return if (fretTag.isNotEmpty()) "$base ($fretTag)" else base
         }
 }
 

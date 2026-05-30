@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.caminerin.guitartrainer.audio.MetronomeEngine
 
 // ===== SHARED CSV PARSING =====
@@ -793,6 +794,7 @@ fun NoteDisplaySelectorOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
@@ -802,7 +804,8 @@ fun NoteDisplaySelectorOverlay(
                 .clip(RoundedCornerShape(20.dp))
                 .background(Color(0xFF2A2A2A))
                 .clickable(enabled = false) {}
-                .padding(24.dp),
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
@@ -881,6 +884,7 @@ private fun ColorSelectorOverlayBody(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
@@ -982,6 +986,7 @@ fun ScaleNameSelectorOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.7f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
