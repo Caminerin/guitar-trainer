@@ -382,6 +382,22 @@ private fun TunerInfo(
             fontSize = 18.sp,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f)
         )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(COLOR_INACTIVE.copy(alpha = 0.15f))
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = "— Sin señal",
+                    color = COLOR_INACTIVE,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            }
+        }
     }
 }
 
@@ -426,15 +442,15 @@ private fun TunerGauge(
             style = Stroke(width = 12f, cap = StrokeCap.Round)
         )
 
-        // Green zone
+        // Green zone — wider and more visible
         drawArc(
-            color = COLOR_TUNED.copy(alpha = 0.3f),
+            color = COLOR_TUNED.copy(alpha = 0.6f),
             startAngle = 180f + 90f - 18f,
             sweepAngle = 36f,
             useCenter = false,
             topLeft = Offset(centerX - radius, bottomY - radius),
             size = androidx.compose.ui.geometry.Size(radius * 2, radius * 2),
-            style = Stroke(width = 12f, cap = StrokeCap.Round)
+            style = Stroke(width = 20f, cap = StrokeCap.Round)
         )
 
         // Tick marks
@@ -538,7 +554,7 @@ private fun StringChip(
             .background(backgroundColor)
             .border(1.dp, borderColor, RoundedCornerShape(10.dp))
             .then(if (isManual) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 10.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -551,7 +567,8 @@ private fun StringChip(
                 text = if (NoteFormatPreference.current == NoteFormat.EUROPEAN) guitarString.spanishName else guitarString.noteName,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = textColor
+                color = textColor,
+                maxLines = 1
             )
         }
     }

@@ -804,9 +804,9 @@ private fun ValueSelector(
             MiniButton("−", onMinus)
             Spacer(modifier = Modifier.width(6.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(value, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 if (unit.isNotEmpty()) {
-                    Text(unit, fontSize = 9.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f))
+                    Text(unit, fontSize = 9.sp, color = Color.White.copy(alpha = 0.5f))
                 }
             }
             Spacer(modifier = Modifier.width(6.dp))
@@ -830,9 +830,9 @@ private fun BigValueSelector(
         PillButton("−") { onMinus() }
         Spacer(modifier = Modifier.width(16.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
             if (unit.isNotEmpty()) {
-                Text(unit, fontSize = 11.sp, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
+                Text(unit, fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
             }
         }
         Spacer(modifier = Modifier.width(16.dp))

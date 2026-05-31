@@ -667,8 +667,8 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
     val startFret = if (maxFret <= 4) 0 else (minFret - 1).coerceAtLeast(0)
     val fretsToShow = 5.coerceAtLeast(maxFret - startFret + 1)
 
-    val topPad = h * 0.1f
-    val bottomPad = h * 0.1f
+    val topPad = h * 0.08f
+    val bottomPad = h * 0.18f
     val leftPad = w * 0.12f
     val rightPad = w * 0.08f
     val fbTop = topPad
@@ -853,7 +853,7 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
             isAntiAlias = true
         }
         val notesText = chordNoteNames.joinToString(" - ")
-        drawContext.canvas.nativeCanvas.drawText(notesText, w / 2f, h - bottomPad * 0.15f, notePaint)
+        drawContext.canvas.nativeCanvas.drawText(notesText, w / 2f, h - bottomPad * 0.08f, notePaint)
     }
 
     // Chord name
@@ -867,7 +867,7 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
     drawContext.canvas.nativeCanvas.drawText(
         chord.displayName,
         w / 2f,
-        h - bottomPad * 0.55f,
+        h - bottomPad * 0.35f,
         chordNamePaint
     )
 }

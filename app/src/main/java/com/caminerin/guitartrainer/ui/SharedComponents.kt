@@ -240,6 +240,7 @@ fun BpmSelectorOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
@@ -347,6 +348,7 @@ fun MeasuresSelectorOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
@@ -403,6 +405,7 @@ fun FretSelectorOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
@@ -470,6 +473,7 @@ fun UnifiedScaleSelectorOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.8f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
@@ -594,6 +598,7 @@ fun SubdivisionSelectorOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
@@ -646,6 +651,7 @@ fun ChordModeSelectorOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
@@ -721,6 +727,7 @@ fun MeasureSubdivisionOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(10f)
             .background(Color.Black.copy(alpha = 0.75f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
