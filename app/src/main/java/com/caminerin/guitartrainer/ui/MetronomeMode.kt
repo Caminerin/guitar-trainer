@@ -36,10 +36,9 @@ import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -69,6 +68,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.caminerin.guitartrainer.audio.MetronomeConfig
 import com.caminerin.guitartrainer.audio.MetronomeEngine
 import com.caminerin.guitartrainer.audio.MetronomeSound
@@ -81,13 +82,16 @@ private data class TempoPreset(val name: String, val bpmMin: Int, val bpmMax: In
 }
 
 private val TEMPO_PRESETS = listOf(
+    TempoPreset("Grave", 20, 39),
     TempoPreset("Largo", 40, 60),
+    TempoPreset("Larghetto", 61, 65),
     TempoPreset("Adagio", 66, 76),
-    TempoPreset("Andante", 76, 108),
-    TempoPreset("Moderato", 108, 120),
-    TempoPreset("Allegro", 120, 156),
-    TempoPreset("Vivace", 156, 176),
-    TempoPreset("Presto", 176, 200)
+    TempoPreset("Andante", 77, 107),
+    TempoPreset("Moderato", 108, 119),
+    TempoPreset("Allegro", 120, 155),
+    TempoPreset("Vivace", 156, 175),
+    TempoPreset("Presto", 176, 200),
+    TempoPreset("Prestissimo", 201, 300)
 )
 
 // Time signatures
@@ -495,162 +499,164 @@ fun MetronomeMode(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
             )
 
-            // Tempo presets row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                TEMPO_PRESETS.forEach { preset ->
-                    val isActive = bpm in preset.bpmMin..preset.bpmMax
-                    Text(
-                        text = preset.name,
-                        fontSize = 9.sp,
-                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isActive) Color(0xFFFFC107) else Color.White.copy(alpha = 0.3f),
-                        modifier = Modifier
-                            .clickable {
-                                bpm = preset.midBpm; bpmSlider = bpm.toFloat()
-                            }
-                            .padding(horizontal = 2.dp, vertical = 4.dp)
-                    )
-                }
+            // Tempo preset button (opens overlay)
+            OutlinedButton(onClick = { tempoPresetMenuExpanded = true }) {
+                val tempoName = getTempoName(bpm)
+                Text(
+                    if (tempoName.isNotEmpty()) "$tempoName \u25BC" else "Tempo \u25BC",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFFC107)
+                )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Time sig + Subdivision + Sound + Count-in row
+            // Time sig + Subdivision + Sound buttons (open overlays)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                // Time signature dropdown
-                Box {
-                    OutlinedButton(onClick = { timeSigMenuExpanded = true }) {
-                        Text("$beatsPerMeasure/$beatUnit", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                OutlinedButton(onClick = { timeSigMenuExpanded = true }) {
+                    Text("$beatsPerMeasure/$beatUnit", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(onClick = { subdivisionMenuExpanded = true }) {
+                    val subLabel = when (subdivision) {
+                        1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
                     }
-                    DropdownMenu(expanded = timeSigMenuExpanded, onDismissRequest = { timeSigMenuExpanded = false }) {
-                        TIME_SIGNATURES.forEach { ts ->
-                            DropdownMenuItem(
-                                text = { Text(ts.label) },
-                                onClick = {
-                                    beatsPerMeasure = ts.beats; beatUnit = ts.unit
-                                    timeSigMenuExpanded = false
-                                }
-                            )
-                        }
+                    Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                }
+                OutlinedButton(onClick = { soundMenuExpanded = true }) {
+                    Text("\u266a ${sound.displayName}", fontSize = 12.sp)
+                }
+            }
+
+            // Overlay dialogs
+            if (timeSigMenuExpanded) {
+                MetronomeOverlaySelector(title = "Compás", onDismiss = { timeSigMenuExpanded = false }) {
+                    TIME_SIGNATURES.forEach { ts ->
+                        MetronomeOverlayItem(
+                            text = ts.label,
+                            isSelected = beatsPerMeasure == ts.beats && beatUnit == ts.unit,
+                            onClick = { beatsPerMeasure = ts.beats; beatUnit = ts.unit; timeSigMenuExpanded = false }
+                        )
                     }
                 }
-
-                // Subdivision dropdown
-                Box {
-                    OutlinedButton(onClick = { subdivisionMenuExpanded = true }) {
-                        val subLabel = when (subdivision) {
-                            1 -> "\u2669"
-                            2 -> "\u266a\u266a"
-                            3 -> "\u266a\u266a\u266a"
-                            4 -> "\u266c"
-                            else -> "$subdivision"
-                        }
-                        Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    }
-                    DropdownMenu(expanded = subdivisionMenuExpanded, onDismissRequest = { subdivisionMenuExpanded = false }) {
-                        listOf(
-                            1 to "\u2669 Negras",
-                            2 to "\u266a\u266a Corcheas",
-                            3 to "\u266a\u266a\u266a Tresillos",
-                            4 to "\u266c Semicorcheas"
-                        ).forEach { (sub, label) ->
-                            DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = { subdivision = sub; subdivisionMenuExpanded = false }
-                            )
-                        }
+            }
+            if (subdivisionMenuExpanded) {
+                MetronomeOverlaySelector(title = "Subdivisión", onDismiss = { subdivisionMenuExpanded = false }) {
+                    listOf(1 to "\u2669 Negras", 2 to "\u266a\u266a Corcheas", 3 to "\u266a\u266a\u266a Tresillos", 4 to "\u266c Semicorcheas").forEach { (sub, label) ->
+                        MetronomeOverlayItem(text = label, isSelected = subdivision == sub, onClick = { subdivision = sub; subdivisionMenuExpanded = false })
                     }
                 }
-
-                // Sound dropdown
-                Box {
-                    OutlinedButton(onClick = { soundMenuExpanded = true }) {
-                        Text("\u266a ${sound.displayName}", fontSize = 12.sp)
+            }
+            if (soundMenuExpanded) {
+                MetronomeOverlaySelector(title = "Tipo de clic", onDismiss = { soundMenuExpanded = false }) {
+                    MetronomeSound.entries.forEach { s ->
+                        MetronomeOverlayItem(text = s.displayName, isSelected = sound == s, onClick = { sound = s; soundMenuExpanded = false })
                     }
-                    DropdownMenu(expanded = soundMenuExpanded, onDismissRequest = { soundMenuExpanded = false }) {
-                        MetronomeSound.entries.forEach { s ->
-                            DropdownMenuItem(
-                                text = { Text(s.displayName) },
-                                onClick = { sound = s; soundMenuExpanded = false }
+                }
+            }
+            if (tempoPresetMenuExpanded) {
+                MetronomeOverlaySelector(title = "Tempo", onDismiss = { tempoPresetMenuExpanded = false }) {
+                    TEMPO_PRESETS.forEach { preset ->
+                        MetronomeOverlayItem(
+                            text = "${preset.name} (${preset.bpmMin}–${preset.bpmMax} BPM)",
+                            isSelected = bpm in preset.bpmMin..preset.bpmMax,
+                            onClick = { bpm = preset.midBpm; bpmSlider = bpm.toFloat(); tempoPresetMenuExpanded = false }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Count-in: big intuitive pills
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Cuenta atrás", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    listOf(0 to "Off", 1 to "1 compás", 2 to "2 compases", 4 to "4 compases").forEach { (bars, label) ->
+                        val isSelected = countInBars == bars
+                        Box(
+                            modifier = Modifier
+                                .padding(horizontal = 4.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant)
+                                .clickable { countInBars = bars }
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                label,
+                                fontSize = 13.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Quick settings: Count-in, Swing, Haptic
+            // Swing + Haptic row — big controls
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Count-in
+                // Swing — big
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Count-in", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
+                    Text("Swing", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        listOf(0, 1, 2, 4).forEach { bars ->
-                            val isSelected = countInBars == bars
-                            Box(
-                                modifier = Modifier
-                                    .padding(horizontal = 2.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isSelected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant)
-                                    .clickable { countInBars = bars }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    if (bars == 0) "Off" else "${bars}c",
-                                    fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Swing
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Swing", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        MiniButton("\u2212") { swingPercent = (swingPercent - 5).coerceAtLeast(50) }
-                        Spacer(modifier = Modifier.width(4.dp))
+                        PillButton("\u2212") { swingPercent = (swingPercent - 5).coerceAtLeast(50) }
+                        Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             "$swingPercent%",
-                            fontSize = 14.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (swingPercent > 50) Color(0xFFFFC107) else Color.White
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        MiniButton("+") { swingPercent = (swingPercent + 5).coerceAtMost(75) }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        PillButton("+") { swingPercent = (swingPercent + 5).coerceAtMost(75) }
                     }
                 }
 
-                // Haptic toggle
+                // Haptic toggle — big
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Haptic", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
+                    Text("Vibración", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(14.dp))
                             .background(if (hapticEnabled) Color(0xFF9C27B0).copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { hapticEnabled = !hapticEnabled }
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            Icons.Default.Vibration,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.5f)
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Vibration,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                if (hapticEnabled) "ON" else "OFF",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.5f)
+                            )
+                        }
                     }
                 }
             }
@@ -976,37 +982,38 @@ private fun MetronomeSettingsRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        Box {
-            OutlinedButton(onClick = { onTimeSigMenuToggle(true) }) {
-                Text("$beatsPerMeasure/$beatUnit", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        OutlinedButton(onClick = { onTimeSigMenuToggle(true) }) {
+            Text("$beatsPerMeasure/$beatUnit", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        OutlinedButton(onClick = { onSubdivisionMenuToggle(true) }) {
+            val subLabel = when (subdivision) {
+                1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
             }
-            DropdownMenu(expanded = timeSigMenuExpanded, onDismissRequest = { onTimeSigMenuToggle(false) }) {
-                TIME_SIGNATURES.forEach { ts ->
-                    DropdownMenuItem(text = { Text(ts.label) }, onClick = { onTimeSigSelected(ts) })
-                }
+            Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        OutlinedButton(onClick = { onSoundMenuToggle(true) }) {
+            Text("\u266a ${sound.displayName}", fontSize = 12.sp)
+        }
+    }
+
+    if (timeSigMenuExpanded) {
+        MetronomeOverlaySelector(title = "Compás", onDismiss = { onTimeSigMenuToggle(false) }) {
+            TIME_SIGNATURES.forEach { ts ->
+                MetronomeOverlayItem(text = ts.label, isSelected = beatsPerMeasure == ts.beats && beatUnit == ts.unit, onClick = { onTimeSigSelected(ts) })
             }
         }
-        Box {
-            OutlinedButton(onClick = { onSubdivisionMenuToggle(true) }) {
-                val subLabel = when (subdivision) {
-                    1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
-                }
-                Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
-            DropdownMenu(expanded = subdivisionMenuExpanded, onDismissRequest = { onSubdivisionMenuToggle(false) }) {
-                listOf(1 to "\u2669 Negras", 2 to "\u266a\u266a Corcheas", 3 to "\u266a\u266a\u266a Tresillos", 4 to "\u266c Semicorcheas").forEach { (sub, label) ->
-                    DropdownMenuItem(text = { Text(label) }, onClick = { onSubdivisionSelected(sub) })
-                }
+    }
+    if (subdivisionMenuExpanded) {
+        MetronomeOverlaySelector(title = "Subdivisión", onDismiss = { onSubdivisionMenuToggle(false) }) {
+            listOf(1 to "\u2669 Negras", 2 to "\u266a\u266a Corcheas", 3 to "\u266a\u266a\u266a Tresillos", 4 to "\u266c Semicorcheas").forEach { (sub, label) ->
+                MetronomeOverlayItem(text = label, isSelected = subdivision == sub, onClick = { onSubdivisionSelected(sub) })
             }
         }
-        Box {
-            OutlinedButton(onClick = { onSoundMenuToggle(true) }) {
-                Text("\u266a ${sound.displayName}", fontSize = 12.sp)
-            }
-            DropdownMenu(expanded = soundMenuExpanded, onDismissRequest = { onSoundMenuToggle(false) }) {
-                MetronomeSound.entries.forEach { s ->
-                    DropdownMenuItem(text = { Text(s.displayName) }, onClick = { onSoundSelected(s) })
-                }
+    }
+    if (soundMenuExpanded) {
+        MetronomeOverlaySelector(title = "Tipo de clic", onDismiss = { onSoundMenuToggle(false) }) {
+            MetronomeSound.entries.forEach { s ->
+                MetronomeOverlayItem(text = s.displayName, isSelected = sound == s, onClick = { onSoundSelected(s) })
             }
         }
     }
@@ -1028,69 +1035,93 @@ private fun QuickSettingsRow(
     onTempoPresetMenuToggle: (Boolean) -> Unit,
     onTempoPresetSelected: (TempoPreset) -> Unit
 ) {
+    // Count-in row
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Cuenta atrás:", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+        Spacer(modifier = Modifier.width(8.dp))
+        listOf(0 to "Off", 1 to "1c", 2 to "2c", 4 to "4c").forEach { (bars, label) ->
+            val isSelected = countInBars == bars
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 2.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isSelected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onCountInChange(bars) }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    label,
+                    fontSize = 12.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
+                )
+            }
+        }
+    }
+    Spacer(modifier = Modifier.height(6.dp))
+    // Swing + Haptic + Tempo row
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Count-in compact
+        // Swing
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("CI:", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.width(4.dp))
-            listOf(0, 1, 2).forEach { bars ->
-                val isSelected = countInBars == bars
-                Box(
-                    modifier = Modifier
-                        .padding(horizontal = 1.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (isSelected) Color(0xFF4CAF50) else Color.Transparent)
-                        .clickable { onCountInChange(bars) }
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        if (bars == 0) "0" else "$bars",
-                        fontSize = 10.sp,
-                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.4f)
-                    )
-                }
-            }
-        }
-        // Swing compact
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Sw:", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.width(2.dp))
+            Text("Swing:", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
+            Spacer(modifier = Modifier.width(6.dp))
+            MiniButton("\u2212") { onSwingChange((swingPercent - 5).coerceAtLeast(50)) }
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 "$swingPercent%",
-                fontSize = 10.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (swingPercent > 50) Color(0xFFFFC107) else Color.White.copy(alpha = 0.6f),
-                modifier = Modifier.clickable {
-                    val next = if (swingPercent >= 75) 50 else swingPercent + 5
-                    onSwingChange(next)
-                }
+                color = if (swingPercent > 50) Color(0xFFFFC107) else Color.White.copy(alpha = 0.6f)
             )
+            Spacer(modifier = Modifier.width(6.dp))
+            MiniButton("+") { onSwingChange((swingPercent + 5).coerceAtMost(75)) }
         }
         // Haptic
-        Icon(
-            Icons.Default.Vibration,
-            contentDescription = null,
+        Box(
             modifier = Modifier
-                .size(18.dp)
-                .clickable { onHapticToggle() },
-            tint = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.3f)
-        )
-        // Tempo presets
-        Box {
-            OutlinedButton(onClick = { onTempoPresetMenuToggle(true) }) {
-                Text("Tempo", fontSize = 10.sp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(if (hapticEnabled) Color(0xFF9C27B0).copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
+                .clickable { onHapticToggle() }
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Vibration,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.4f)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    if (hapticEnabled) "ON" else "OFF",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.4f)
+                )
             }
-            DropdownMenu(expanded = tempoPresetMenuExpanded, onDismissRequest = { onTempoPresetMenuToggle(false) }) {
-                TEMPO_PRESETS.forEach { preset ->
-                    DropdownMenuItem(
-                        text = { Text("${preset.name} (${preset.bpmMin}-${preset.bpmMax})") },
-                        onClick = { onTempoPresetSelected(preset) }
-                    )
-                }
+        }
+        // Tempo presets
+        OutlinedButton(onClick = { onTempoPresetMenuToggle(true) }) {
+            Text("Tempo \u25BC", fontSize = 11.sp)
+        }
+    }
+
+    if (tempoPresetMenuExpanded) {
+        MetronomeOverlaySelector(title = "Tempo", onDismiss = { onTempoPresetMenuToggle(false) }) {
+            TEMPO_PRESETS.forEach { preset ->
+                MetronomeOverlayItem(
+                    text = "${preset.name} (${preset.bpmMin}\u2013${preset.bpmMax} BPM)",
+                    isSelected = false,
+                    onClick = { onTempoPresetSelected(preset) }
+                )
             }
         }
     }
@@ -1431,6 +1462,75 @@ private fun Pill(text: String, isSelected: Boolean, onClick: () -> Unit) {
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) MaterialTheme.colorScheme.onPrimary
             else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun MetronomeOverlaySelector(
+    title: String,
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF2A2A2A))
+                    .clickable(enabled = false) {}
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Icon(
+                        Icons.Default.Close, "Cerrar",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp).clickable { onDismiss() }
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetronomeOverlayItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isSelected) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.08f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text,
+            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+            fontSize = 15.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
 }
