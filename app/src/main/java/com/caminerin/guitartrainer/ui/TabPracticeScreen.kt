@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,8 +40,6 @@ import androidx.compose.material3.RangeSlider
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -91,14 +88,12 @@ fun TabPracticeScreen(
     val scope = rememberCoroutineScope()
     var loading by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
-    var searchQuery by remember { mutableStateOf("") }
     var selectedArtist by remember { mutableStateOf<String?>(null) }
     var showFilterOverlay by remember { mutableStateOf(false) }
     var selectedEntry by remember { mutableStateOf<CatalogEntry?>(null) }
     var bpmRange by remember { mutableStateOf(30f..300f) }
     var sortKeys by remember { mutableStateOf(listOf<SortKey>()) }
-    var minGuitars by remember { mutableIntStateOf(0) }
-    var minBass by remember { mutableIntStateOf(0) }
+    var selectedInstruments by remember { mutableStateOf(setOf<String>()) }
     var catalogRefresh by remember { mutableIntStateOf(0) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -155,13 +150,11 @@ fun TabPracticeScreen(
             artists = TabRepository.getArtists(),
             selectedArtist = selectedArtist,
             bpmRange = bpmRange,
-            minGuitars = minGuitars,
-            minBass = minBass,
+            selectedInstruments = selectedInstruments,
             onArtistSelected = { selectedArtist = it },
             onBpmRangeChanged = { bpmRange = it },
-            onMinGuitarsChanged = { minGuitars = it },
-            onMinBassChanged = { minBass = it },
-            onClear = { selectedArtist = null; bpmRange = 30f..300f; minGuitars = 0; minBass = 0 },
+            onInstrumentsChanged = { selectedInstruments = it },
+            onClear = { selectedArtist = null; bpmRange = 30f..300f; selectedInstruments = emptySet() },
             onDismiss = { showFilterOverlay = false }
         )
         return
@@ -227,7 +220,7 @@ fun TabPracticeScreen(
             Spacer(Modifier.weight(1f))
             if (!loading) {
                 val bpmActive = bpmRange.start > 30f || bpmRange.endInclusive < 300f
-                val filtersActive = selectedArtist != null || bpmActive
+                val filtersActive = selectedArtist != null || bpmActive || selectedInstruments.isNotEmpty()
                 Text(
                     "${TabRepository.filter("", selectedArtist,
                         if (bpmActive) bpmRange.start.toInt() else null,
@@ -286,11 +279,12 @@ fun TabPracticeScreen(
 
         // Active filter chips
         val bpmActive = bpmRange.start > 30f || bpmRange.endInclusive < 300f
-        if (selectedArtist != null || bpmActive) {
+        if (selectedArtist != null || bpmActive || selectedInstruments.isNotEmpty()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -304,6 +298,12 @@ fun TabPracticeScreen(
                     FilterChip(
                         text = "${bpmRange.start.toInt()}-${bpmRange.endInclusive.toInt()} BPM",
                         onRemove = { bpmRange = 30f..300f }
+                    )
+                }
+                if (selectedInstruments.isNotEmpty()) {
+                    FilterChip(
+                        text = selectedInstruments.joinToString(", "),
+                        onRemove = { selectedInstruments = emptySet() }
                     )
                 }
             }
@@ -350,8 +350,15 @@ fun TabPracticeScreen(
                 if (bpmActive) bpmRange.start.toInt() else null,
                 if (bpmActive) bpmRange.endInclusive.toInt() else null
             ).filter { entry ->
-                (minGuitars == 0 || entry.guitarTracks >= minGuitars) &&
-                (minBass == 0 || entry.bassTracks >= minBass)
+                if (selectedInstruments.isEmpty()) true
+                else selectedInstruments.all { inst ->
+                    when (inst) {
+                        "Guitarra" -> entry.guitarTracks > 0
+                        "Bajo" -> entry.bassTracks > 0
+                        "Teclado/Piano" -> entry.otherTracks > 0
+                        else -> true
+                    }
+                }
             }
             val sortedEntries = applySorting(filteredEntries)
             val listState = rememberLazyListState()
@@ -364,9 +371,10 @@ fun TabPracticeScreen(
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SortableHeader("Nombre", "song", sortKeys, Modifier.weight(1.4f)) { toggleSort("song") }
-                SortableHeader("Categoría", "artist", sortKeys, Modifier.weight(1f)) { toggleSort("artist") }
-                SortableHeader("BPM", "bpm", sortKeys, Modifier.width(44.dp)) { toggleSort("bpm") }
+                SortableHeader("Nombre", "song", sortKeys, Modifier.weight(1.2f)) { toggleSort("song") }
+                SortableHeader("Categoría", "artist", sortKeys, Modifier.weight(0.8f)) { toggleSort("artist") }
+                SortableHeader("Instrumentos", "tracks", sortKeys, Modifier.weight(0.8f)) { toggleSort("tracks") }
+                SortableHeader("BPM", "bpm", sortKeys, Modifier.width(40.dp)) { toggleSort("bpm") }
             }
 
             LazyColumn(
@@ -388,7 +396,7 @@ fun TabPracticeScreen(
                             fontWeight = FontWeight.Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1.4f)
+                            modifier = Modifier.weight(1.2f)
                         )
                         Text(
                             entry.artist,
@@ -396,13 +404,21 @@ fun TabPracticeScreen(
                             fontSize = 13.sp,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(0.8f)
+                        )
+                        Text(
+                            instrumentsLabel(entry),
+                            color = AppColors.textSecondary,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(0.8f)
                         )
                         Text(
                             "${entry.tempo}",
                             color = AppColors.textSecondary,
                             fontSize = 13.sp,
-                            modifier = Modifier.width(44.dp),
+                            modifier = Modifier.width(40.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                         if (entry.isUserTab) {
@@ -428,6 +444,16 @@ fun TabPracticeScreen(
         }
     }
 }
+
+private fun instrumentsLabel(entry: CatalogEntry): String {
+    val parts = mutableListOf<String>()
+    if (entry.guitarTracks > 0) parts.add("Guitarra")
+    if (entry.bassTracks > 0) parts.add("Bajo")
+    if (entry.otherTracks > 0) parts.add("Teclado/Piano")
+    return if (parts.isEmpty()) "-" else parts.joinToString(", ")
+}
+
+private val ALL_INSTRUMENTS = listOf("Guitarra", "Bajo", "Teclado/Piano")
 
 @Composable
 private fun SortableHeader(
@@ -481,16 +507,17 @@ private fun FilterOverlay(
     artists: List<String>,
     selectedArtist: String?,
     bpmRange: ClosedFloatingPointRange<Float>,
-    minGuitars: Int,
-    minBass: Int,
+    selectedInstruments: Set<String>,
     onArtistSelected: (String?) -> Unit,
     onBpmRangeChanged: (ClosedFloatingPointRange<Float>) -> Unit,
-    onMinGuitarsChanged: (Int) -> Unit,
-    onMinBassChanged: (Int) -> Unit,
+    onInstrumentsChanged: (Set<String>) -> Unit,
     onClear: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // 0 = main menu, 1 = BPM, 2 = Categoría, 3 = Instrumentos
+    var filterPage by remember { mutableIntStateOf(0) }
     var localBpmRange by remember { mutableStateOf(bpmRange) }
+    var localInstruments by remember { mutableStateOf(selectedInstruments) }
 
     Column(
         modifier = Modifier
@@ -505,10 +532,25 @@ private fun FilterOverlay(
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, "Cerrar", tint = AppColors.text)
+            IconButton(onClick = {
+                if (filterPage == 0) onDismiss()
+                else filterPage = 0
+            }) {
+                Icon(
+                    if (filterPage == 0) Icons.Default.Close else Icons.Default.ArrowBack,
+                    "Volver",
+                    tint = AppColors.text
+                )
             }
-            Text("Filtros", color = AppColors.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                when (filterPage) {
+                    1 -> "BPM"
+                    2 -> "Categoría"
+                    3 -> "Instrumentos"
+                    else -> "Filtros"
+                },
+                color = AppColors.text, fontSize = 20.sp, fontWeight = FontWeight.Bold
+            )
             Spacer(Modifier.weight(1f))
             Box(
                 modifier = Modifier
@@ -519,68 +561,178 @@ private fun FilterOverlay(
             ) {
                 Text("Limpiar", color = AppColors.error, fontSize = 12.sp)
             }
-            Spacer(Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(AppColors.tertiary)
-                    .clickable { onBpmRangeChanged(localBpmRange); onDismiss() }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text("Aplicar", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
-            // BPM range
-            Text("Rango de BPM", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "${localBpmRange.start.toInt()} – ${localBpmRange.endInclusive.toInt()} BPM",
-                color = AppColors.tertiary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-            RangeSlider(
-                value = localBpmRange,
-                onValueChange = { localBpmRange = it },
-                valueRange = 30f..300f,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(Modifier.height(20.dp))
-
-            // Category filter
-            Text("Categoría", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(8.dp))
-            artists.forEach { category ->
-                val isSelected = category == selectedArtist
-                Row(
+        when (filterPage) {
+            0 -> {
+                // Main menu with 3 filter type buttons
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) AppColors.tertiary.copy(alpha = 0.2f) else Color.Transparent)
-                        .clickable { onArtistSelected(if (isSelected) null else category) }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        category,
-                        color = if (isSelected) AppColors.tertiary else AppColors.text,
-                        fontSize = 14.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    FilterMenuButton(
+                        title = "BPM",
+                        subtitle = if (bpmRange.start > 30f || bpmRange.endInclusive < 300f)
+                            "${bpmRange.start.toInt()} – ${bpmRange.endInclusive.toInt()}" else "Todos",
+                        onClick = { filterPage = 1 }
                     )
-                    if (isSelected) {
-                        Spacer(Modifier.weight(1f))
-                        Text("✕", color = AppColors.tertiary, fontSize = 14.sp)
+                    FilterMenuButton(
+                        title = "Categoría",
+                        subtitle = selectedArtist ?: "Todas",
+                        onClick = { filterPage = 2 }
+                    )
+                    FilterMenuButton(
+                        title = "Instrumentos",
+                        subtitle = if (selectedInstruments.isEmpty()) "Todos"
+                            else selectedInstruments.joinToString(", "),
+                        onClick = { filterPage = 3 }
+                    )
+                }
+            }
+            1 -> {
+                // BPM filter page
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "${localBpmRange.start.toInt()} – ${localBpmRange.endInclusive.toInt()} BPM",
+                        color = AppColors.tertiary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    RangeSlider(
+                        value = localBpmRange,
+                        onValueChange = { localBpmRange = it },
+                        valueRange = 30f..300f,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppColors.tertiary)
+                            .clickable { onBpmRangeChanged(localBpmRange); filterPage = 0 }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Aplicar", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            2 -> {
+                // Category filter page
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                ) {
+                    artists.forEach { category ->
+                        val isSelected = category == selectedArtist
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) AppColors.tertiary.copy(alpha = 0.2f) else Color.Transparent)
+                                .clickable {
+                                    onArtistSelected(if (isSelected) null else category)
+                                    filterPage = 0
+                                }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                category,
+                                color = if (isSelected) AppColors.tertiary else AppColors.text,
+                                fontSize = 15.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                            if (isSelected) {
+                                Spacer(Modifier.weight(1f))
+                                Text("✕", color = AppColors.tertiary, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
+            }
+            3 -> {
+                // Instruments filter page (multi-select)
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    ALL_INSTRUMENTS.forEach { instrument ->
+                        val isSelected = instrument in localInstruments
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) AppColors.tertiary.copy(alpha = 0.2f) else AppColors.surface)
+                                .clickable {
+                                    localInstruments = if (isSelected) localInstruments - instrument
+                                        else localInstruments + instrument
+                                }
+                                .padding(horizontal = 14.dp, vertical = 14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                instrument,
+                                color = if (isSelected) AppColors.tertiary else AppColors.text,
+                                fontSize = 16.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                            Spacer(Modifier.weight(1f))
+                            if (isSelected) {
+                                Text("✓", color = AppColors.tertiary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(AppColors.tertiary)
+                            .clickable { onInstrumentsChanged(localInstruments); filterPage = 0 }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("Aplicar", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FilterMenuButton(title: String, subtitle: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(AppColors.surface)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, color = AppColors.text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = AppColors.textSecondary, fontSize = 13.sp)
+        }
+        Text("›", color = AppColors.textSecondary, fontSize = 22.sp)
     }
 }
 
@@ -603,6 +755,8 @@ fun TabPlayerScreen(
     var loopStart by remember { mutableIntStateOf(-1) }
     var loopEnd by remember { mutableIntStateOf(-1) }
     var loopEnabled by remember { mutableStateOf(false) }
+    var countdownEnabled by remember { mutableStateOf(false) }
+    var countdownText by remember { mutableStateOf<String?>(null) }
     var playJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(Unit) {
@@ -630,6 +784,7 @@ fun TabPlayerScreen(
     fun stopPlayback() {
         playJob?.cancel()
         isPlaying = false
+        countdownText = null
         RiffSynth.stop()
     }
 
@@ -693,6 +848,21 @@ fun TabPlayerScreen(
         }
 
         playJob = scope.launch {
+            // Countdown before playing
+            if (countdownEnabled) {
+                val baseTempo = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300)
+                val beatMs = 60_000L / baseTempo
+                val startIdx = fromMeasure ?: currentMeasure
+                val beatsInMeasure = if (startIdx < track.measures.size)
+                    track.measures[startIdx].size.coerceIn(2, 8) else 4
+                for (i in beatsInMeasure downTo 1) {
+                    if (!isActive || !isPlaying) { countdownText = null; return@launch }
+                    countdownText = "$i"
+                    delay(beatMs)
+                }
+                countdownText = null
+            }
+
             withContext(Dispatchers.Default) {
                 RiffSynth.init(context)
 
@@ -869,6 +1039,22 @@ fun TabPlayerScreen(
                     },
                     tempo = (entry.tempo * bpmFactor).toInt()
                 )
+                // Countdown overlay
+                if (countdownText != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.6f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            countdownText!!,
+                            color = AppColors.tertiary,
+                            fontSize = 72.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
 
             // Controls: tempo slider (1/3) + buttons equidistant (2/3)
@@ -933,6 +1119,23 @@ fun TabPlayerScreen(
                                 if (!loopEnabled) { loopStart = -1; loopEnd = -1 }
                             }
                     )
+
+                    // Countdown toggle
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (countdownEnabled) AppColors.tertiary else Color.Transparent)
+                            .clickable { countdownEnabled = !countdownEnabled },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "3…",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (countdownEnabled) Color.White else AppColors.textSecondary
+                        )
+                    }
 
                     // Play/Stop
                     Box(
