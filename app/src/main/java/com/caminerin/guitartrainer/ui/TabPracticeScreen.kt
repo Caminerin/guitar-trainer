@@ -871,7 +871,7 @@ fun TabPlayerScreen(
                 )
             }
 
-            // Single-line controls: BPM + buttons compact
+            // Controls: tempo slider (1/3) + buttons equidistant (2/3)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -879,28 +879,34 @@ fun TabPlayerScreen(
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // BPM label + compact slider
-                Text(
-                    "${(entry.tempo * bpmFactor).toInt()}",
-                    color = AppColors.text,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.width(28.dp)
-                )
-                Slider(
-                    value = bpmFactor,
-                    onValueChange = { bpmFactor = it },
-                    valueRange = 0.25f..1.5f,
-                    colors = SliderDefaults.colors(
-                        thumbColor = AppColors.tertiary,
-                        activeTrackColor = AppColors.tertiary
-                    ),
-                    modifier = Modifier.weight(1f).height(24.dp)
-                )
-
-                // Control buttons
+                // BPM slider — 1/3 of width
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "${(entry.tempo * bpmFactor).toInt()}",
+                        color = AppColors.text,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.width(28.dp)
+                    )
+                    Slider(
+                        value = bpmFactor,
+                        onValueChange = { bpmFactor = it },
+                        valueRange = 0.25f..1.5f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = AppColors.tertiary,
+                            activeTrackColor = AppColors.tertiary
+                        ),
+                        modifier = Modifier.weight(1f).height(24.dp)
+                    )
+                }
+
+                // Control buttons — 2/3 of width, equidistant
+                Row(
+                    modifier = Modifier.weight(2f),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     // Measure counter

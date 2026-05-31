@@ -29,8 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Mood
-import androidx.compose.material.icons.filled.MusicNote
+
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Stop
@@ -467,7 +466,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                                 .padding(horizontal = 16.dp, vertical = 16.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Mood, "Sentimiento", tint = Color.White, modifier = Modifier.size(22.dp))
+                                Text("😊", fontSize = 18.sp)
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text("Filtrar por sentimiento", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
@@ -482,7 +481,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                                 .padding(horizontal = 16.dp, vertical = 16.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.MusicNote, "Intervalos", tint = Color.White, modifier = Modifier.size(22.dp))
+                                Text("🎵", fontSize = 18.sp)
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text("Filtrar por intervalos", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
