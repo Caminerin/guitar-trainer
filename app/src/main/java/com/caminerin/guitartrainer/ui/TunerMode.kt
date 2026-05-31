@@ -23,8 +23,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -37,6 +38,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -263,16 +266,72 @@ private fun TuningSelector(
     onToggle: (Boolean) -> Unit,
     onSelected: (Int) -> Unit
 ) {
-    Box {
-        OutlinedButton(onClick = { onToggle(true) }) {
-            Text(text = currentTuning.name)
-        }
-        DropdownMenu(expanded = expanded, onDismissRequest = { onToggle(false) }) {
-            ALL_TUNINGS.forEachIndexed { index, tuning ->
-                DropdownMenuItem(
-                    text = { Text(tuning.name) },
-                    onClick = { onSelected(index) }
-                )
+    OutlinedButton(onClick = { onToggle(true) }) {
+        Text(text = currentTuning.name)
+    }
+    if (expanded) {
+        Dialog(
+            onDismissRequest = { onToggle(false) },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .clickable { onToggle(false) },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color(0xFF2A2A2A))
+                        .clickable(enabled = false) {}
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Afinación", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Icon(
+                            Icons.Default.Close, "Cerrar",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp).clickable { onToggle(false) }
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        ALL_TUNINGS.forEachIndexed { index, tuning ->
+                            val isSelected = tuning.name == currentTuning.name
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 3.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.08f))
+                                    .clickable { onSelected(index) }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                Column {
+                                    Text(
+                                        tuning.name,
+                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f),
+                                        fontSize = 15.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                    Text(
+                                        tuning.strings.joinToString(" ") { it.noteName },
+                                        color = if (isSelected) Color.White.copy(alpha = 0.7f) else Color.White.copy(alpha = 0.4f),
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
