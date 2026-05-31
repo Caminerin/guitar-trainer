@@ -8,6 +8,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -20,12 +22,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Mood
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Stop
@@ -332,7 +337,8 @@ private fun chordNameFor(rootIndex: Int, step: ProgressionChord): String {
 @Composable
 fun ChordPracticeScreen(
     onBack: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") onGoToVisualizer: (() -> Unit)? = null
+    @Suppress("UNUSED_PARAMETER") onGoToVisualizer: (() -> Unit)? = null,
+    onOverlayChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     var dataLoaded by remember { mutableStateOf(false) }
@@ -349,7 +355,7 @@ fun ChordPracticeScreen(
 
         val progression = selectedProgression
         if (progression == null) {
-            ProgressionSelectorScreen(onSelect = { selectedProgression = it })
+            ProgressionSelectorScreen(onSelect = { selectedProgression = it }, onOverlayChanged = onOverlayChanged)
         } else {
             ProgressionPlayerScreen(
                 progression = progression,
@@ -362,21 +368,42 @@ fun ChordPracticeScreen(
 // ═══════════════════════════════════════════════════════
 // 1st Screen — Progression Selector (table)
 // ═══════════════════════════════════════════════════════
+private fun extractDegrees(label: String): Set<String> {
+    return label.split("–").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+}
+
+private val ALL_DEGREES = listOf(
+    "I", "ii", "iii", "IV", "V", "vi", "vii",
+    "i", "II", "III", "VI", "VII",
+    "V7", "ii7",
+    "bII", "bIII", "bVI", "bVII", "bii", "bvii",
+    "#III", "#IV", "#VII", "#iv", "iv", "v"
+)
+
 @Composable
-private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit) {
+private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, onOverlayChanged: (Boolean) -> Unit = {}) {
     var selectedCategory by remember { mutableStateOf<String?>(null) }
-    var degreeSearch by remember { mutableStateOf("") }
+    var selectedDegrees by remember { mutableStateOf(setOf<String>()) }
     var showFilterOverlay by remember { mutableStateOf(false) }
+    // 0 = main menu, 1 = sentimiento, 2 = intervalos
+    var filterPage by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(showFilterOverlay) { onOverlayChanged(showFilterOverlay) }
 
     val allCategories = remember {
         ALL_PROGRESSIONS.map { it.category }.distinct()
     }
 
-    val filtered = remember(selectedCategory, degreeSearch) {
+    val availableDegrees = remember {
+        ALL_PROGRESSIONS.flatMap { extractDegrees(it.degreeLabel) }.distinct()
+            .sortedWith(compareBy { ALL_DEGREES.indexOf(it).let { idx -> if (idx < 0) 999 else idx } })
+    }
+
+    val filtered = remember(selectedCategory, selectedDegrees) {
         ALL_PROGRESSIONS
             .filter { prog ->
                 (selectedCategory == null || prog.category == selectedCategory) &&
-                (degreeSearch.isBlank() || prog.degreeLabel.contains(degreeSearch, ignoreCase = true))
+                (selectedDegrees.isEmpty() || selectedDegrees.all { deg -> deg in extractDegrees(prog.degreeLabel) })
             }
     }
 
@@ -395,7 +422,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit) {
                 .fillMaxSize()
                 .zIndex(10f)
                 .background(Color.Black.copy(alpha = 0.7f))
-                .clickable { showFilterOverlay = false },
+                .clickable { showFilterOverlay = false; filterPage = 0 },
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -412,49 +439,164 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Filtrar por sentimiento", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    IconButton(onClick = { showFilterOverlay = false }) {
+                    if (filterPage > 0) {
+                        IconButton(onClick = { filterPage = 0 }) {
+                            Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White)
+                        }
+                    }
+                    Text(
+                        when (filterPage) { 1 -> "Por sentimiento"; 2 -> "Por intervalos"; else -> "Filtrar" },
+                        color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { showFilterOverlay = false; filterPage = 0 }) {
                         Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                // "Todos" option
-                val allSelected = selectedCategory == null
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (allSelected) ACCENT else Color.White.copy(alpha = 0.08f))
-                        .clickable { selectedCategory = null; showFilterOverlay = false }
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                ) {
-                    Text(
-                        "Todos",
-                        color = if (allSelected) Color.Black else Color.White.copy(alpha = 0.6f),
-                        fontSize = 14.sp,
-                        fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal
-                    )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                for (cat in allCategories) {
-                    val catColor = ALL_PROGRESSIONS.first { it.category == cat }.categoryColor
-                    val isSelected = selectedCategory == cat
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
-                            .clickable { selectedCategory = cat; showFilterOverlay = false }
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Text(
-                            cat,
-                            color = if (isSelected) Color.White else catColor,
-                            fontSize = 14.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
+
+                when (filterPage) {
+                    0 -> {
+                        // Main menu: two buttons
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFF5C6BC0))
+                                .clickable { filterPage = 1 }
+                                .padding(horizontal = 16.dp, vertical = 16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Mood, "Sentimiento", tint = Color.White, modifier = Modifier.size(22.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text("Filtrar por sentimiento", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(0xFFE91E63))
+                                .clickable { filterPage = 2 }
+                                .padding(horizontal = 16.dp, vertical = 16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.MusicNote, "Intervalos", tint = Color.White, modifier = Modifier.size(22.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text("Filtrar por intervalos", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (selectedCategory != null || selectedDegrees.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.1f))
+                                    .clickable { selectedCategory = null; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Quitar filtros", color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp)
+                            }
+                        }
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
+                    1 -> {
+                        // Sentimiento list with scroll
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState())
+                        ) {
+                            val allSelected = selectedCategory == null
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (allSelected) ACCENT else Color.White.copy(alpha = 0.08f))
+                                    .clickable { selectedCategory = null; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                Text(
+                                    "Todos",
+                                    color = if (allSelected) Color.Black else Color.White.copy(alpha = 0.6f),
+                                    fontSize = 14.sp,
+                                    fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            for (cat in allCategories) {
+                                val catColor = ALL_PROGRESSIONS.first { it.category == cat }.categoryColor
+                                val isSelected = selectedCategory == cat
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
+                                        .clickable { selectedCategory = cat; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                                ) {
+                                    Text(
+                                        cat,
+                                        color = if (isSelected) Color.White else catColor,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+                        }
+                    }
+                    2 -> {
+                        // Interval selector (multi-select, AND logic)
+                        Text("Selecciona intervalos (filtro Y):", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState())
+                        ) {
+                            @OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                for (deg in availableDegrees) {
+                                    val isSelected = deg in selectedDegrees
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(if (isSelected) ACCENT else Color.White.copy(alpha = 0.1f))
+                                            .clickable {
+                                                selectedDegrees = if (isSelected) selectedDegrees - deg else selectedDegrees + deg
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                                    ) {
+                                        Text(
+                                            deg,
+                                            color = if (isSelected) Color.Black else Color.White,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            if (selectedDegrees.isNotEmpty()) {
+                                val matchCount = ALL_PROGRESSIONS.count { prog ->
+                                    selectedDegrees.all { deg -> deg in extractDegrees(prog.degreeLabel) }
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(ACCENT)
+                                        .clickable { selectedCategory = null; showFilterOverlay = false; filterPage = 0 }
+                                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Aplicar ($matchCount resultados)", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -494,66 +636,29 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit) {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
             }
+            if (selectedDegrees.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(ACCENT.copy(alpha = 0.3f))
+                        .clickable { selectedDegrees = emptySet() }
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(selectedDegrees.joinToString(", "), color = ACCENT, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("\u2715", color = ACCENT.copy(alpha = 0.6f), fontSize = 10.sp)
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
             Icon(
                 Icons.Default.FilterList, "Filtros",
-                tint = if (selectedCategory != null) ACCENT else Color.White.copy(alpha = 0.6f),
+                tint = if (selectedCategory != null || selectedDegrees.isNotEmpty()) ACCENT else Color.White.copy(alpha = 0.6f),
                 modifier = Modifier
                     .size(28.dp)
                     .clickable { showFilterOverlay = true }
             )
-        }
-
-        // Filter: degree search
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFF1A1A2A))
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "🔍",
-                fontSize = 14.sp,
-                modifier = Modifier.padding(end = 6.dp)
-            )
-            androidx.compose.foundation.text.BasicTextField(
-                value = degreeSearch,
-                onValueChange = { degreeSearch = it },
-                textStyle = androidx.compose.ui.text.TextStyle(
-                    color = Color.White,
-                    fontSize = 13.sp
-                ),
-                singleLine = true,
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.08f))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                decorationBox = { innerTextField ->
-                    Box {
-                        if (degreeSearch.isEmpty()) {
-                            Text(
-                                "Buscar grados (ej: I, IV, vi...)",
-                                color = Color.White.copy(alpha = 0.3f),
-                                fontSize = 13.sp
-                            )
-                        }
-                        innerTextField()
-                    }
-                }
-            )
-            if (degreeSearch.isNotEmpty()) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.1f))
-                        .clickable { degreeSearch = "" }
-                        .padding(4.dp)
-                ) {
-                    Text("✕", color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp)
-                }
-            }
         }
 
         // Table header

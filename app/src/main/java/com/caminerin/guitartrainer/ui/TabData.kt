@@ -67,7 +67,7 @@ object TabRepository {
     private const val READ_TIMEOUT = 30_000
     private const val USER_TABS_DIR = "user_tabs"
     private const val USER_TABS_INDEX = "user_tabs_index.json"
-    private const val LIBRARY_BASE_URL = "https://raw.githubusercontent.com/Caminerin/guitar-tabs-library/main/tabs/"
+    private const val LIBRARY_BASE_URL = "https://raw.githubusercontent.com/Caminerin/guitar-tabs-library/main/"
 
     @Volatile private var catalog: List<CatalogEntry> = emptyList()
     @Volatile private var allArtists: List<String> = emptyList()

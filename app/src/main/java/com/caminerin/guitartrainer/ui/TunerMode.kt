@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -550,6 +551,7 @@ private fun StringChip(
 
     Box(
         modifier = Modifier
+            .widthIn(min = 44.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(backgroundColor)
             .border(1.dp, borderColor, RoundedCornerShape(10.dp))
@@ -568,7 +570,8 @@ private fun StringChip(
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor,
-                maxLines = 1
+                maxLines = 1,
+                softWrap = false
             )
         }
     }

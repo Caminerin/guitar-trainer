@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.PitchDetector
@@ -421,25 +422,29 @@ private fun ModeToggle(
 @Composable
 private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
     var isViewMode by rememberSaveable { mutableStateOf(true) }
+    var overlayVisible by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isViewMode) {
-            ScaleFretboardScreen(onBack = {}, showBackButton = false)
+            ScaleFretboardScreen(onBack = {}, showBackButton = false, onOverlayChanged = { overlayVisible = it })
         } else {
-            CagedPracticeScreen(onBack = { isViewMode = true }, pitchResult = pitchResult)
+            CagedPracticeScreen(onBack = { isViewMode = true }, pitchResult = pitchResult, onOverlayChanged = { overlayVisible = it })
         }
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 10.dp, bottom = 14.dp)
-        ) {
-            ModeToggle(
-                leftLabel = "Ver",
-                rightLabel = "Practicar",
-                isLeftSelected = isViewMode,
-                onToggle = { isViewMode = it }
-            )
+        if (!overlayVisible) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 10.dp, bottom = 14.dp)
+                    .zIndex(5f)
+            ) {
+                ModeToggle(
+                    leftLabel = "Ver",
+                    rightLabel = "Practicar",
+                    isLeftSelected = isViewMode,
+                    onToggle = { isViewMode = it }
+                )
+            }
         }
     }
 }
@@ -447,32 +452,38 @@ private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
 @Composable
 private fun UnifiedChordsScreen() {
     var isViewMode by rememberSaveable { mutableStateOf(true) }
+    var overlayVisible by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (isViewMode) {
             ChordVisualizerScreen(
                 onBack = {},
                 onGoToPractice = { isViewMode = false },
-                showBackButton = false
+                showBackButton = false,
+                onOverlayChanged = { overlayVisible = it }
             )
         } else {
             ChordPracticeScreen(
                 onBack = { isViewMode = true },
-                onGoToVisualizer = { isViewMode = true }
+                onGoToVisualizer = { isViewMode = true },
+                onOverlayChanged = { overlayVisible = it }
             )
         }
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 10.dp, bottom = 14.dp)
-        ) {
-            ModeToggle(
-                leftLabel = "Ver",
-                rightLabel = "Practicar",
-                isLeftSelected = isViewMode,
-                onToggle = { isViewMode = it }
-            )
+        if (!overlayVisible) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 10.dp, bottom = 14.dp)
+                    .zIndex(5f)
+            ) {
+                ModeToggle(
+                    leftLabel = "Ver",
+                    rightLabel = "Practicar",
+                    isLeftSelected = isViewMode,
+                    onToggle = { isViewMode = it }
+                )
+            }
         }
     }
 }
