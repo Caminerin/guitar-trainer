@@ -87,7 +87,7 @@ private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 
 
 @Composable
-fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? = null) {
+fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? = null, onOverlayChanged: (Boolean) -> Unit = {}) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex.coerceIn(0, ALL_SCALES.size - 1)) }
@@ -110,6 +110,9 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
     var showInfo by remember { mutableStateOf(false) }
     var showSubdivisionMenu by remember { mutableStateOf(false) }
     var showColorSelector by remember { mutableStateOf(false) }
+
+    val anyOverlayOpen = showKeyCircle || showScaleSelector || showInfo || showSubdivisionMenu || showColorSelector
+    LaunchedEffect(anyOverlayOpen) { onOverlayChanged(anyOverlayOpen) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
     val positions = if (scale.hasCaged) computeCagedPositions(selectedKey) else scale.positions

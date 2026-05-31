@@ -229,7 +229,7 @@ fun TabPracticeScreen(
                 val bpmActive = bpmRange.start > 30f || bpmRange.endInclusive < 300f
                 val filtersActive = selectedArtist != null || bpmActive
                 Text(
-                    "${TabRepository.filter(searchQuery, selectedArtist,
+                    "${TabRepository.filter("", selectedArtist,
                         if (bpmActive) bpmRange.start.toInt() else null,
                         if (bpmActive) bpmRange.endInclusive.toInt() else null
                     ).size} tabs",
@@ -248,27 +248,14 @@ fun TabPracticeScreen(
             }
         }
 
-        // Search bar + filter button
+        // Import + filter buttons
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End
         ) {
-            TextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Buscar tab...", color = AppColors.textSecondary) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = AppColors.textSecondary) },
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color.Transparent,
-                    unfocusedContainerColor = Color.Transparent,
-                    focusedTextColor = AppColors.text,
-                    unfocusedTextColor = AppColors.text,
-                    focusedIndicatorColor = AppColors.tertiary,
-                    unfocusedIndicatorColor = AppColors.divider
-                ),
-                singleLine = true,
-                modifier = Modifier.weight(1f)
-            )
             Icon(
                 Icons.Default.Add, "Importar tab",
                 tint = AppColors.success,
@@ -359,7 +346,7 @@ fun TabPracticeScreen(
             }
         } else {
             val filteredEntries = TabRepository.filter(
-                searchQuery, selectedArtist,
+                "", selectedArtist,
                 if (bpmActive) bpmRange.start.toInt() else null,
                 if (bpmActive) bpmRange.endInclusive.toInt() else null
             ).filter { entry ->

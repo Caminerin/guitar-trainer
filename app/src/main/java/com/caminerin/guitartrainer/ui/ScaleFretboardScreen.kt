@@ -81,7 +81,7 @@ private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 
 
 @Composable
-fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true) {
+fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onOverlayChanged: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
     var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex.coerceIn(0, ALL_SCALES.size - 1)) }
@@ -97,6 +97,9 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true) {
 
     // State for chromatic circle overlay on key selection
     var showChromaticCircle by remember { mutableStateOf(false) }
+
+    val anyOverlayOpen = showScaleSelector || showDisplaySelector || showColorSelector || showInfo || showChromaticCircle
+    LaunchedEffect(anyOverlayOpen) { onOverlayChanged(anyOverlayOpen) }
 
     // Load color preferences
     LaunchedEffect(Unit) { DegreeColorPrefs.load(context) }

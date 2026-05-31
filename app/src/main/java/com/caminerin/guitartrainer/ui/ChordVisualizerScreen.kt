@@ -109,7 +109,7 @@ private val LEVEL_COLORS = mapOf(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = null, showBackButton: Boolean = true) {
+fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = null, showBackButton: Boolean = true, onOverlayChanged: (Boolean) -> Unit = {}) {
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -136,6 +136,9 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
     var showShapeSelector by remember { mutableStateOf(false) }
     var scaleFilterEnabled by rememberSaveable { mutableStateOf(AppPreferences.chordScaleEnabled) }
     var selectedScaleName by rememberSaveable { mutableStateOf(AppPreferences.chordScaleName) }
+
+    val anyOverlayOpen = showRootSelector || showQualitySelector || showLevelSelector || showDisplaySelector || showColorSelector || showScaleSelector || showShapeSelector
+    LaunchedEffect(anyOverlayOpen) { onOverlayChanged(anyOverlayOpen) }
 
     // Save state whenever it changes
     LaunchedEffect(selectedRoot, selectedQuality, selectedLevel, scaleFilterEnabled, selectedScaleName) {
