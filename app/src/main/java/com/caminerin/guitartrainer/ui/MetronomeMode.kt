@@ -23,14 +23,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -51,6 +50,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
@@ -303,65 +304,66 @@ fun MetronomeMode(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Compás + Subdivisión + Sonido in a row of dropdown buttons
+        // Compás + Subdivisión + Sonido in a row of buttons
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            // Compás dropdown
-            Box {
-                OutlinedButton(onClick = { beatsMenuExpanded = true }) {
-                    Text("$beatsPerMeasure/4", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            OutlinedButton(onClick = { beatsMenuExpanded = true }) {
+                Text("$beatsPerMeasure/4", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+            OutlinedButton(onClick = { subdivisionMenuExpanded = true }) {
+                val subLabel = when (subdivision) {
+                    1 -> "♩"; 2 -> "♪♪"; 3 -> "♪♪♪"; 4 -> "♬"; else -> "$subdivision"
                 }
-                DropdownMenu(expanded = beatsMenuExpanded, onDismissRequest = { beatsMenuExpanded = false }) {
-                    (2..12).forEach { n ->
-                        DropdownMenuItem(
-                            text = { Text("$n/4") },
-                            onClick = { beatsPerMeasure = n; beatsMenuExpanded = false }
-                        )
-                    }
+                Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+            OutlinedButton(onClick = { soundMenuExpanded = true }) {
+                Text("♪ ${sound.displayName}", fontSize = 12.sp)
+            }
+        }
+
+        // Overlay selectors
+        if (beatsMenuExpanded) {
+            MetronomeOverlaySelector(
+                title = "Compás",
+                onDismiss = { beatsMenuExpanded = false }
+            ) {
+                (2..12).forEach { n ->
+                    val isSelected = beatsPerMeasure == n
+                    MetronomeOverlayItem(
+                        text = "$n/4",
+                        isSelected = isSelected,
+                        onClick = { beatsPerMeasure = n; beatsMenuExpanded = false }
+                    )
                 }
             }
-
-            // Subdivisión dropdown
-            Box {
-                OutlinedButton(onClick = { subdivisionMenuExpanded = true }) {
-                    val subLabel = when (subdivision) {
-                        1 -> "♩"
-                        2 -> "♪♪"
-                        3 -> "♪♪♪"
-                        4 -> "♬"
-                        else -> "$subdivision"
-                    }
-                    Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
-                DropdownMenu(expanded = subdivisionMenuExpanded, onDismissRequest = { subdivisionMenuExpanded = false }) {
-                    listOf(
-                        1 to "♩ Negras",
-                        2 to "♪♪ Corcheas",
-                        3 to "♪♪♪ Tresillos",
-                        4 to "♬ Semicorcheas"
-                    ).forEach { (sub, label) ->
-                        DropdownMenuItem(
-                            text = { Text(label) },
-                            onClick = { subdivision = sub; subdivisionMenuExpanded = false }
-                        )
-                    }
+        }
+        if (subdivisionMenuExpanded) {
+            MetronomeOverlaySelector(
+                title = "Subdivisión",
+                onDismiss = { subdivisionMenuExpanded = false }
+            ) {
+                listOf(1 to "♩ Negras", 2 to "♪♪ Corcheas", 3 to "♪♪♪ Tresillos", 4 to "♬ Semicorcheas").forEach { (sub, label) ->
+                    MetronomeOverlayItem(
+                        text = label,
+                        isSelected = subdivision == sub,
+                        onClick = { subdivision = sub; subdivisionMenuExpanded = false }
+                    )
                 }
             }
-
-            // Sonido dropdown
-            Box {
-                OutlinedButton(onClick = { soundMenuExpanded = true }) {
-                    Text("♪ ${sound.displayName}", fontSize = 12.sp)
-                }
-                DropdownMenu(expanded = soundMenuExpanded, onDismissRequest = { soundMenuExpanded = false }) {
-                    MetronomeSound.entries.forEach { s ->
-                        DropdownMenuItem(
-                            text = { Text(s.displayName) },
-                            onClick = { sound = s; soundMenuExpanded = false }
-                        )
-                    }
+        }
+        if (soundMenuExpanded) {
+            MetronomeOverlaySelector(
+                title = "Tipo de clic",
+                onDismiss = { soundMenuExpanded = false }
+            ) {
+                MetronomeSound.entries.forEach { s ->
+                    MetronomeOverlayItem(
+                        text = s.displayName,
+                        isSelected = sound == s,
+                        onClick = { sound = s; soundMenuExpanded = false }
+                    )
                 }
             }
         }
@@ -512,37 +514,38 @@ private fun MetronomeSettings(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        Box {
-            OutlinedButton(onClick = { onBeatsMenuToggle(true) }) {
-                Text("$beatsPerMeasure/4", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        OutlinedButton(onClick = { onBeatsMenuToggle(true) }) {
+            Text("$beatsPerMeasure/4", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        OutlinedButton(onClick = { onSubdivisionMenuToggle(true) }) {
+            val subLabel = when (subdivision) {
+                1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
             }
-            DropdownMenu(expanded = beatsMenuExpanded, onDismissRequest = { onBeatsMenuToggle(false) }) {
-                (2..12).forEach { n ->
-                    DropdownMenuItem(text = { Text("$n/4") }, onClick = { onBeatsSelected(n) })
-                }
+            Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        OutlinedButton(onClick = { onSoundMenuToggle(true) }) {
+            Text("\u266a ${sound.displayName}", fontSize = 12.sp)
+        }
+    }
+
+    if (beatsMenuExpanded) {
+        MetronomeOverlaySelector(title = "Compás", onDismiss = { onBeatsMenuToggle(false) }) {
+            (2..12).forEach { n ->
+                MetronomeOverlayItem(text = "$n/4", isSelected = beatsPerMeasure == n, onClick = { onBeatsSelected(n) })
             }
         }
-        Box {
-            OutlinedButton(onClick = { onSubdivisionMenuToggle(true) }) {
-                val subLabel = when (subdivision) {
-                    1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
-                }
-                Text(subLabel, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
-            DropdownMenu(expanded = subdivisionMenuExpanded, onDismissRequest = { onSubdivisionMenuToggle(false) }) {
-                listOf(1 to "\u2669 Negras", 2 to "\u266a\u266a Corcheas", 3 to "\u266a\u266a\u266a Tresillos", 4 to "\u266c Semicorcheas").forEach { (sub, label) ->
-                    DropdownMenuItem(text = { Text(label) }, onClick = { onSubdivisionSelected(sub) })
-                }
+    }
+    if (subdivisionMenuExpanded) {
+        MetronomeOverlaySelector(title = "Subdivisión", onDismiss = { onSubdivisionMenuToggle(false) }) {
+            listOf(1 to "\u2669 Negras", 2 to "\u266a\u266a Corcheas", 3 to "\u266a\u266a\u266a Tresillos", 4 to "\u266c Semicorcheas").forEach { (sub, label) ->
+                MetronomeOverlayItem(text = label, isSelected = subdivision == sub, onClick = { onSubdivisionSelected(sub) })
             }
         }
-        Box {
-            OutlinedButton(onClick = { onSoundMenuToggle(true) }) {
-                Text("\u266a ${sound.displayName}", fontSize = 12.sp)
-            }
-            DropdownMenu(expanded = soundMenuExpanded, onDismissRequest = { onSoundMenuToggle(false) }) {
-                MetronomeSound.entries.forEach { s ->
-                    DropdownMenuItem(text = { Text(s.displayName) }, onClick = { onSoundSelected(s) })
-                }
+    }
+    if (soundMenuExpanded) {
+        MetronomeOverlaySelector(title = "Tipo de clic", onDismiss = { onSoundMenuToggle(false) }) {
+            MetronomeSound.entries.forEach { s ->
+                MetronomeOverlayItem(text = s.displayName, isSelected = sound == s, onClick = { onSoundSelected(s) })
             }
         }
     }
@@ -887,6 +890,75 @@ private fun Pill(text: String, isSelected: Boolean, onClick: () -> Unit) {
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
             color = if (isSelected) MaterialTheme.colorScheme.onPrimary
             else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun MetronomeOverlaySelector(
+    title: String,
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.7f))
+                .clickable { onDismiss() },
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color(0xFF2A2A2A))
+                    .clickable(enabled = false) {}
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Icon(
+                        Icons.Default.Close, "Cerrar",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp).clickable { onDismiss() }
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                content()
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetronomeOverlayItem(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 3.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isSelected) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.08f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Text(
+            text,
+            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
+            fontSize = 15.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
 }
