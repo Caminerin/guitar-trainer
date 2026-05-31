@@ -21,16 +21,30 @@ enum class MetronomeSound(val displayName: String) {
     BEEP("Bip electrónico")
 }
 
+enum class TrainingDirection(val displayName: String) {
+    UP("Solo subir"),
+    DOWN("Solo bajar"),
+    PYRAMID("Pirámide ↑↓")
+}
+
 data class MetronomeConfig(
     val bpm: Int = 120,
     val beatsPerMeasure: Int = 4,
+    val beatUnit: Int = 4,
     val subdivision: Int = 1,
     val sound: MetronomeSound = MetronomeSound.CLICK,
+    val accentPattern: List<Boolean> = emptyList(),
+    val swingPercent: Int = 50,
+    val countInBars: Int = 0,
+    val muteEnabled: Boolean = false,
+    val muteBarsPlay: Int = 4,
+    val muteBarsSilent: Int = 4,
     val trainingEnabled: Boolean = false,
     val trainingIntervalBeats: Int = 4,
     val trainingBpmChange: Int = 5,
     val trainingMaxBpm: Int = 200,
     val trainingMinBpm: Int = 40,
+    val trainingDirection: TrainingDirection = TrainingDirection.UP,
     val timerEnabled: Boolean = false,
     val timerMeasures: Int = 0,
     val timerSeconds: Int = 0
@@ -60,11 +74,19 @@ class MetronomeEngine {
     private val _elapsedSeconds = MutableStateFlow(0)
     val elapsedSeconds: StateFlow<Int> = _elapsedSeconds
 
+    private val _isCountingIn = MutableStateFlow(false)
+    val isCountingIn: StateFlow<Boolean> = _isCountingIn
+
+    private val _isMutedBar = MutableStateFlow(false)
+    val isMutedBar: StateFlow<Boolean> = _isMutedBar
+
     // Live-updatable fields: UI writes these, audio loop reads them each beat
     @Volatile var liveBpm: Int = 120
     @Volatile var liveSubdivision: Int = 1
     @Volatile var liveBeatsPerMeasure: Int = 4
     @Volatile var liveSound: MetronomeSound = MetronomeSound.CLICK
+    @Volatile var liveAccentPattern: List<Boolean> = emptyList()
+    @Volatile var liveSwingPercent: Int = 50
 
     private fun generateClick(frequency: Float, durationSamples: Int, volume: Float): ShortArray {
         val samples = ShortArray(durationSamples)
@@ -115,22 +137,44 @@ class MetronomeEngine {
         bpm: Int,
         subdivision: Int,
         sound: MetronomeSound,
-        isAccent: Boolean
+        isAccent: Boolean,
+        swingPercent: Int = 50,
+        subIndex: Int = 0,
+        isMuted: Boolean = false
     ): ShortArray {
         val totalSamplesPerBeat = (SAMPLE_RATE * 60.0 / bpm).roundToInt()
-        val samplesPerSub = totalSamplesPerBeat / subdivision
+
+        if (isMuted) {
+            return ShortArray(totalSamplesPerBeat)
+        }
+
         val result = ShortArray(totalSamplesPerBeat)
 
-        for (sub in 0 until subdivision) {
-            val click = if (sub == 0) {
-                getClickSamples(sound, isAccent)
-            } else {
-                getSubClickSamples(sound)
-            }
-            val offset = sub * samplesPerSub
+        if (subdivision <= 1) {
+            val click = getClickSamples(sound, isAccent)
             for (i in click.indices) {
-                if (offset + i < result.size) {
-                    result[offset + i] = click[i]
+                if (i < result.size) result[i] = click[i]
+            }
+        } else {
+            val samplesPerSub = totalSamplesPerBeat / subdivision
+            for (sub in 0 until subdivision) {
+                val click = if (sub == 0) {
+                    getClickSamples(sound, isAccent)
+                } else {
+                    getSubClickSamples(sound)
+                }
+
+                val offset = if (subdivision == 2 && swingPercent != 50 && sub == 1) {
+                    val swingRatio = swingPercent / 100.0
+                    (totalSamplesPerBeat * swingRatio).roundToInt()
+                } else {
+                    sub * samplesPerSub
+                }
+
+                for (i in click.indices) {
+                    if (offset + i < result.size) {
+                        result[offset + i] = click[i]
+                    }
                 }
             }
         }
@@ -170,16 +214,39 @@ class MetronomeEngine {
         _currentMeasure.value = 0
         _currentBpm.value = config.bpm
         _elapsedSeconds.value = 0
+        _isMutedBar.value = false
 
         // Initialize live fields from config
         liveBpm = config.bpm
         liveSubdivision = config.subdivision
         liveBeatsPerMeasure = config.beatsPerMeasure
         liveSound = config.sound
+        liveAccentPattern = config.accentPattern
+        liveSwingPercent = config.swingPercent
+
+        // Count-in phase
+        if (config.countInBars > 0) {
+            _isCountingIn.value = true
+            val countInBeats = config.countInBars * config.beatsPerMeasure
+            for (ciBeat in 0 until countInBeats) {
+                if (!isActive || !_isPlaying.value) break
+                val beatInBar = ciBeat % config.beatsPerMeasure
+                _currentBeat.value = beatInBar
+                val isAccent = (beatInBar == 0)
+                val beatAudio = buildBeatAudio(
+                    config.bpm, 1, config.sound, isAccent,
+                    config.swingPercent
+                )
+                track.write(beatAudio, 0, beatAudio.size)
+            }
+            _isCountingIn.value = false
+            _currentBeat.value = 0
+        }
 
         var activeBpm = config.bpm
         var beatInMeasure = 0
         var measuresCompleted = 0
+        var trainingGoingUp = config.trainingDirection != TrainingDirection.DOWN
         val startTimeMs = System.currentTimeMillis()
 
         while (isActive && _isPlaying.value) {
@@ -188,12 +255,34 @@ class MetronomeEngine {
             val useSub = liveSubdivision
             val useBeats = liveBeatsPerMeasure
             val useSound = liveSound
+            val useAccentPattern = liveAccentPattern
+            val useSwing = liveSwingPercent
 
-            val isAccent = (beatInMeasure == 0)
+            val isAccent = if (useAccentPattern.isNotEmpty() && beatInMeasure < useAccentPattern.size) {
+                useAccentPattern[beatInMeasure]
+            } else {
+                beatInMeasure == 0
+            }
+
             _currentBeat.value = beatInMeasure
             _currentBpm.value = useBpm
 
-            val beatAudio = buildBeatAudio(useBpm, useSub, useSound, isAccent)
+            // Mute bars logic
+            val isMuted = if (config.muteEnabled) {
+                val cycleLength = config.muteBarsPlay + config.muteBarsSilent
+                val posInCycle = measuresCompleted % cycleLength
+                val muted = posInCycle >= config.muteBarsPlay
+                _isMutedBar.value = muted
+                muted
+            } else {
+                _isMutedBar.value = false
+                false
+            }
+
+            val beatAudio = buildBeatAudio(
+                useBpm, useSub, useSound, isAccent, useSwing,
+                beatInMeasure, isMuted
+            )
             track.write(beatAudio, 0, beatAudio.size)
 
             beatInMeasure = (beatInMeasure + 1) % useBeats
@@ -203,8 +292,31 @@ class MetronomeEngine {
                 _currentMeasure.value = measuresCompleted
 
                 if (config.trainingEnabled && measuresCompleted % config.trainingIntervalBeats == 0) {
-                    activeBpm = (activeBpm + config.trainingBpmChange)
-                        .coerceIn(config.trainingMinBpm, config.trainingMaxBpm)
+                    when (config.trainingDirection) {
+                        TrainingDirection.UP -> {
+                            activeBpm = (activeBpm + config.trainingBpmChange)
+                                .coerceIn(config.trainingMinBpm, config.trainingMaxBpm)
+                        }
+                        TrainingDirection.DOWN -> {
+                            activeBpm = (activeBpm - config.trainingBpmChange)
+                                .coerceIn(config.trainingMinBpm, config.trainingMaxBpm)
+                        }
+                        TrainingDirection.PYRAMID -> {
+                            if (trainingGoingUp) {
+                                activeBpm += config.trainingBpmChange
+                                if (activeBpm >= config.trainingMaxBpm) {
+                                    activeBpm = config.trainingMaxBpm
+                                    trainingGoingUp = false
+                                }
+                            } else {
+                                activeBpm -= config.trainingBpmChange
+                                if (activeBpm <= config.trainingMinBpm) {
+                                    activeBpm = config.trainingMinBpm
+                                    trainingGoingUp = true
+                                }
+                            }
+                        }
+                    }
                     _currentBpm.value = activeBpm
                 }
 
@@ -225,6 +337,8 @@ class MetronomeEngine {
         track.stop()
         track.release()
         _isPlaying.value = false
+        _isCountingIn.value = false
+        _isMutedBar.value = false
     }
 
     fun stop() {
