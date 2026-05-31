@@ -569,9 +569,7 @@ private fun StringChip(
                 text = if (NoteFormatPreference.current == NoteFormat.EUROPEAN) guitarString.spanishName else guitarString.noteName,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = textColor,
-                maxLines = 1,
-                softWrap = false
+                color = textColor
             )
         }
     }
