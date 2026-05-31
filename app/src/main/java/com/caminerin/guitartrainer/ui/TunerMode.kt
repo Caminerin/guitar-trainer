@@ -8,6 +8,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -358,8 +359,8 @@ private fun StringRow(
     onStringSelected: (Int) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center
+        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
     ) {
         currentTuning.strings.forEachIndexed { index, string ->
             StringChip(
@@ -368,9 +369,6 @@ private fun StringRow(
                 isManual = isManual,
                 onClick = { if (isManual) onStringSelected(index) }
             )
-            if (index < currentTuning.strings.size - 1) {
-                Spacer(modifier = Modifier.width(6.dp))
-            }
         }
     }
 }
@@ -611,12 +609,12 @@ private fun StringChip(
 
     Box(
         modifier = Modifier
-            .widthIn(min = 44.dp)
+            .widthIn(min = 40.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(backgroundColor)
             .border(1.dp, borderColor, RoundedCornerShape(10.dp))
             .then(if (isManual) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
