@@ -42,7 +42,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.caminerin.guitartrainer.audio.ExerciseContext
+import com.caminerin.guitartrainer.audio.NoteEvent
+import com.caminerin.guitartrainer.audio.NoteRecognizer
 import com.caminerin.guitartrainer.audio.PitchDetector
+import com.caminerin.guitartrainer.audio.RecognitionResult
 import com.caminerin.guitartrainer.audio.TickPlayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
@@ -87,7 +91,13 @@ private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
 
 
 @Composable
-fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? = null, onOverlayChanged: (Boolean) -> Unit = {}) {
+fun CagedPracticeScreen(
+    onBack: () -> Unit,
+    pitchResult: PitchDetector.PitchResult? = null,
+    noteEvent: NoteEvent? = null,
+    noteRecognizer: NoteRecognizer? = null,
+    onOverlayChanged: (Boolean) -> Unit = {}
+) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex.coerceIn(0, ALL_SCALES.size - 1)) }
@@ -169,46 +179,82 @@ fun CagedPracticeScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResu
     var lastWrongNote by remember { mutableIntStateOf(-1) }
     var lastWrongTime by remember { mutableStateOf(0L) }
 
-    // Guitar evaluation mode: detect pitch and compare to expected note
-    LaunchedEffect(guitarMode, pitchResult) {
+    // Reset NoteRecognizer when entering/leaving guitar mode
+    LaunchedEffect(guitarMode) {
+        if (guitarMode) noteRecognizer?.reset()
+    }
+
+    // Build exercise context from current scale + position
+    val exerciseContext = remember(selectedKey, selectedScaleIndex, currentPositionIndex, currentNoteIndex) {
+        val scaleNotes = scale.intervals.map { (selectedKey + it) % 12 }.toSet()
+        val expectedIdx = currentNote?.noteIndex ?: 0
+        val prevSeqIdx = currentNoteIndex - 1
+        val prevNote = if (prevSeqIdx >= 0) noteSequence.getOrNull(prevSeqIdx)?.noteIndex ?: -1 else -1
+        // Constrain MIDI range to current position on fretboard
+        val posMinMidi = (0 until 6).minOf { s -> STANDARD_TUNING_MIDI[s] + currentPosition.startFret }
+        val posMaxMidi = (0 until 6).maxOf { s -> STANDARD_TUNING_MIDI[s] + currentPosition.endFret }
+        ExerciseContext(
+            scaleNoteIndices = scaleNotes,
+            expectedNoteIndex = expectedIdx,
+            previousNoteIndex = prevNote,
+            minMidi = posMinMidi,
+            maxMidi = posMaxMidi
+        )
+    }
+
+    // Guitar evaluation mode: use NoteRecognizer for smart note detection
+    LaunchedEffect(guitarMode, noteEvent) {
         if (!guitarMode) return@LaunchedEffect
-        val pr = pitchResult ?: return@LaunchedEffect
-        if (pr.confidence < 0.7f || pr.frequency <= 0f) return@LaunchedEffect
-        val detectedNote = pr.noteIndex % 12
+        val event = noteEvent ?: return@LaunchedEffect
+        val recognizer = noteRecognizer ?: return@LaunchedEffect
+
+        val evaluated = recognizer.evaluate(event, exerciseContext)
+        val detectedNote = event.noteIndex
         val expected = currentNote?.noteIndex ?: return@LaunchedEffect
         val now = System.currentTimeMillis()
-        if (detectedNote == expected) {
-            if (lastEvalNoteIdx != currentNoteIndex) {
-                correctCount++
-                lastEvalNoteIdx = currentNoteIndex
-                lastWrongNote = -1
+
+        when (evaluated.result) {
+            RecognitionResult.EXPECTED_NOTE -> {
+                if (lastEvalNoteIdx != currentNoteIndex) {
+                    correctCount++
+                    lastEvalNoteIdx = currentNoteIndex
+                    lastWrongNote = -1
+                }
+                evalFeedback = "✓"
+                evalFeedbackColor = Color(0xFF4CAF50)
+                val seq = getPositionNoteSequence(
+                    selectedKey, scale.intervals,
+                    positions.getOrElse(currentPositionIndex) { positions.first() }
+                )
+                val nextIdx = currentNoteIndex + 1
+                if (nextIdx >= seq.size) {
+                    val nextPos = (currentPositionIndex + 1) % positions.size
+                    currentPositionIndex = nextPos
+                    currentNoteIndex = 0
+                    lastEvalNoteIdx = -1
+                } else {
+                    currentNoteIndex = nextIdx
+                    lastEvalNoteIdx = -1
+                }
             }
-            evalFeedback = "✓"
-            evalFeedbackColor = Color(0xFF4CAF50)
-            val seq = getPositionNoteSequence(
-                selectedKey, scale.intervals,
-                positions.getOrElse(currentPositionIndex) { positions.first() }
-            )
-            val nextIdx = currentNoteIndex + 1
-            if (nextIdx >= seq.size) {
-                val nextPos = (currentPositionIndex + 1) % positions.size
-                currentPositionIndex = nextPos
-                currentNoteIndex = 0
-                lastEvalNoteIdx = -1
-            } else {
-                currentNoteIndex = nextIdx
-                lastEvalNoteIdx = -1
+            RecognitionResult.PREVIOUS_NOTE -> {
+                // Ignore — still hearing the previous note ringing
             }
-        } else {
-            if (detectedNote != lastWrongNote || (now - lastWrongTime) > 1500L) {
-                wrongCount++
-                lastWrongNote = detectedNote
-                lastWrongTime = now
+            RecognitionResult.NOISE, RecognitionResult.UNCERTAIN -> {
+                // Ignore noise and uncertain detections
             }
-            val detectedName = getNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
-            val expectedName = getNoteName(expected, selectedKey, scale.relativeMajorOffset)
-            evalFeedback = "✗ $detectedName (esperada: $expectedName)"
-            evalFeedbackColor = Color(0xFFF44336)
+            else -> {
+                // Wrong note (in-scale or out-of-scale)
+                if (detectedNote != lastWrongNote || (now - lastWrongTime) > 1500L) {
+                    wrongCount++
+                    lastWrongNote = detectedNote
+                    lastWrongTime = now
+                }
+                val detectedName = getNoteName(detectedNote, selectedKey, scale.relativeMajorOffset)
+                val expectedName = getNoteName(expected, selectedKey, scale.relativeMajorOffset)
+                evalFeedback = "✗ $detectedName (esperada: $expectedName)"
+                evalFeedbackColor = Color(0xFFF44336)
+            }
         }
     }
 

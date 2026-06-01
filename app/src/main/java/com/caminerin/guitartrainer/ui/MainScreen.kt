@@ -62,6 +62,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.caminerin.guitartrainer.audio.NoteEvent
+import com.caminerin.guitartrainer.audio.NoteRecognizer
 import com.caminerin.guitartrainer.audio.PitchDetector
 
 private enum class NavDestination(val label: String, val icon: ImageVector) {
@@ -83,7 +85,9 @@ enum class AppMode(val title: String, val icon: ImageVector) {
 @Composable
 fun MainScreen(
     pitchResult: PitchDetector.PitchResult?,
-    isListening: Boolean
+    isListening: Boolean,
+    noteEvent: NoteEvent? = null,
+    noteRecognizer: NoteRecognizer? = null
 ) {
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -125,7 +129,11 @@ fun MainScreen(
                 ) { navIndex ->
                     val dest = destinations[navIndex]
                     when (dest) {
-                        NavDestination.SCALES -> UnifiedScalesScreen(pitchResult = pitchResult)
+                        NavDestination.SCALES -> UnifiedScalesScreen(
+                                pitchResult = pitchResult,
+                                noteEvent = noteEvent,
+                                noteRecognizer = noteRecognizer
+                            )
                         NavDestination.CHORDS -> UnifiedChordsScreen()
                         NavDestination.TABS -> TabPracticeScreen(
                             onBack = { selectedNav = 0 },
@@ -420,7 +428,11 @@ private fun ModeToggle(
 }
 
 @Composable
-private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
+private fun UnifiedScalesScreen(
+    pitchResult: PitchDetector.PitchResult?,
+    noteEvent: NoteEvent? = null,
+    noteRecognizer: NoteRecognizer? = null
+) {
     var isViewMode by rememberSaveable { mutableStateOf(true) }
     var overlayVisible by remember { mutableStateOf(false) }
 
@@ -428,7 +440,13 @@ private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
         if (isViewMode) {
             ScaleFretboardScreen(onBack = {}, showBackButton = false, onOverlayChanged = { overlayVisible = it })
         } else {
-            CagedPracticeScreen(onBack = { isViewMode = true }, pitchResult = pitchResult, onOverlayChanged = { overlayVisible = it })
+            CagedPracticeScreen(
+                onBack = { isViewMode = true },
+                pitchResult = pitchResult,
+                noteEvent = noteEvent,
+                noteRecognizer = noteRecognizer,
+                onOverlayChanged = { overlayVisible = it }
+            )
         }
 
         if (!overlayVisible) {
