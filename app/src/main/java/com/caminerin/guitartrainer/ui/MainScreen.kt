@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -369,7 +370,7 @@ private fun LibraryHub(onItemClick: (Int) -> Unit) {
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth().weight(1f)
         ) {
             GridCard(
                 emoji = "🎸",
@@ -377,7 +378,7 @@ private fun LibraryHub(onItemClick: (Int) -> Unit) {
                 subtitle = "Mástil + posiciones",
                 gradientStart = GradientColors.scalesStart,
                 gradientEnd = GradientColors.scalesEnd,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 onClick = { onItemClick(0) }
             )
             GridCard(
@@ -386,7 +387,7 @@ private fun LibraryHub(onItemClick: (Int) -> Unit) {
                 subtitle = "Diagramas + formas",
                 gradientStart = GradientColors.chordsStart,
                 gradientEnd = GradientColors.chordsEnd,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 onClick = { onItemClick(1) }
             )
         }
@@ -450,10 +451,13 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
         )
         Spacer(modifier = Modifier.height(20.dp))
 
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.weight(1f)
+        ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().weight(1f)
             ) {
                 GridCard(
                     emoji = "🎸",
@@ -461,7 +465,7 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
                     subtitle = "Con guitarra real",
                     gradientStart = GradientColors.scalesStart,
                     gradientEnd = GradientColors.scalesEnd,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(0) }
                 )
                 GridCard(
@@ -470,13 +474,13 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
                     subtitle = "Progresiones + Reto",
                     gradientStart = GradientColors.chordsStart,
                     gradientEnd = GradientColors.chordsEnd,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(1) }
                 )
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().weight(1f)
             ) {
                 GridCard(
                     emoji = "🎵",
@@ -484,7 +488,7 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
                     subtitle = "Loop + BPM",
                     gradientStart = GradientColors.tabsStart,
                     gradientEnd = GradientColors.tabsEnd,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(2) }
                 )
                 GridCard(
@@ -493,7 +497,7 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
                     subtitle = "Oído + Teoría",
                     gradientStart = GradientColors.quizStart,
                     gradientEnd = GradientColors.quizEnd,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(3) }
                 )
             }
@@ -645,10 +649,13 @@ private fun ToolsHub(onItemClick: (Int) -> Unit) {
         )
         Spacer(modifier = Modifier.height(20.dp))
 
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.weight(1f)
+        ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().weight(1f)
             ) {
                 GridCard(
                     emoji = "🎯",
@@ -656,7 +663,7 @@ private fun ToolsHub(onItemClick: (Int) -> Unit) {
                     subtitle = "Afina tu guitarra",
                     gradientStart = GradientColors.tunerStart,
                     gradientEnd = GradientColors.tunerEnd,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(0) }
                 )
                 GridCard(
@@ -665,13 +672,13 @@ private fun ToolsHub(onItemClick: (Int) -> Unit) {
                     subtitle = "Tempo + batería",
                     gradientStart = GradientColors.metroStart,
                     gradientEnd = GradientColors.metroEnd,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(1) }
                 )
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().weight(1f)
             ) {
                 GridCard(
                     emoji = "⚙️",
@@ -679,7 +686,7 @@ private fun ToolsHub(onItemClick: (Int) -> Unit) {
                     subtitle = "Colores, notación",
                     gradientStart = GradientColors.settingsStart,
                     gradientEnd = GradientColors.settingsEnd,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(2) }
                 )
                 // Empty spacer for alignment
