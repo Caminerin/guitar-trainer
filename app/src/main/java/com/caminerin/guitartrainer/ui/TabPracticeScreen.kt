@@ -67,6 +67,8 @@ import androidx.compose.ui.unit.sp
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import com.caminerin.guitartrainer.audio.DrumEngine
+import com.caminerin.guitartrainer.audio.DrumStyle
 import com.caminerin.guitartrainer.audio.RiffSynth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -759,6 +761,8 @@ fun TabPlayerScreen(
     var countdownEnabled by remember { mutableStateOf(false) }
     var countdownText by remember { mutableStateOf<String?>(null) }
     var playJob by remember { mutableStateOf<Job?>(null) }
+    var selectedDrumStyle by remember { mutableStateOf<DrumStyle?>(null) }
+    var drumJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(Unit) {
         try {
@@ -778,7 +782,25 @@ fun TabPlayerScreen(
     DisposableEffect(Unit) {
         onDispose {
             playJob?.cancel()
+            drumJob?.cancel()
             RiffSynth.release()
+            DrumEngine.release()
+        }
+    }
+
+    // Drum engine sync
+    LaunchedEffect(isPlaying, selectedDrumStyle) {
+        drumJob?.cancel()
+        DrumEngine.stop()
+        if (isPlaying && selectedDrumStyle != null) {
+            drumJob = scope.launch {
+                DrumEngine.playLoop(
+                    context = context,
+                    style = selectedDrumStyle!!,
+                    bpm = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300),
+                    beatsPerMeasure = 4
+                )
+            }
         }
     }
 
@@ -1007,6 +1029,39 @@ fun TabPlayerScreen(
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             maxLines = 1
                         )
+                    }
+                }
+            }
+
+            // Drum style selector
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text("\uD83E\uDD41", fontSize = 11.sp,
+                    modifier = Modifier.align(Alignment.CenterVertically))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (selectedDrumStyle == null) AppColors.tertiary else AppColors.surface)
+                        .clickable { selectedDrumStyle = null; drumJob?.cancel(); DrumEngine.stop() }
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text("Off", fontSize = 10.sp, color = if (selectedDrumStyle == null) Color.Black else AppColors.textSecondary)
+                }
+                DrumStyle.entries.forEach { style ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (selectedDrumStyle == style) AppColors.tertiary else AppColors.surface)
+                            .clickable { selectedDrumStyle = style }
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(style.displayName, fontSize = 10.sp,
+                            color = if (selectedDrumStyle == style) Color.Black else AppColors.textSecondary)
                     }
                 }
             }

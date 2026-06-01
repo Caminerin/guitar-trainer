@@ -72,10 +72,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.caminerin.guitartrainer.audio.DrumEngine
+import com.caminerin.guitartrainer.audio.DrumStyle
 import com.caminerin.guitartrainer.audio.MetronomeConfig
 import com.caminerin.guitartrainer.audio.MetronomeEngine
 import com.caminerin.guitartrainer.audio.MetronomeSound
 import com.caminerin.guitartrainer.audio.TrainingDirection
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState as rememberHScrollState
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 
 // Tempo presets with musical terms
@@ -169,6 +176,11 @@ fun MetronomeMode(
     // Haptic
     var hapticEnabled by remember { mutableStateOf(false) }
 
+    // Drum backing track
+    var selectedDrumStyle by remember { mutableStateOf<DrumStyle?>(null) }
+    var drumJob by remember { mutableStateOf<Job?>(null) }
+    val drumScope = rememberCoroutineScope()
+
     // Tap tempo state
     var lastTapTime by remember { mutableLongStateOf(0L) }
     var tapCount by remember { mutableIntStateOf(0) }
@@ -225,8 +237,27 @@ fun MetronomeMode(
         }
     }
 
-    // Haptic feedback: trigger from engine's audio thread for sync
+    // Drum engine: start/stop with metronome
     val context = LocalContext.current
+    LaunchedEffect(isPlaying, selectedDrumStyle) {
+        drumJob?.cancel()
+        DrumEngine.stop()
+        if (isPlaying && selectedDrumStyle != null) {
+            drumJob = drumScope.launch {
+                DrumEngine.playLoop(
+                    context = context,
+                    style = selectedDrumStyle!!,
+                    bpm = bpm,
+                    beatsPerMeasure = beatsPerMeasure
+                )
+            }
+        }
+    }
+    DisposableEffect(Unit) {
+        onDispose { drumJob?.cancel(); DrumEngine.release() }
+    }
+
+    // Haptic feedback: trigger from engine's audio thread for sync
     DisposableEffect(hapticEnabled) {
         engine.onBeatCallback = if (hapticEnabled) {
             { triggerHaptic(context) }
@@ -573,7 +604,44 @@ fun MetronomeMode(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // Drum style selector (horizontal chips)
+            Text("Batería", fontSize = 12.sp, color = Color(0xFFFFC107), fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 12.dp, top = 4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // "Off" chip
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(if (selectedDrumStyle == null) Color(0xFFFFC107) else Color(0xFF2A2A3E))
+                        .clickable {
+                            selectedDrumStyle = null
+                            drumJob?.cancel()
+                            DrumEngine.stop()
+                        }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text("Off", fontSize = 11.sp, color = if (selectedDrumStyle == null) Color.Black else Color.White)
+                }
+                DrumStyle.entries.forEach { style ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (selectedDrumStyle == style) Color(0xFFFFC107) else Color(0xFF2A2A3E))
+                            .clickable { selectedDrumStyle = style }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(style.displayName, fontSize = 11.sp, color = if (selectedDrumStyle == style) Color.Black else Color.White)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Count-in + Swing + Haptic row
             Row(
