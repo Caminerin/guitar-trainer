@@ -261,7 +261,7 @@ private fun ExerciseCard(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(HUB_CARD)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically

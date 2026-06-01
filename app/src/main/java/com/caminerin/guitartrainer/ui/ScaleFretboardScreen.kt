@@ -114,97 +114,99 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
             .fillMaxSize()
             .background(COLOR_BG)
     ) {
-        // ===== REDESIGNED TOOLBAR =====
+        // ===== TOOLBAR =====
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(COLOR_TOOLBAR)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Back button
-            if (showBackButton) {
-                IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(22.dp))
+            // Left side: back + selectors
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Back button
+                if (showBackButton) {
+                    IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                        Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
+                    }
+                }
+
+                // Key selector
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
+                        .clickable { showChromaticCircle = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey],
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Scale selector
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
+                        .clickable { showScaleSelector = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Display mode
+                NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
+
+                // Colors
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFff6b9d).copy(alpha = 0.3f))
+                        .clickable { showColorSelector = true }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text("Colores", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+
+                // Info
+                IconButton(onClick = { showInfo = true }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.Info, "Info", tint = Color(0xFF90A4AE), modifier = Modifier.size(18.dp))
+                }
+
+                // Posiciones toggle
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (positionsEnabled) Color(0xFFff6b9d).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
+                        .clickable { positionsEnabled = !positionsEnabled }
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                ) {
+                    Text("Pos", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
-            // Key selector - opens chromatic circle
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
-                    .clickable { showChromaticCircle = true }
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
-                Text(
-                    getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey],
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
-            // Scale selector -> overlay
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
-                    .clickable { showScaleSelector = true }
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
-
-            // Display mode
-            NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
-
-            // Colors button
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFE91E63).copy(alpha = 0.3f))
-                    .clickable { showColorSelector = true }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text("Colores", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-
-            // Info button
-            IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
-                Icon(Icons.Default.Info, "Info", tint = Color(0xFF90A4AE), modifier = Modifier.size(20.dp))
-            }
-
-            // Position toggle + CAGED bar
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (positionsEnabled) COLOR_TONIC.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
-                    .clickable { positionsEnabled = !positionsEnabled }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text("Posiciones", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-
             Spacer(modifier = Modifier.weight(1f))
-        }
 
-        // ===== POSITION BAR (separate row) =====
-        if (positionsEnabled && positions.isNotEmpty()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(COLOR_TOOLBAR)
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                CagedPositionBar(
-                    positions = positions,
-                    currentIndex = currentPosition,
-                    onSelect = { currentPosition = it }
-                )
+            // Right side: position chips (when enabled)
+            if (positionsEnabled && positions.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.horizontalScroll(rememberScrollState())
+                ) {
+                    CagedPositionBar(
+                        positions = positions,
+                        currentIndex = currentPosition,
+                        onSelect = { currentPosition = it }
+                    )
+                }
             }
         }
 

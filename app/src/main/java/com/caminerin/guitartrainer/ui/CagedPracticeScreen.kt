@@ -288,7 +288,7 @@ fun CagedPracticeScreen(
                 // Key selector -> chromatic circle
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
                         .clickable { showKeyCircle = true }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -299,7 +299,7 @@ fun CagedPracticeScreen(
                 // Scale selector -> overlay
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
                         .clickable { showScaleSelector = true }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -332,7 +332,7 @@ fun CagedPracticeScreen(
                 }
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFF7C4DFF).copy(alpha = 0.3f))
                         .clickable { showSubdivisionMenu = true }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -343,8 +343,8 @@ fun CagedPracticeScreen(
                 // Colors button
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFFE91E63).copy(alpha = 0.3f))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFff6b9d).copy(alpha = 0.3f))
                         .clickable { showColorSelector = true }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
@@ -388,7 +388,7 @@ fun CagedPracticeScreen(
                 // Positions toggle
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(if (positionsEnabled) COLOR_TONIC.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
                         .clickable { positionsEnabled = !positionsEnabled }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -399,7 +399,7 @@ fun CagedPracticeScreen(
                 // Guitar evaluation toggle
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(if (guitarMode) Color(0xFF4CAF50).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
                         .clickable {
                             guitarMode = !guitarMode

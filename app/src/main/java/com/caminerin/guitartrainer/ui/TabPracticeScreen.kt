@@ -645,7 +645,7 @@ private fun FilterOverlay(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 2.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(if (isSelected) AppColors.tertiary.copy(alpha = 0.2f) else Color.Transparent)
                                 .clickable {
                                     onArtistSelected(if (isSelected) null else category)
@@ -681,7 +681,7 @@ private fun FilterOverlay(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(if (isSelected) AppColors.tertiary.copy(alpha = 0.2f) else AppColors.surface)
                                 .clickable {
                                     localInstruments = if (isSelected) localInstruments - instrument

@@ -566,7 +566,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                                     val isSelected = deg in selectedDegrees
                                     Box(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(10.dp))
+                                            .clip(RoundedCornerShape(8.dp))
                                             .background(if (isSelected) ACCENT else Color.White.copy(alpha = 0.1f))
                                             .clickable {
                                                 selectedDegrees = if (isSelected) selectedDegrees - deg else selectedDegrees + deg
@@ -1074,12 +1074,12 @@ private fun ProgressionPlayerScreen(
                                 modifier = Modifier
                                     .width(90.dp)
                                     .height(72.dp)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(bgColor)
                                     .border(
                                         width = if (isActive) 2.dp else 1.dp,
                                         color = borderColor,
-                                        shape = RoundedCornerShape(10.dp)
+                                        shape = RoundedCornerShape(8.dp)
                                     )
                                     .clickable {
                                         // Jump to this chord
