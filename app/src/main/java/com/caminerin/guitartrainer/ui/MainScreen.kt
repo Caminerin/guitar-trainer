@@ -275,50 +275,53 @@ private fun TunerSplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(GradientColors.backgroundGradient),
-        contentAlignment = Alignment.Center
+            .background(GradientColors.backgroundGradient)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(32.dp)
+        // Skip button - top right, always visible
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 12.dp, end = 16.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(GradientColors.accent)
+                .clickable { onSkip() }
+                .padding(horizontal = 20.dp, vertical = 8.dp)
         ) {
             Text(
-                "🎸",
-                fontSize = 48.sp
+                "Continuar →",
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
             )
-            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // Title - top center
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 "Guitar Trainer",
-                fontSize = 24.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
                 color = GradientColors.accent
             )
             Text(
                 "Afina tu guitarra",
-                fontSize = 13.sp,
+                fontSize = 11.sp,
                 color = Color(0xFF8899aa)
             )
-            Spacer(modifier = Modifier.height(24.dp))
+        }
 
-            // Inline tuner
+        // Tuner takes remaining space
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = 40.dp)
+        ) {
             TunerMode(pitchResult = pitchResult)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(Color.White.copy(alpha = 0.1f))
-                    .clickable { onSkip() }
-                    .padding(horizontal = 28.dp, vertical = 10.dp)
-            ) {
-                Text(
-                    "Skip →",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
         }
     }
 }
