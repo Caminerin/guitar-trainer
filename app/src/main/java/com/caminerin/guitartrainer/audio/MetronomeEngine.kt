@@ -57,6 +57,7 @@ class MetronomeEngine {
         private const val CLICK_DURATION_SAMPLES = 1323 // 30ms
         private const val ACCENT_DURATION_SAMPLES = 1764 // 40ms
         private const val SUB_DURATION_SAMPLES = 882 // 20ms
+        private const val STICK_CLICK_SAMPLES = 1102 // 25ms
     }
 
     private val _currentBeat = MutableStateFlow(0)
@@ -80,6 +81,9 @@ class MetronomeEngine {
     private val _isMutedBar = MutableStateFlow(false)
     val isMutedBar: StateFlow<Boolean> = _isMutedBar
 
+    // Haptic callback — invoked from audio thread right before writing audio
+    @Volatile var onBeatCallback: (() -> Unit)? = null
+
     // Live-updatable fields: UI writes these, audio loop reads them each beat
     @Volatile var liveBpm: Int = 120
     @Volatile var liveSubdivision: Int = 1
@@ -97,6 +101,24 @@ class MetronomeEngine {
             samples[i] = sample.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
         }
         return samples
+    }
+
+    private fun generateStickClick(durationSamples: Int, volume: Float): ShortArray {
+        val samples = ShortArray(durationSamples)
+        for (i in 0 until durationSamples) {
+            val t = i.toFloat() / SAMPLE_RATE
+            val envelope = exp(-t * 120.0).toFloat() * volume
+            val tone = (sin(2.0 * PI * 2500.0 * t) * 0.4 +
+                        sin(2.0 * PI * 4000.0 * t) * 0.3 +
+                        (Math.random() * 2.0 - 1.0) * 0.3).toFloat()
+            val sample = (tone * envelope * Short.MAX_VALUE).toInt()
+            samples[i] = sample.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+        }
+        return samples
+    }
+
+    private fun getCountInClickSamples(): ShortArray {
+        return generateStickClick(STICK_CLICK_SAMPLES, 0.9f)
     }
 
     private fun generateNoise(durationSamples: Int, volume: Float): ShortArray {
@@ -224,7 +246,7 @@ class MetronomeEngine {
         liveAccentPattern = config.accentPattern
         liveSwingPercent = config.swingPercent
 
-        // Count-in phase
+        // Count-in phase (stick click sound, distinct from normal beats)
         if (config.countInBars > 0) {
             _isCountingIn.value = true
             val countInBeats = config.countInBars * config.beatsPerMeasure
@@ -232,12 +254,14 @@ class MetronomeEngine {
                 if (!isActive || !_isPlaying.value) break
                 val beatInBar = ciBeat % config.beatsPerMeasure
                 _currentBeat.value = beatInBar
-                val isAccent = (beatInBar == 0)
-                val beatAudio = buildBeatAudio(
-                    config.bpm, 1, config.sound, isAccent,
-                    config.swingPercent
-                )
-                track.write(beatAudio, 0, beatAudio.size)
+                onBeatCallback?.invoke()
+                val totalSamplesPerBeat = (SAMPLE_RATE * 60.0 / config.bpm).roundToInt()
+                val ciAudio = ShortArray(totalSamplesPerBeat)
+                val stickClick = getCountInClickSamples()
+                for (i in stickClick.indices) {
+                    if (i < ciAudio.size) ciAudio[i] = stickClick[i]
+                }
+                track.write(ciAudio, 0, ciAudio.size)
             }
             _isCountingIn.value = false
             _currentBeat.value = 0
@@ -266,6 +290,7 @@ class MetronomeEngine {
 
             _currentBeat.value = beatInMeasure
             _currentBpm.value = useBpm
+            onBeatCallback?.invoke()
 
             // Mute bars logic
             val isMuted = if (config.muteEnabled) {

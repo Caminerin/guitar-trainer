@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledIconButton
@@ -102,10 +104,6 @@ private val TIME_SIGNATURES = listOf(
     TimeSignature(3, 4, "3/4"),
     TimeSignature(4, 4, "4/4"),
     TimeSignature(5, 4, "5/4"),
-    TimeSignature(6, 4, "6/4"),
-    TimeSignature(7, 4, "7/4"),
-    TimeSignature(3, 8, "3/8"),
-    TimeSignature(5, 8, "5/8"),
     TimeSignature(6, 8, "6/8"),
     TimeSignature(7, 8, "7/8"),
     TimeSignature(9, 8, "9/8"),
@@ -147,8 +145,8 @@ fun MetronomeMode(
     // Swing
     var swingPercent by remember { mutableIntStateOf(50) }
 
-    // Count-in
-    var countInBars by remember { mutableIntStateOf(0) }
+    // Count-in (on/off toggle, always 1 bar)
+    var countInEnabled by remember { mutableStateOf(false) }
 
     // Mute bars
     var muteEnabled by remember { mutableStateOf(false) }
@@ -197,7 +195,7 @@ fun MetronomeMode(
                     sound = sound,
                     accentPattern = accentPattern,
                     swingPercent = swingPercent,
-                    countInBars = countInBars,
+                    countInBars = if (countInEnabled) 1 else 0,
                     muteEnabled = muteEnabled,
                     muteBarsPlay = muteBarsPlay,
                     muteBarsSilent = muteBarsSilent,
@@ -220,14 +218,20 @@ fun MetronomeMode(
     LaunchedEffect(beatsPerMeasure) { engine.liveBeatsPerMeasure = beatsPerMeasure }
     LaunchedEffect(sound) { engine.liveSound = sound }
     LaunchedEffect(accentPattern) { engine.liveAccentPattern = accentPattern }
-    LaunchedEffect(swingPercent) { engine.liveSwingPercent = swingPercent }
-
-    // Haptic feedback
-    val context = LocalContext.current
-    LaunchedEffect(currentBeat, isPlaying) {
-        if (isPlaying && hapticEnabled) {
-            triggerHaptic(context)
+    LaunchedEffect(swingPercent) {
+        engine.liveSwingPercent = swingPercent
+        if (swingPercent > 50 && subdivision < 2) {
+            subdivision = 2
         }
+    }
+
+    // Haptic feedback: trigger from engine's audio thread for sync
+    val context = LocalContext.current
+    DisposableEffect(hapticEnabled) {
+        engine.onBeatCallback = if (hapticEnabled) {
+            { triggerHaptic(context) }
+        } else null
+        onDispose { engine.onBeatCallback = null }
     }
 
     val configuration = LocalConfiguration.current
@@ -363,8 +367,8 @@ fun MetronomeMode(
 
                 // Quick settings row: count-in, swing, haptic, tempo presets
                 QuickSettingsRow(
-                    countInBars = countInBars,
-                    onCountInChange = { countInBars = it },
+                    countInEnabled = countInEnabled,
+                    onCountInToggle = { countInEnabled = !countInEnabled },
                     swingPercent = swingPercent,
                     onSwingChange = { swingPercent = it },
                     hapticEnabled = hapticEnabled,
@@ -571,48 +575,39 @@ fun MetronomeMode(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Count-in: big intuitive pills
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text("Cuenta atrás", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    listOf(0 to "Off", 1 to "1 compás", 2 to "2 compases", 4 to "4 compases").forEach { (bars, label) ->
-                        val isSelected = countInBars == bars
-                        Box(
-                            modifier = Modifier
-                                .padding(horizontal = 4.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant)
-                                .clickable { countInBars = bars }
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                label,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Swing + Haptic row — big controls
+            // Count-in + Swing + Haptic row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Swing — big
+                // Count-in toggle button
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(
+                        modifier = Modifier
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (countInEnabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { countInEnabled = !countInEnabled },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "3 2 1",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (countInEnabled) Color.White else Color.White.copy(alpha = 0.5f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Count-in",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (countInEnabled) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.5f)
+                    )
+                }
+
+                // Swing
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("Swing", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                     Spacer(modifier = Modifier.height(6.dp))
@@ -630,34 +625,30 @@ fun MetronomeMode(
                     }
                 }
 
-                // Haptic toggle — big
+                // Haptic toggle
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("Vibración", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
-                    Spacer(modifier = Modifier.height(6.dp))
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
+                            .size(56.dp)
+                            .clip(RoundedCornerShape(16.dp))
                             .background(if (hapticEnabled) Color(0xFF9C27B0).copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
-                            .clickable { hapticEnabled = !hapticEnabled }
-                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                            .clickable { hapticEnabled = !hapticEnabled },
                         contentAlignment = Alignment.Center
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Vibration,
-                                contentDescription = null,
-                                modifier = Modifier.size(24.dp),
-                                tint = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.5f)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                if (hapticEnabled) "ON" else "OFF",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.5f)
-                            )
-                        }
+                        Icon(
+                            Icons.Default.Vibration,
+                            contentDescription = null,
+                            modifier = Modifier.size(28.dp),
+                            tint = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.5f)
+                        )
                     }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        if (hapticEnabled) "Vibración ON" else "Vibración",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.5f)
+                    )
                 }
             }
 
@@ -1025,8 +1016,8 @@ private fun MetronomeSettingsRow(
 
 @Composable
 private fun QuickSettingsRow(
-    countInBars: Int,
-    onCountInChange: (Int) -> Unit,
+    countInEnabled: Boolean,
+    onCountInToggle: () -> Unit,
     swingPercent: Int,
     onSwingChange: (Int) -> Unit,
     hapticEnabled: Boolean,
@@ -1035,40 +1026,35 @@ private fun QuickSettingsRow(
     onTempoPresetMenuToggle: (Boolean) -> Unit,
     onTempoPresetSelected: (TempoPreset) -> Unit
 ) {
-    // Count-in row
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text("Cuenta atrás:", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
-        Spacer(modifier = Modifier.width(8.dp))
-        listOf(0 to "Off", 1 to "1c", 2 to "2c", 4 to "4c").forEach { (bars, label) ->
-            val isSelected = countInBars == bars
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 2.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { onCountInChange(bars) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    label,
-                    fontSize = 12.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f)
-                )
-            }
-        }
-    }
-    Spacer(modifier = Modifier.height(6.dp))
-    // Swing + Haptic + Tempo row
+    // Count-in + Swing + Haptic + Tempo row
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // Count-in toggle
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (countInEnabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onCountInToggle() },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "3 2 1",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    color = if (countInEnabled) Color.White else Color.White.copy(alpha = 0.5f)
+                )
+            }
+            Text(
+                "Count-in",
+                fontSize = 9.sp,
+                color = if (countInEnabled) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.5f)
+            )
+        }
         // Swing
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Swing:", fontSize = 12.sp, color = Color.White.copy(alpha = 0.7f))
@@ -1085,28 +1071,28 @@ private fun QuickSettingsRow(
             MiniButton("+") { onSwingChange((swingPercent + 5).coerceAtMost(75)) }
         }
         // Haptic
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
-                .background(if (hapticEnabled) Color(0xFF9C27B0).copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
-                .clickable { onHapticToggle() }
-                .padding(horizontal = 12.dp, vertical = 6.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (hapticEnabled) Color(0xFF9C27B0).copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onHapticToggle() },
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
                     Icons.Default.Vibration,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     tint = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.4f)
                 )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    if (hapticEnabled) "ON" else "OFF",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.4f)
-                )
             }
+            Text(
+                if (hapticEnabled) "ON" else "OFF",
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.4f)
+            )
         }
         // Tempo presets
         OutlinedButton(onClick = { onTempoPresetMenuToggle(true) }) {
@@ -1485,7 +1471,8 @@ private fun MetronomeOverlaySelector(
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth(0.8f)
+                    .fillMaxWidth(0.85f)
+                    .heightIn(max = 480.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(Color(0xFF2A2A2A))
                     .clickable(enabled = false) {}
@@ -1505,7 +1492,13 @@ private fun MetronomeOverlaySelector(
                     )
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                content()
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    content()
+                }
             }
         }
     }
