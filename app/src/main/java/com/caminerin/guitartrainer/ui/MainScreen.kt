@@ -29,19 +29,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Audiotrack
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Piano
-import androidx.compose.material.icons.filled.Quiz
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoStories
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -55,31 +52,53 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.zIndex
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.NoteEvent
 import com.caminerin.guitartrainer.audio.NoteRecognizer
 import com.caminerin.guitartrainer.audio.PitchDetector
+import java.util.Calendar
+
+// ===== NEW NAVIGATION: 3 TABS =====
 
 private enum class NavDestination(val label: String, val icon: ImageVector) {
-    SCALES("Escalas", Icons.Default.MusicNote),
-    CHORDS("Acordes", Icons.Default.Piano),
-    TABS("Tabs", Icons.Default.Audiotrack),
-    QUIZ("Quiz", Icons.Default.Quiz),
-    TUNER("Afinar", Icons.Default.Tune),
-    METRONOME("Metro", Icons.Default.Speed)
+    LIBRARY("Biblioteca", Icons.Default.AutoStories),
+    PRACTICE("Practicar", Icons.Default.FitnessCenter),
+    TOOLS("Herramientas", Icons.Default.Build)
 }
 
-enum class AppMode(val title: String, val icon: ImageVector) {
-    VISUALIZER("Visualizador", Icons.Default.MusicNote),
-    PRACTICE("Práctica", Icons.Default.Piano),
-    QUIZ("Quiz", Icons.Default.Quiz),
-    TOOLS("Herramientas", Icons.Default.Tune)
+// ===== GRADIENT COLORS FOR CARDS =====
+object GradientColors {
+    val scalesStart = Color(0xFF1b5e20)
+    val scalesEnd = Color(0xFF4caf50)
+    val chordsStart = Color(0xFF0d47a1)
+    val chordsEnd = Color(0xFF42a5f5)
+    val tabsStart = Color(0xFF4a148c)
+    val tabsEnd = Color(0xFFab47bc)
+    val quizStart = Color(0xFFe65100)
+    val quizEnd = Color(0xFFffa726)
+    val retoStart = Color(0xFFb71c1c)
+    val retoEnd = Color(0xFFef5350)
+    val tunerStart = Color(0xFF004d40)
+    val tunerEnd = Color(0xFF26a69a)
+    val metroStart = Color(0xFF1a237e)
+    val metroEnd = Color(0xFF5c6bc0)
+    val settingsStart = Color(0xFF37474f)
+    val settingsEnd = Color(0xFF78909c)
+
+    val backgroundGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFF1a1033), Color(0xFF0d1b2a))
+    )
+    val titleGradient = Brush.horizontalGradient(
+        colors = listOf(Color(0xFFff6b9d), Color(0xFFffa726))
+    )
+    val accent = Color(0xFFff6b9d)
 }
 
 @Composable
@@ -97,19 +116,46 @@ fun MainScreen(
         DegreeColorPrefs.load(context)
     }
 
+    // Check if tuner splash should show (first time today)
+    var showTunerSplash by rememberSaveable { mutableStateOf(shouldShowTunerToday(context)) }
+
     var selectedNav by rememberSaveable { mutableIntStateOf(AppPreferences.lastTab.coerceIn(0, NavDestination.entries.size - 1)) }
-    var showSettings by remember { mutableStateOf(false) }
-    val destinations = NavDestination.entries
     var previousNav by remember { mutableIntStateOf(selectedNav) }
 
+    // Sub-navigation state
+    var practiceSubScreen by rememberSaveable { mutableIntStateOf(-1) } // -1 = hub
+    var librarySubScreen by rememberSaveable { mutableIntStateOf(-1) }
+    var toolsSubScreen by rememberSaveable { mutableIntStateOf(-1) }
+    var chordsSubScreen by rememberSaveable { mutableIntStateOf(-1) } // -1=selection, 0=progresiones, 1=reto
+
+    val destinations = NavDestination.entries
+
     BackHandler {
-        (context as? Activity)?.finish()
+        when {
+            showTunerSplash -> (context as? Activity)?.finish()
+            chordsSubScreen >= 0 -> chordsSubScreen = -1
+            practiceSubScreen >= 0 -> practiceSubScreen = -1
+            librarySubScreen >= 0 -> librarySubScreen = -1
+            toolsSubScreen >= 0 -> toolsSubScreen = -1
+            else -> (context as? Activity)?.finish()
+        }
+    }
+
+    if (showTunerSplash) {
+        TunerSplashScreen(
+            pitchResult = pitchResult,
+            onSkip = {
+                markTunerShownToday(context)
+                showTunerSplash = false
+            }
+        )
+        return
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(AppColors.background)
+            .background(GradientColors.backgroundGradient)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Content area
@@ -129,43 +175,43 @@ fun MainScreen(
                 ) { navIndex ->
                     val dest = destinations[navIndex]
                     when (dest) {
-                        NavDestination.SCALES -> UnifiedScalesScreen(
-                                pitchResult = pitchResult,
-                                noteEvent = noteEvent,
-                                noteRecognizer = noteRecognizer
-                            )
-                        NavDestination.CHORDS -> UnifiedChordsScreen()
-                        NavDestination.TABS -> TabPracticeScreen(
-                            onBack = { selectedNav = 0 },
-                            showBackButton = false
-                        )
-                        NavDestination.QUIZ -> QuizHubScreen(
-                            onBack = { selectedNav = 0 },
+                        NavDestination.LIBRARY -> LibrarySection(
+                            subScreen = librarySubScreen,
+                            onSubScreenChange = { librarySubScreen = it },
                             pitchResult = pitchResult,
-                            showBackButton = false
+                            noteEvent = noteEvent,
+                            noteRecognizer = noteRecognizer
                         )
-                        NavDestination.TUNER -> {
-                            TunerMode(pitchResult = pitchResult)
-                        }
-                        NavDestination.METRONOME -> {
-                            MetronomeMode()
-                        }
+                        NavDestination.PRACTICE -> PracticeSection(
+                            subScreen = practiceSubScreen,
+                            onSubScreenChange = { practiceSubScreen = it },
+                            chordsSubScreen = chordsSubScreen,
+                            onChordsSubScreenChange = { chordsSubScreen = it },
+                            pitchResult = pitchResult,
+                            noteEvent = noteEvent,
+                            noteRecognizer = noteRecognizer
+                        )
+                        NavDestination.TOOLS -> ToolsSection(
+                            subScreen = toolsSubScreen,
+                            onSubScreenChange = { toolsSubScreen = it },
+                            pitchResult = pitchResult
+                        )
                     }
                 }
             }
 
-            // Bottom Navigation Bar — custom compact row
+            // Bottom Navigation Bar
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
-                    .background(AppColors.navBar),
+                    .height(56.dp)
+                    .background(Color.Black.copy(alpha = 0.6f)),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 destinations.forEachIndexed { index, dest ->
                     val isSelected = selectedNav == index
-                    val itemColor = if (isSelected) AppColors.navSelected else AppColors.navUnselected
+                    val itemColor = if (isSelected) GradientColors.accent else Color(0xFF667788)
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -174,8 +220,13 @@ fun MainScreen(
                                 previousNav = selectedNav
                                 selectedNav = index
                                 AppPreferences.saveTab(index, context)
+                                // Reset sub-screens when switching tabs
+                                if (index != NavDestination.PRACTICE.ordinal) practiceSubScreen = -1
+                                if (index != NavDestination.LIBRARY.ordinal) librarySubScreen = -1
+                                if (index != NavDestination.TOOLS.ordinal) toolsSubScreen = -1
+                                chordsSubScreen = -1
                             }
-                            .padding(vertical = 4.dp),
+                            .padding(vertical = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -183,12 +234,12 @@ fun MainScreen(
                             dest.icon,
                             contentDescription = dest.label,
                             tint = itemColor,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                         Text(
                             dest.label,
                             color = itemColor,
-                            fontSize = 9.sp,
+                            fontSize = 10.sp,
                             maxLines = 1,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
@@ -196,25 +247,657 @@ fun MainScreen(
                 }
             }
         }
+    }
+}
 
-        // Settings button — only on Tuner/Metronome (other screens have top-right UI)
-        val showSettingsBtn = selectedNav in listOf(NavDestination.TUNER.ordinal, NavDestination.METRONOME.ordinal)
-        if (showSettingsBtn) {
-            IconButton(
-                onClick = { showSettings = true },
+// ===== TUNER SPLASH (1st time of day) =====
+
+private fun shouldShowTunerToday(context: Context): Boolean {
+    val prefs = context.getSharedPreferences("guitar_prefs", Context.MODE_PRIVATE)
+    val lastShown = prefs.getLong("tuner_splash_last_day", 0L)
+    val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR) +
+            Calendar.getInstance().get(Calendar.YEAR) * 1000
+    return lastShown.toInt() != today
+}
+
+private fun markTunerShownToday(context: Context) {
+    val today = Calendar.getInstance().get(Calendar.DAY_OF_YEAR) +
+            Calendar.getInstance().get(Calendar.YEAR) * 1000
+    context.getSharedPreferences("guitar_prefs", Context.MODE_PRIVATE)
+        .edit().putLong("tuner_splash_last_day", today.toLong()).apply()
+}
+
+@Composable
+private fun TunerSplashScreen(
+    pitchResult: PitchDetector.PitchResult?,
+    onSkip: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(GradientColors.backgroundGradient),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Text(
+                "🎸",
+                fontSize = 48.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "Guitar Trainer",
+                fontSize = 24.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = GradientColors.accent
+            )
+            Text(
+                "Afina tu guitarra",
+                fontSize = 13.sp,
+                color = Color(0xFF8899aa)
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Inline tuner
+            TunerMode(pitchResult = pitchResult)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(end = 4.dp, top = 4.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White.copy(alpha = 0.1f))
+                    .clickable { onSkip() }
+                    .padding(horizontal = 28.dp, vertical = 10.dp)
             ) {
-                Icon(Icons.Default.Settings, "Ajustes", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+                Text(
+                    "Skip →",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
-        }
-
-        if (showSettings) {
-            SettingsOverlay(context = context, onDismiss = { showSettings = false })
         }
     }
 }
+
+// ===== LIBRARY SECTION =====
+
+@Composable
+private fun LibrarySection(
+    subScreen: Int,
+    onSubScreenChange: (Int) -> Unit,
+    pitchResult: PitchDetector.PitchResult?,
+    noteEvent: NoteEvent?,
+    noteRecognizer: NoteRecognizer?
+) {
+    when (subScreen) {
+        -1 -> LibraryHub(onItemClick = { onSubScreenChange(it) })
+        0 -> ScaleFretboardScreen(onBack = { onSubScreenChange(-1) }, showBackButton = true)
+        1 -> ChordVisualizerScreen(
+            onBack = { onSubScreenChange(-1) },
+            onGoToPractice = {},
+            showBackButton = true
+        )
+    }
+}
+
+@Composable
+private fun LibraryHub(onItemClick: (Int) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            "Biblioteca",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = GradientColors.accent
+        )
+        Text(
+            "Consulta y aprende",
+            fontSize = 12.sp,
+            color = Color(0xFF8899aa)
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            GridCard(
+                emoji = "🎸",
+                label = "Escalas",
+                subtitle = "Mástil + posiciones",
+                gradientStart = GradientColors.scalesStart,
+                gradientEnd = GradientColors.scalesEnd,
+                modifier = Modifier.weight(1f),
+                onClick = { onItemClick(0) }
+            )
+            GridCard(
+                emoji = "🎹",
+                label = "Acordes",
+                subtitle = "Diagramas + formas",
+                gradientStart = GradientColors.chordsStart,
+                gradientEnd = GradientColors.chordsEnd,
+                modifier = Modifier.weight(1f),
+                onClick = { onItemClick(1) }
+            )
+        }
+    }
+}
+
+// ===== PRACTICE SECTION =====
+
+@Composable
+private fun PracticeSection(
+    subScreen: Int,
+    onSubScreenChange: (Int) -> Unit,
+    chordsSubScreen: Int,
+    onChordsSubScreenChange: (Int) -> Unit,
+    pitchResult: PitchDetector.PitchResult?,
+    noteEvent: NoteEvent?,
+    noteRecognizer: NoteRecognizer?
+) {
+    when (subScreen) {
+        -1 -> PracticeHub(onItemClick = { onSubScreenChange(it) })
+        0 -> CagedPracticeScreen(
+            onBack = { onSubScreenChange(-1) },
+            pitchResult = pitchResult,
+            noteEvent = noteEvent,
+            noteRecognizer = noteRecognizer
+        )
+        1 -> ChordsSubSection(
+            chordsSubScreen = chordsSubScreen,
+            onChordsSubScreenChange = onChordsSubScreenChange,
+            onBack = { onSubScreenChange(-1) }
+        )
+        2 -> TabPracticeScreen(
+            onBack = { onSubScreenChange(-1) },
+            showBackButton = true
+        )
+        3 -> QuizHubScreen(
+            onBack = { onSubScreenChange(-1) },
+            pitchResult = pitchResult,
+            showBackButton = true
+        )
+    }
+}
+
+@Composable
+private fun PracticeHub(onItemClick: (Int) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            "Practicar",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = GradientColors.accent
+        )
+        Text(
+            "Elige tu actividad",
+            fontSize = 12.sp,
+            color = Color(0xFF8899aa)
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                GridCard(
+                    emoji = "🎸",
+                    label = "Escalas",
+                    subtitle = "Con guitarra real",
+                    gradientStart = GradientColors.scalesStart,
+                    gradientEnd = GradientColors.scalesEnd,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onItemClick(0) }
+                )
+                GridCard(
+                    emoji = "🎹",
+                    label = "Acordes",
+                    subtitle = "Progresiones + Reto",
+                    gradientStart = GradientColors.chordsStart,
+                    gradientEnd = GradientColors.chordsEnd,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onItemClick(1) }
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                GridCard(
+                    emoji = "🎵",
+                    label = "Tabs",
+                    subtitle = "Loop + BPM",
+                    gradientStart = GradientColors.tabsStart,
+                    gradientEnd = GradientColors.tabsEnd,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onItemClick(2) }
+                )
+                GridCard(
+                    emoji = "🧠",
+                    label = "Quiz",
+                    subtitle = "Oído + Teoría",
+                    gradientStart = GradientColors.quizStart,
+                    gradientEnd = GradientColors.quizEnd,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onItemClick(3) }
+                )
+            }
+        }
+    }
+}
+
+// ===== CHORDS SUB-SECTION =====
+
+@Composable
+private fun ChordsSubSection(
+    chordsSubScreen: Int,
+    onChordsSubScreenChange: (Int) -> Unit,
+    onBack: () -> Unit
+) {
+    when (chordsSubScreen) {
+        -1 -> ChordsSelectionScreen(
+            onSelect = { onChordsSubScreenChange(it) },
+            onBack = onBack
+        )
+        0 -> ChordPracticeScreen(
+            onBack = { onChordsSubScreenChange(-1) },
+            onGoToVisualizer = {}
+        )
+        1 -> ChordChallengeScreen(
+            onBack = { onChordsSubScreenChange(-1) }
+        )
+    }
+}
+
+@Composable
+private fun ChordsSelectionScreen(
+    onSelect: (Int) -> Unit,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 16.dp)
+        ) {
+            Icon(
+                Icons.Default.ArrowBack,
+                contentDescription = "Volver",
+                tint = GradientColors.accent,
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable { onBack() }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Acordes",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            SubOptionCard(
+                emoji = "🎹",
+                title = "Progresiones",
+                subtitle = "Cambios con metrónomo y batería",
+                gradientStart = GradientColors.chordsStart,
+                gradientEnd = GradientColors.chordsEnd,
+                onClick = { onSelect(0) }
+            )
+            SubOptionCard(
+                emoji = "⚡",
+                title = "Reto de velocidad",
+                subtitle = "¿Cuántos cambios aguantas?",
+                gradientStart = GradientColors.retoStart,
+                gradientEnd = GradientColors.retoEnd,
+                onClick = { onSelect(1) }
+            )
+        }
+    }
+}
+
+// ===== TOOLS SECTION =====
+
+@Composable
+private fun ToolsSection(
+    subScreen: Int,
+    onSubScreenChange: (Int) -> Unit,
+    pitchResult: PitchDetector.PitchResult?
+) {
+    when (subScreen) {
+        -1 -> ToolsHub(onItemClick = { onSubScreenChange(it) })
+        0 -> ToolScreenWrapper(title = "Afinador", onBack = { onSubScreenChange(-1) }) {
+            TunerMode(pitchResult = pitchResult)
+        }
+        1 -> ToolScreenWrapper(title = "Metrónomo", onBack = { onSubScreenChange(-1) }) {
+            MetronomeMode()
+        }
+        2 -> SettingsScreen(onBack = { onSubScreenChange(-1) })
+    }
+}
+
+@Composable
+private fun ToolScreenWrapper(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
+        ) {
+            Icon(
+                Icons.Default.ArrowBack,
+                contentDescription = "Volver",
+                tint = GradientColors.accent,
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable { onBack() }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+        Box(modifier = Modifier.weight(1f)) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ToolsHub(onItemClick: (Int) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            "Herramientas",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = GradientColors.accent
+        )
+        Text(
+            "Utilidades",
+            fontSize = 12.sp,
+            color = Color(0xFF8899aa)
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                GridCard(
+                    emoji = "🎯",
+                    label = "Afinador",
+                    subtitle = "Afina tu guitarra",
+                    gradientStart = GradientColors.tunerStart,
+                    gradientEnd = GradientColors.tunerEnd,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onItemClick(0) }
+                )
+                GridCard(
+                    emoji = "🥁",
+                    label = "Metrónomo",
+                    subtitle = "Tempo + batería",
+                    gradientStart = GradientColors.metroStart,
+                    gradientEnd = GradientColors.metroEnd,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onItemClick(1) }
+                )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                GridCard(
+                    emoji = "⚙️",
+                    label = "Ajustes",
+                    subtitle = "Colores, notación",
+                    gradientStart = GradientColors.settingsStart,
+                    gradientEnd = GradientColors.settingsEnd,
+                    modifier = Modifier.weight(1f),
+                    onClick = { onItemClick(2) }
+                )
+                // Empty spacer for alignment
+                Spacer(modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+// ===== SETTINGS SCREEN (extracted from old SettingsOverlay) =====
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SettingsScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 8.dp)
+        ) {
+            Icon(
+                Icons.Default.ArrowBack,
+                contentDescription = "Volver",
+                tint = GradientColors.accent,
+                modifier = Modifier
+                    .size(24.dp)
+                    .clickable { onBack() }
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                "Ajustes",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+
+        // Nomenclature
+        Text("Nomenclatura", color = Color(0xFF8899aa), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            NoteFormat.entries.forEach { fmt ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (NoteFormatPreference.current == fmt) GradientColors.accent else Color.White.copy(alpha = 0.1f))
+                        .clickable { NoteFormatPreference.set(fmt, context) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(fmt.label, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        val colorPalette = listOf(
+            Color(0xFFE53935), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF5E35B1),
+            Color(0xFF3949AB), Color(0xFF1E88E5), Color(0xFF00ACC1), Color(0xFF00897B),
+            Color(0xFF43A047), Color(0xFF7CB342), Color(0xFFFDD835), Color(0xFFFF8F00),
+            Color(0xFFFF6D00), Color(0xFF6D4C41), Color(0xFF546E7A), Color(0xFF26A69A)
+        )
+
+        // Degree colors - Scale
+        Text("Colores de grado (escalas)", color = Color(0xFF8899aa), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        val scaleDegs = listOf(
+            "Tónica (I)" to ("tonic" to DegreeColorPrefs.tonicColor),
+            "Tercera (III)" to ("third" to DegreeColorPrefs.thirdColor),
+            "Quinta (V)" to ("fifth" to DegreeColorPrefs.fifthColor),
+            "Otros" to ("other" to DegreeColorPrefs.otherColor)
+        )
+        scaleDegs.forEach { (label, keyColor) ->
+            val (key, currentColor) = keyColor
+            var expanded by remember { mutableStateOf(false) }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(currentColor)
+                        .clickable { expanded = !expanded }
+                )
+                Text(label, color = Color.White, fontSize = 13.sp,
+                    modifier = Modifier.clickable { expanded = !expanded })
+            }
+            if (expanded) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = 32.dp, top = 4.dp, bottom = 4.dp)) {
+                    colorPalette.forEach { c ->
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(c)
+                                .then(if (c == currentColor) Modifier.border(2.dp, Color.White, RoundedCornerShape(4.dp)) else Modifier)
+                                .clickable { DegreeColorPrefs.setScaleColor(key, c, true, context); expanded = false }
+                        )
+                    }
+                }
+            }
+        }
+
+        // Degree colors - Chords
+        Text("Colores de intervalo (acordes)", color = Color(0xFF8899aa), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        val chordDegs = listOf(
+            "Raíz (1)" to ("root" to DegreeColorPrefs.chordRootColor),
+            "Tercera (3)" to ("third" to DegreeColorPrefs.chordThirdColor),
+            "Quinta (5)" to ("fifth" to DegreeColorPrefs.chordFifthColor),
+            "Otros" to ("other" to DegreeColorPrefs.chordOtherColor)
+        )
+        chordDegs.forEach { (label, keyColor) ->
+            val (key, currentColor) = keyColor
+            var expanded by remember { mutableStateOf(false) }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(currentColor)
+                        .clickable { expanded = !expanded }
+                )
+                Text(label, color = Color.White, fontSize = 13.sp,
+                    modifier = Modifier.clickable { expanded = !expanded })
+            }
+            if (expanded) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = 32.dp, top = 4.dp, bottom = 4.dp)) {
+                    colorPalette.forEach { c ->
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(c)
+                                .then(if (c == currentColor) Modifier.border(2.dp, Color.White, RoundedCornerShape(4.dp)) else Modifier)
+                                .clickable { DegreeColorPrefs.setChordColor(key, c, true, context); expanded = false }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ===== SHARED GRID CARD COMPONENT =====
+
+@Composable
+private fun GridCard(
+    emoji: String,
+    label: String,
+    subtitle: String,
+    gradientStart: Color,
+    gradientEnd: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Brush.linearGradient(listOf(gradientStart, gradientEnd)))
+            .clickable { onClick() }
+            .padding(18.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(emoji, fontSize = 28.sp)
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                label,
+                color = Color.White,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                subtitle,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+// ===== SUB-OPTION CARD (for Acordes selection) =====
+
+@Composable
+private fun SubOptionCard(
+    emoji: String,
+    title: String,
+    subtitle: String,
+    gradientStart: Color,
+    gradientEnd: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(Brush.linearGradient(listOf(gradientStart, gradientEnd)))
+            .clickable { onClick() }
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(emoji, fontSize = 26.sp)
+        Column {
+            Text(title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = Color.White.copy(alpha = 0.7f), fontSize = 11.sp)
+        }
+    }
+}
+
+// ===== UTILITIES =====
 
 fun hapticTick(context: Context) {
     try {
@@ -229,315 +912,6 @@ fun hapticTick(context: Context) {
             }
         }
     } catch (_: Exception) { }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun SettingsOverlay(context: Context, onDismiss: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(AppColors.overlay)
-            .clickable(
-                indication = null,
-                interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-            ) { onDismiss() },
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .clip(RoundedCornerShape(16.dp))
-                .background(AppColors.surfaceVariant)
-                .clickable(
-                    indication = null,
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                ) {}
-                .padding(20.dp)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text("Ajustes", color = AppColors.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-
-            // Nomenclature
-            Text("Nomenclatura", color = AppColors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NoteFormat.entries.forEach { fmt ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (NoteFormatPreference.current == fmt) AppColors.tertiary else Color.White.copy(alpha = 0.1f))
-                            .clickable { NoteFormatPreference.set(fmt, context) }
-                            .padding(horizontal = 14.dp, vertical = 8.dp)
-                    ) {
-                        Text(fmt.label, color = AppColors.text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-
-            val colorPalette = listOf(
-                Color(0xFFE53935), Color(0xFFD81B60), Color(0xFF8E24AA), Color(0xFF5E35B1),
-                Color(0xFF3949AB), Color(0xFF1E88E5), Color(0xFF00ACC1), Color(0xFF00897B),
-                Color(0xFF43A047), Color(0xFF7CB342), Color(0xFFFDD835), Color(0xFFFF8F00),
-                Color(0xFFFF6D00), Color(0xFF6D4C41), Color(0xFF546E7A), Color(0xFF26A69A)
-            )
-
-            // Degree colors - Scale
-            Text("Colores de grado (escalas)", color = AppColors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            val scaleDegs = listOf(
-                "Tónica (I)" to ("tonic" to DegreeColorPrefs.tonicColor),
-                "Tercera (III)" to ("third" to DegreeColorPrefs.thirdColor),
-                "Quinta (V)" to ("fifth" to DegreeColorPrefs.fifthColor),
-                "Otros" to ("other" to DegreeColorPrefs.otherColor)
-            )
-            scaleDegs.forEach { (label, keyColor) ->
-                val (key, currentColor) = keyColor
-                var expanded by remember { mutableStateOf(false) }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(currentColor)
-                            .clickable { expanded = !expanded }
-                    )
-                    Text(label, color = AppColors.text, fontSize = 13.sp,
-                        modifier = Modifier.clickable { expanded = !expanded })
-                }
-                if (expanded) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = 32.dp, top = 4.dp, bottom = 4.dp)) {
-                        colorPalette.forEach { c ->
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(c)
-                                    .then(if (c == currentColor) Modifier.border(2.dp, Color.White, RoundedCornerShape(4.dp)) else Modifier)
-                                    .clickable { DegreeColorPrefs.setScaleColor(key, c, true, context); expanded = false }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Degree colors - Chords
-            Text("Colores de intervalo (acordes)", color = AppColors.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            val chordDegs = listOf(
-                "Raíz (1)" to ("root" to DegreeColorPrefs.chordRootColor),
-                "Tercera (3)" to ("third" to DegreeColorPrefs.chordThirdColor),
-                "Quinta (5)" to ("fifth" to DegreeColorPrefs.chordFifthColor),
-                "Otros" to ("other" to DegreeColorPrefs.chordOtherColor)
-            )
-            chordDegs.forEach { (label, keyColor) ->
-                val (key, currentColor) = keyColor
-                var expanded by remember { mutableStateOf(false) }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(currentColor)
-                            .clickable { expanded = !expanded }
-                    )
-                    Text(label, color = AppColors.text, fontSize = 13.sp,
-                        modifier = Modifier.clickable { expanded = !expanded })
-                }
-                if (expanded) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(start = 32.dp, top = 4.dp, bottom = 4.dp)) {
-                        colorPalette.forEach { c ->
-                            Box(
-                                modifier = Modifier
-                                    .size(24.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(c)
-                                    .then(if (c == currentColor) Modifier.border(2.dp, Color.White, RoundedCornerShape(4.dp)) else Modifier)
-                                    .clickable { DegreeColorPrefs.setChordColor(key, c, true, context); expanded = false }
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(AppColors.tertiary)
-                    .clickable { onDismiss() }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Cerrar", color = AppColors.text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-// ===== UNIFIED SCREENS WITH TOGGLE =====
-
-@Composable
-private fun ModeToggle(
-    leftLabel: String,
-    rightLabel: String,
-    isLeftSelected: Boolean,
-    onToggle: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(AppColors.surfaceVariant)
-            .padding(2.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (isLeftSelected) AppColors.primary else Color.Transparent)
-                .clickable { onToggle(true) }
-                .padding(horizontal = 14.dp, vertical = 5.dp)
-        ) {
-            Text(
-                leftLabel,
-                color = if (isLeftSelected) AppColors.onPrimary else AppColors.textMuted,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (!isLeftSelected) AppColors.primary else Color.Transparent)
-                .clickable { onToggle(false) }
-                .padding(horizontal = 14.dp, vertical = 5.dp)
-        ) {
-            Text(
-                rightLabel,
-                color = if (!isLeftSelected) AppColors.onPrimary else AppColors.textMuted,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-    }
-}
-
-@Composable
-private fun UnifiedScalesScreen(
-    pitchResult: PitchDetector.PitchResult?,
-    noteEvent: NoteEvent? = null,
-    noteRecognizer: NoteRecognizer? = null
-) {
-    var isViewMode by rememberSaveable { mutableStateOf(true) }
-    var overlayVisible by remember { mutableStateOf(false) }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        if (isViewMode) {
-            ScaleFretboardScreen(onBack = {}, showBackButton = false, onOverlayChanged = { overlayVisible = it })
-        } else {
-            CagedPracticeScreen(
-                onBack = { isViewMode = true },
-                pitchResult = pitchResult,
-                noteEvent = noteEvent,
-                noteRecognizer = noteRecognizer,
-                onOverlayChanged = { overlayVisible = it }
-            )
-        }
-
-        if (!overlayVisible) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 10.dp, bottom = 14.dp)
-                    .zIndex(5f)
-            ) {
-                ModeToggle(
-                    leftLabel = "Ver",
-                    rightLabel = "Practicar",
-                    isLeftSelected = isViewMode,
-                    onToggle = { isViewMode = it }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun UnifiedChordsScreen() {
-    // 0=Ver, 1=Practicar, 2=Reto
-    var chordMode by rememberSaveable { mutableIntStateOf(0) }
-    var overlayVisible by remember { mutableStateOf(false) }
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (chordMode) {
-            0 -> ChordVisualizerScreen(
-                onBack = {},
-                onGoToPractice = { chordMode = 1 },
-                showBackButton = false,
-                onOverlayChanged = { overlayVisible = it }
-            )
-            1 -> ChordPracticeScreen(
-                onBack = { chordMode = 0 },
-                onGoToVisualizer = { chordMode = 0 },
-                onOverlayChanged = { overlayVisible = it }
-            )
-            2 -> ChordChallengeScreen(
-                onBack = { chordMode = 0 }
-            )
-        }
-
-        if (!overlayVisible) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 10.dp, bottom = 14.dp)
-                    .zIndex(5f)
-            ) {
-                TriModeToggle(
-                    labels = listOf("Ver", "Practicar", "Reto"),
-                    selectedIndex = chordMode,
-                    onSelect = { chordMode = it }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TriModeToggle(
-    labels: List<String>,
-    selectedIndex: Int,
-    onSelect: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(AppColors.surfaceVariant)
-            .padding(2.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        labels.forEachIndexed { index, label ->
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (selectedIndex == index) AppColors.primary else Color.Transparent)
-                    .clickable { onSelect(index) }
-                    .padding(horizontal = 12.dp, vertical = 5.dp)
-            ) {
-                Text(
-                    label,
-                    color = if (selectedIndex == index) AppColors.onPrimary else AppColors.textMuted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
 }
 
 @Composable
