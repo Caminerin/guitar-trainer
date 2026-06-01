@@ -27,12 +27,16 @@ class AudioProcessor(private val context: Context) {
     }
 
     private val pitchDetector = PitchDetector(SAMPLE_RATE)
+    val noteRecognizer = NoteRecognizer()
     private var audioRecord: AudioRecord? = null
     private var lastDetectionTimeMs = 0L
     private var useFloatFormat = true
 
     private val _currentPitch = MutableStateFlow<PitchDetector.PitchResult?>(null)
     val currentPitch: StateFlow<PitchDetector.PitchResult?> = _currentPitch
+
+    private val _currentNoteEvent = MutableStateFlow<NoteEvent?>(null)
+    val currentNoteEvent: StateFlow<NoteEvent?> = _currentNoteEvent
 
     private val _isListening = MutableStateFlow(false)
     val isListening: StateFlow<Boolean> = _isListening
@@ -99,16 +103,29 @@ class AudioProcessor(private val context: Context) {
                 }
                 r
             }
-            if (read > 0 && hasSignal(floatBuffer, read)) {
-                val detected = detectAdaptive(floatBuffer, read)
+            if (read > 0) {
+                val now = System.currentTimeMillis()
+                val detected = if (hasSignal(floatBuffer, read)) {
+                    detectAdaptive(floatBuffer, read)
+                } else null
+
+                // Raw pitch for tuner/free mode (unchanged behavior)
                 if (detected != null) {
                     _currentPitch.value = detected
-                    lastDetectionTimeMs = System.currentTimeMillis()
+                    lastDetectionTimeMs = now
+                } else {
+                    val elapsed = now - lastDetectionTimeMs
+                    if (elapsed > HOLD_DURATION_MS) {
+                        _currentPitch.value = null
+                    }
                 }
-            } else if (read > 0) {
-                val elapsed = System.currentTimeMillis() - lastDetectionTimeMs
-                if (elapsed > HOLD_DURATION_MS) {
-                    _currentPitch.value = null
+
+                // Smart note recognition (onset + hysteresis + noise gate)
+                val noteEvent = noteRecognizer.processFrame(
+                    floatBuffer, read, detected, now
+                )
+                if (noteEvent != null) {
+                    _currentNoteEvent.value = noteEvent
                 }
             }
         }
