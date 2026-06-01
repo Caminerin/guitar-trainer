@@ -119,94 +119,82 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
             modifier = Modifier
                 .fillMaxWidth()
                 .background(COLOR_TOOLBAR)
-                .padding(horizontal = 6.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 6.dp, vertical = 4.dp)
+                .horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            // Left side: back + selectors
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                // Back button
-                if (showBackButton) {
-                    IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                        Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-                }
-
-                // Key selector
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
-                        .clickable { showChromaticCircle = true }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey],
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Scale selector
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
-                        .clickable { showScaleSelector = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // Display mode
-                NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
-
-                // Colors
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFff6b9d).copy(alpha = 0.3f))
-                        .clickable { showColorSelector = true }
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                ) {
-                    Text("Colores", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // Info
-                IconButton(onClick = { showInfo = true }, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.Info, "Info", tint = Color(0xFF90A4AE), modifier = Modifier.size(18.dp))
-                }
-
-                // Posiciones toggle
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (positionsEnabled) Color(0xFFff6b9d).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
-                        .clickable { positionsEnabled = !positionsEnabled }
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                ) {
-                    Text("Pos", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            // Back button
+            if (showBackButton) {
+                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            // Key selector
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
+                    .clickable { showChromaticCircle = true }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey],
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
 
-            // Right side: position chips (when enabled)
+            // Scale selector
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
+                    .clickable { showScaleSelector = true }
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // Display mode
+            NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
+
+            // Colors
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFff6b9d).copy(alpha = 0.3f))
+                    .clickable { showColorSelector = true }
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                Text("Colores", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // Info
+            IconButton(onClick = { showInfo = true }, modifier = Modifier.size(32.dp)) {
+                Icon(Icons.Default.Info, "Info", tint = Color(0xFF90A4AE), modifier = Modifier.size(18.dp))
+            }
+
+            // Posiciones toggle
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (positionsEnabled) Color(0xFFff6b9d).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
+                    .clickable { positionsEnabled = !positionsEnabled }
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            ) {
+                Text("Pos", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // Position chips (when enabled) - inline, same row, no gap
             if (positionsEnabled && positions.isNotEmpty()) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.horizontalScroll(rememberScrollState())
-                ) {
-                    CagedPositionBar(
-                        positions = positions,
-                        currentIndex = currentPosition,
-                        onSelect = { currentPosition = it }
-                    )
-                }
+                CagedPositionBar(
+                    positions = positions,
+                    currentIndex = currentPosition,
+                    onSelect = { currentPosition = it }
+                )
             }
         }
 
