@@ -74,7 +74,7 @@ fun smartSplit(line: String): List<String> {
 // ===== SHARED COLORS =====
 val SHARED_BG = Color(0xFF1A1A1A)
 val SHARED_TOOLBAR = Color(0xFF1E1E1E)
-val SHARED_ACCENT = Color(0xFF7B1FA2)
+val SHARED_ACCENT = Color(0xFFff6b9d)
 
 // ===== CENTRALIZED APP COLOR SYSTEM =====
 object AppColors {
@@ -103,15 +103,21 @@ object AppColors {
 // ===== COLOR PALETTE for degree/interval color picker =====
 val COLOR_PALETTE = listOf(
     Color(0xFFE53935) to "Rojo",
+    Color(0xFFD81B60) to "Fucsia",
+    Color(0xFFff6b9d) to "Coral",
+    Color(0xFF8E24AA) to "Púrpura",
+    Color(0xFF5E35B1) to "Violeta",
+    Color(0xFF3949AB) to "Índigo",
     Color(0xFF1E88E5) to "Azul",
+    Color(0xFF00ACC1) to "Cian",
+    Color(0xFF00897B) to "Teal",
     Color(0xFF43A047) to "Verde",
-    Color(0xFF26A69A) to "Teal",
-    Color(0xFF7B1FA2) to "Morado",
-    Color(0xFFFF9800) to "Naranja",
-    Color(0xFFFFC107) to "Amarillo",
-    Color(0xFFEC407A) to "Rosa",
-    Color(0xFF00BCD4) to "Cian",
-    Color(0xFF8D6E63) to "Marr\u00f3n",
+    Color(0xFF7CB342) to "Lima",
+    Color(0xFFFDD835) to "Amarillo",
+    Color(0xFFFF8F00) to "Ámbar",
+    Color(0xFFFF6D00) to "Naranja",
+    Color(0xFF6D4C41) to "Marrón",
+    Color(0xFF546E7A) to "Gris",
 )
 val COLOR_OFF = Color(0xFF78909C) // "Apagado"
 
@@ -329,7 +335,7 @@ fun BpmSelectorOverlay(
 private fun BpmButton(label: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(Color.White.copy(alpha = 0.1f))
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 10.dp)
@@ -518,7 +524,7 @@ fun UnifiedScaleSelectorOverlay(
                             val isSelected = scaleName == selectedScaleName
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(8.dp))
                                     .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
                                     .clickable { onScaleSelected(scaleIdx); onDismiss() }
                                     .padding(horizontal = 14.dp, vertical = 10.dp)
@@ -774,7 +780,7 @@ fun MeasureSubdivisionOverlay(
 fun BpmToolbarButton(bpm: Int, onClick: () -> Unit) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(Color(0xFF7C4DFF).copy(alpha = 0.25f))
             .clickable { onClick() }
             .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -973,12 +979,12 @@ fun NoteDisplayToolbarButton(noteDisplay: NoteDisplay, onClick: () -> Unit) {
     }
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(8.dp))
             .background(Color(0xFF26A69A).copy(alpha = 0.25f))
             .clickable { onClick() }
-            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .padding(horizontal = 8.dp, vertical = 6.dp)
     ) {
-        Text(label, color = Color(0xFF80CBC4), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = Color(0xFF80CBC4), fontSize = 11.sp, fontWeight = FontWeight.Bold)
     }
 }
 

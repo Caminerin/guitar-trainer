@@ -188,7 +188,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             // Root selector
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(if (hasSelectedRoot) CHROMATIC_COLORS[selectedRoot].copy(alpha = 0.4f) else Color.White.copy(alpha = 0.12f))
                     .clickable { showRootSelector = true }
                     .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -202,7 +202,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             // Quality selector
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background((QUALITY_COLORS[selectedQuality] ?: Color.Gray).copy(alpha = 0.4f))
                     .clickable { showQualitySelector = true }
                     .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -213,7 +213,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             // Level selector
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background((LEVEL_COLORS[selectedLevel] ?: Color(0xFF5C6BC0)).copy(alpha = 0.4f))
                     .clickable { showLevelSelector = true }
                     .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -224,7 +224,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             // Scale filter
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .background(if (scaleFilterEnabled) Color(0xFF7C4DFF).copy(alpha = 0.5f) else Color.White.copy(alpha = 0.08f))
                     .clickable {
                         if (hasSelectedRoot) showScaleSelector = true
@@ -243,8 +243,8 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             // Colors button
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFFE91E63).copy(alpha = 0.3f))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFff6b9d).copy(alpha = 0.3f))
                     .clickable { showColorSelector = true }
                     .padding(horizontal = 10.dp, vertical = 8.dp)
             ) {
@@ -291,7 +291,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                 val color = QUALITY_COLORS[selectedQuality] ?: Color.Gray
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(color.copy(alpha = 0.3f))
                         .clickable { showShapeSelector = true }
                         .padding(horizontal = 14.dp, vertical = 6.dp)

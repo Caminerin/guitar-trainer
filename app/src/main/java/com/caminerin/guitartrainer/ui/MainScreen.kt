@@ -218,14 +218,23 @@ fun MainScreen(
                             .weight(1f)
                             .clickable {
                                 hapticTick(context)
-                                previousNav = selectedNav
-                                selectedNav = index
-                                AppPreferences.saveTab(index, context)
-                                // Reset sub-screens when switching tabs
-                                if (index != NavDestination.PRACTICE.ordinal) practiceSubScreen = -1
-                                if (index != NavDestination.LIBRARY.ordinal) librarySubScreen = -1
-                                if (index != NavDestination.TOOLS.ordinal) toolsSubScreen = -1
-                                chordsSubScreen = -1
+                                if (selectedNav == index) {
+                                    // Tap on current tab → go back to hub
+                                    when (index) {
+                                        NavDestination.LIBRARY.ordinal -> librarySubScreen = -1
+                                        NavDestination.PRACTICE.ordinal -> { practiceSubScreen = -1; chordsSubScreen = -1 }
+                                        NavDestination.TOOLS.ordinal -> toolsSubScreen = -1
+                                    }
+                                } else {
+                                    previousNav = selectedNav
+                                    selectedNav = index
+                                    AppPreferences.saveTab(index, context)
+                                    // Reset sub-screens when switching tabs
+                                    if (index != NavDestination.PRACTICE.ordinal) practiceSubScreen = -1
+                                    if (index != NavDestination.LIBRARY.ordinal) librarySubScreen = -1
+                                    if (index != NavDestination.TOOLS.ordinal) toolsSubScreen = -1
+                                    chordsSubScreen = -1
+                                }
                             }
                             .padding(vertical = 6.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
