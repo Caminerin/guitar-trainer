@@ -131,7 +131,7 @@ fun MainScreen(
                             onBack = { selectedNav = 0 },
                             showBackButton = false
                         )
-                        NavDestination.QUIZ -> ScaleQuizScreen(
+                        NavDestination.QUIZ -> QuizHubScreen(
                             onBack = { selectedNav = 0 },
                             pitchResult = pitchResult,
                             showBackButton = false
@@ -451,22 +451,25 @@ private fun UnifiedScalesScreen(pitchResult: PitchDetector.PitchResult?) {
 
 @Composable
 private fun UnifiedChordsScreen() {
-    var isViewMode by rememberSaveable { mutableStateOf(true) }
+    // 0=Ver, 1=Practicar, 2=Reto
+    var chordMode by rememberSaveable { mutableIntStateOf(0) }
     var overlayVisible by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (isViewMode) {
-            ChordVisualizerScreen(
+        when (chordMode) {
+            0 -> ChordVisualizerScreen(
                 onBack = {},
-                onGoToPractice = { isViewMode = false },
+                onGoToPractice = { chordMode = 1 },
                 showBackButton = false,
                 onOverlayChanged = { overlayVisible = it }
             )
-        } else {
-            ChordPracticeScreen(
-                onBack = { isViewMode = true },
-                onGoToVisualizer = { isViewMode = true },
+            1 -> ChordPracticeScreen(
+                onBack = { chordMode = 0 },
+                onGoToVisualizer = { chordMode = 0 },
                 onOverlayChanged = { overlayVisible = it }
+            )
+            2 -> ChordChallengeScreen(
+                onBack = { chordMode = 0 }
             )
         }
 
@@ -477,11 +480,42 @@ private fun UnifiedChordsScreen() {
                     .padding(start = 10.dp, bottom = 14.dp)
                     .zIndex(5f)
             ) {
-                ModeToggle(
-                    leftLabel = "Ver",
-                    rightLabel = "Practicar",
-                    isLeftSelected = isViewMode,
-                    onToggle = { isViewMode = it }
+                TriModeToggle(
+                    labels = listOf("Ver", "Practicar", "Reto"),
+                    selectedIndex = chordMode,
+                    onSelect = { chordMode = it }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TriModeToggle(
+    labels: List<String>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(AppColors.surfaceVariant)
+            .padding(2.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        labels.forEachIndexed { index, label ->
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (selectedIndex == index) AppColors.primary else Color.Transparent)
+                    .clickable { onSelect(index) }
+                    .padding(horizontal = 12.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    label,
+                    color = if (selectedIndex == index) AppColors.onPrimary else AppColors.textMuted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

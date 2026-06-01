@@ -64,11 +64,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.caminerin.guitartrainer.audio.DrumEngine
+import com.caminerin.guitartrainer.audio.DrumStyle
 import com.caminerin.guitartrainer.audio.TickPlayer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.rememberCoroutineScope
 
 // ─── Theme ───
 private val BG = Color(0xFF121212)
@@ -772,6 +777,10 @@ private fun ProgressionPlayerScreen(
     var metronomeEnabled by remember { mutableStateOf(true) }
     var currentBeatGlobal by remember { mutableIntStateOf(-1) }
     var beatsPerMeasure by remember { mutableIntStateOf(4) } // 3=3/4, 4=4/4, 6=6/8
+    var selectedDrumStyle by remember { mutableStateOf<DrumStyle?>(null) }
+    var drumJob by remember { mutableStateOf<Job?>(null) }
+    val drumScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     val bpmState = rememberUpdatedState(bpm)
     val loopState = rememberUpdatedState(loopEnabled)
@@ -803,7 +812,23 @@ private fun ProgressionPlayerScreen(
 
     // Single TickPlayer instance, reused across play/stop cycles
     val tickPlayer = remember { TickPlayer() }
-    DisposableEffect(Unit) { onDispose { tickPlayer.release() } }
+    DisposableEffect(Unit) { onDispose { tickPlayer.release(); drumJob?.cancel(); DrumEngine.release() } }
+
+    // Drum engine sync
+    LaunchedEffect(isPlaying, selectedDrumStyle) {
+        drumJob?.cancel()
+        DrumEngine.stop()
+        if (isPlaying && selectedDrumStyle != null) {
+            drumJob = drumScope.launch {
+                DrumEngine.playLoop(
+                    context = context,
+                    style = selectedDrumStyle!!,
+                    bpm = bpm,
+                    beatsPerMeasure = beatsPerMeasure
+                )
+            }
+        }
+    }
 
     // Metronome playback loop
     LaunchedEffect(isPlaying) {
@@ -940,6 +965,39 @@ private fun ProgressionPlayerScreen(
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                         textAlign = TextAlign.Center
                     )
+                }
+            }
+        }
+
+        // ── Drum style selector ──
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1A1A2A))
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Text("🥁", fontSize = 12.sp,
+                modifier = Modifier.align(Alignment.CenterVertically).padding(end = 2.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (selectedDrumStyle == null) ACCENT else Color.White.copy(alpha = 0.08f))
+                    .clickable { selectedDrumStyle = null; drumJob?.cancel(); DrumEngine.stop() }
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+                Text("Off", fontSize = 10.sp, color = if (selectedDrumStyle == null) Color.Black else Color.White)
+            }
+            DrumStyle.entries.forEach { style ->
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (selectedDrumStyle == style) ACCENT else Color.White.copy(alpha = 0.08f))
+                        .clickable { selectedDrumStyle = style }
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(style.displayName, fontSize = 10.sp, color = if (selectedDrumStyle == style) Color.Black else Color.White)
                 }
             }
         }
