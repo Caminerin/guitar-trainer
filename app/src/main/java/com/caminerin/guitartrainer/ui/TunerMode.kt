@@ -8,7 +8,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -182,9 +182,9 @@ private fun TunerPortraitLayout(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
             .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
         TuningSelector(currentTuning, tuningMenuExpanded, onTuningMenuToggle, onTuningSelected)
         Spacer(modifier = Modifier.height(12.dp))
@@ -227,8 +227,7 @@ private fun TunerLandscapeLayout(
         Column(
             modifier = Modifier
                 .weight(0.35f)
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState()),
+                .fillMaxHeight(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -241,12 +240,11 @@ private fun TunerLandscapeLayout(
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // Right: gauge + info (constrained height to avoid overflow)
+        // Right: gauge + info
         Column(
             modifier = Modifier
                 .weight(0.65f)
-                .fillMaxHeight()
-                .verticalScroll(rememberScrollState()),
+                .fillMaxHeight(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -359,7 +357,7 @@ private fun StringRow(
     onStringSelected: (Int) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)
     ) {
         currentTuning.strings.forEachIndexed { index, string ->
