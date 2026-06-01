@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -1057,6 +1058,40 @@ fun TabPlayerScreen(
                 }
             }
 
+            // Loop range slider (when loop active)
+            if (loopEnabled && track.measures.isNotEmpty()) {
+                val totalMeasures = track.measures.size
+                val rangeStart = if (loopStart >= 0) loopStart.toFloat() else 0f
+                val rangeEnd = if (loopEnd >= 0) loopEnd.toFloat() else (totalMeasures - 1).toFloat()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(AppColors.surface)
+                        .padding(horizontal = 12.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        "Loop: compás ${loopStart + 1} → ${if (loopEnd >= 0) "${loopEnd + 1}" else "?"}",
+                        color = AppColors.tertiary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    RangeSlider(
+                        value = rangeStart..rangeEnd,
+                        onValueChange = { range ->
+                            loopStart = range.start.toInt().coerceIn(0, totalMeasures - 1)
+                            loopEnd = range.endInclusive.toInt().coerceIn(loopStart, totalMeasures - 1)
+                        },
+                        valueRange = 0f..(totalMeasures - 1).toFloat(),
+                        steps = (totalMeasures - 2).coerceAtLeast(0),
+                        colors = SliderDefaults.colors(
+                            thumbColor = AppColors.tertiary,
+                            activeTrackColor = AppColors.tertiary
+                        ),
+                        modifier = Modifier.fillMaxWidth().height(28.dp)
+                    )
+                }
+            }
+
             // Controls: tempo slider (1/3) + buttons equidistant (2/3)
             Row(
                 modifier = Modifier
@@ -1065,11 +1100,22 @@ fun TabPlayerScreen(
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // BPM slider — 1/3 of width
+                // BPM: -5 button + value + slider + +5 button
                 Row(
                     modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Icon(
+                        Icons.Default.Remove, "-5",
+                        tint = AppColors.textSecondary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable {
+                                val newBpm = ((entry.tempo * bpmFactor).toInt() - 5)
+                                    .coerceIn(30, 300)
+                                bpmFactor = newBpm.toFloat() / entry.tempo
+                            }
+                    )
                     Text(
                         "${(entry.tempo * bpmFactor).toInt()}",
                         color = AppColors.text,
@@ -1086,6 +1132,17 @@ fun TabPlayerScreen(
                             activeTrackColor = AppColors.tertiary
                         ),
                         modifier = Modifier.weight(1f).height(24.dp)
+                    )
+                    Icon(
+                        Icons.Default.Add, "+5",
+                        tint = AppColors.textSecondary,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clickable {
+                                val newBpm = ((entry.tempo * bpmFactor).toInt() + 5)
+                                    .coerceIn(30, 300)
+                                bpmFactor = newBpm.toFloat() / entry.tempo
+                            }
                     )
                 }
 
@@ -1116,7 +1173,14 @@ fun TabPlayerScreen(
                             .size(24.dp)
                             .clickable {
                                 loopEnabled = !loopEnabled
-                                if (!loopEnabled) { loopStart = -1; loopEnd = -1 }
+                                if (loopEnabled) {
+                                    if (loopStart < 0) {
+                                        loopStart = 0
+                                        loopEnd = track.measures.size - 1
+                                    }
+                                } else {
+                                    loopStart = -1; loopEnd = -1
+                                }
                             }
                     )
 
@@ -1171,15 +1235,7 @@ fun TabPlayerScreen(
                 }
             }
 
-            // Loop info (only when active, very compact)
-            if (loopEnabled && loopStart >= 0) {
-                Text(
-                    "Loop: ${loopStart + 1}-${if (loopEnd >= 0) "${loopEnd + 1}" else "?"}",
-                    color = AppColors.tertiary,
-                    fontSize = 9.sp,
-                    modifier = Modifier.padding(start = 8.dp)
-                )
-            }
+
         }
     }
 }
