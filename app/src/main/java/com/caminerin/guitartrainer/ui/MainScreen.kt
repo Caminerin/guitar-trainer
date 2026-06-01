@@ -362,20 +362,20 @@ private fun LibraryHub(onItemClick: (Int) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Text(
             "Biblioteca",
-            fontSize = 24.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.ExtraBold,
             color = GradientColors.accent
         )
         Text(
             "Consulta y aprende",
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             color = Color(0xFF8899aa)
         )
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -445,20 +445,20 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Text(
             "Practicar",
-            fontSize = 24.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.ExtraBold,
             color = GradientColors.accent
         )
         Text(
             "Elige tu actividad",
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             color = Color(0xFF8899aa)
         )
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -643,20 +643,20 @@ private fun ToolsHub(onItemClick: (Int) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Text(
             "Herramientas",
-            fontSize = 24.sp,
+            fontSize = 22.sp,
             fontWeight = FontWeight.ExtraBold,
             color = GradientColors.accent
         )
         Text(
             "Utilidades",
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             color = Color(0xFF8899aa)
         )
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -864,23 +864,27 @@ private fun GridCard(
             .clip(RoundedCornerShape(16.dp))
             .background(Brush.linearGradient(listOf(gradientStart, gradientEnd)))
             .clickable { onClick() }
-            .padding(18.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(emoji, fontSize = 28.sp)
-            Spacer(modifier = Modifier.height(6.dp))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxHeight()
+        ) {
+            Text(emoji, fontSize = 26.sp)
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 label,
                 color = Color.White,
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
             Text(
                 subtitle,
                 color = Color.White.copy(alpha = 0.7f),
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 textAlign = TextAlign.Center
             )
         }
