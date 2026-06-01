@@ -784,7 +784,7 @@ private fun ExercisePhase(
                 fontSize = 11.sp
             )
             LinearProgressIndicator(
-                progress = { (consecutiveGoodMeasures.toFloat() + 1) / measuresToAdvance },
+                progress = (consecutiveGoodMeasures.toFloat() + 1) / measuresToAdvance,
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
                     .height(6.dp)

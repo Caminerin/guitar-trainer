@@ -432,7 +432,7 @@ private fun GenericQuizScreen(
 
         // Progress bar
         LinearProgressIndicator(
-            progress = { (currentQuestion.toFloat() + 1) / questionCount },
+            progress = (currentQuestion.toFloat() + 1) / questionCount,
             modifier = Modifier.fillMaxWidth().height(3.dp),
             color = exercise.categoryColor,
             trackColor = Color.White.copy(0.1f),
