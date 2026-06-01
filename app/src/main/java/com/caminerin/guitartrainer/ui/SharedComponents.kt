@@ -575,12 +575,12 @@ fun CagedPositionBar(
                     .clip(RoundedCornerShape(8.dp))
                     .background(if (isCurrent) color else color.copy(alpha = 0.2f))
                     .clickable { onSelect(i) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Text(
                     label,
                     color = if (isCurrent) Color.White else color,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
