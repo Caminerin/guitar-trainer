@@ -236,11 +236,19 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
         )
     }
 
-    // Scale selector overlay
+    // Scale selector overlay (same component as Acordes for consistency)
     if (showScaleSelector) {
-        ScaleSelectorOverlay(
-            currentIndex = selectedScaleIndex,
-            onSelected = { selectedScaleIndex = it; currentPosition = 0; AppPreferences.saveScale(it, context); showScaleSelector = false },
+        ScaleNameSelectorOverlay(
+            currentName = scale.name,
+            onSelected = { name ->
+                val idx = ALL_SCALES.indexOfFirst { it.name == name }
+                if (idx >= 0) {
+                    selectedScaleIndex = idx
+                    currentPosition = 0
+                    AppPreferences.saveScale(idx, context)
+                }
+                showScaleSelector = false
+            },
             onDismiss = { showScaleSelector = false }
         )
     }
