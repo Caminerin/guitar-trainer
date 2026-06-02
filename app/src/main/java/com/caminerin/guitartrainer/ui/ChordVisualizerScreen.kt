@@ -297,7 +297,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                         fontWeight = FontWeight.Bold
                     )
                     IconButton(
-                        onClick = { ChordSynth.playChord(currentChord.frets, 1500) },
+                        onClick = { ChordSynth.playChord(currentChord.frets, 1500, root = currentChord.root, quality = currentChord.quality) },
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(Icons.Default.VolumeUp, "Escuchar", tint = Color(0xFF4CAF50), modifier = Modifier.size(22.dp))

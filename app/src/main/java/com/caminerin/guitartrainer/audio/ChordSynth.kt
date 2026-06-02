@@ -35,6 +35,8 @@ object ChordSynth {
     private var samplesLoaded = false
     // Key: "s{1-6}_f{00-12}_{soft|hard}" -> SoundPool ID
     private val sampleIds = mutableMapOf<String, Int>()
+    // Key: "{Root}_{quality}" -> SoundPool ID (e.g. "C_major", "A_m7")
+    private val chordSampleIds = mutableMapOf<String, Int>()
     private var loadedCount = 0
     private var totalToLoad = 0
 
@@ -68,11 +70,12 @@ object ChordSynth {
 
         soundPool = pool
 
-        // Load all samples from assets/samples/
+        // Load per-string samples from assets/samples/
         val assetManager = context.assets
+        var filesToLoad = 0
         try {
             val files = assetManager.list("samples") ?: emptyArray()
-            totalToLoad = files.size
+            filesToLoad += files.size
             for (file in files) {
                 if (!file.endsWith(".wav")) continue
                 val key = file.removeSuffix(".wav")
@@ -88,16 +91,66 @@ object ChordSynth {
         } catch (_: Exception) {
             // No samples directory — fallback to synthesis
         }
+
+        // Load full chord samples from assets/chords/
+        try {
+            val chordFiles = assetManager.list("chords") ?: emptyArray()
+            filesToLoad += chordFiles.size
+            for (file in chordFiles) {
+                if (!file.endsWith(".wav")) continue
+                val key = file.removeSuffix(".wav")
+                try {
+                    val afd = assetManager.openFd("chords/$file")
+                    val id = pool.load(afd, 1)
+                    chordSampleIds[key] = id
+                    afd.close()
+                } catch (_: Exception) {
+                    // Skip missing chord sample
+                }
+            }
+        } catch (_: Exception) {
+            // No chords directory
+        }
+
+        totalToLoad = filesToLoad
     }
 
     fun playChord(
         frets: List<Int?>,
         durationMs: Int = 1200,
         upStrum: Boolean = false,
-        velocity: Float = 1.0f
+        velocity: Float = 1.0f,
+        root: String? = null,
+        quality: String? = null
     ) {
+        // Try full chord sample first if root+quality provided
+        if (root != null && quality != null && samplesLoaded) {
+            if (playFullChordSample(root, quality, velocity)) return
+        }
         val strokeType = if (upStrum) StrokeType.UP else StrokeType.DOWN
         playStroke(frets, durationMs, strokeType, velocity)
+    }
+
+    private fun playFullChordSample(
+        root: String,
+        quality: String,
+        velocity: Float
+    ): Boolean {
+        val pool = soundPool ?: return false
+        // Map root with sharps to flats for filename lookup
+        val rootMapped = when (root) {
+            "A#" -> "Bb"
+            "C#" -> "Db"
+            "D#" -> "Eb"
+            "F#" -> "Gb"
+            "G#" -> "Ab"
+            else -> root
+        }
+        val key = "${rootMapped}_${quality}"
+        val sampleId = chordSampleIds[key] ?: return false
+        val vol = velocity.coerceIn(0.3f, 1.0f)
+        pool.play(sampleId, vol, vol, 1, 0, 1.0f)
+        return true
     }
 
     fun playStroke(
@@ -243,6 +296,7 @@ object ChordSynth {
         } catch (_: Exception) {}
         soundPool = null
         sampleIds.clear()
+        chordSampleIds.clear()
         samplesLoaded = false
         loadedCount = 0
     }
