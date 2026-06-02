@@ -24,6 +24,7 @@ class AudioProcessor(private val context: Context) {
         private const val LOW_FREQ_BUFFER = 4096
         private const val HIGH_FREQ_BUFFER = 2048
         private const val SIGNAL_RMS_THRESHOLD = 0.002
+        private const val SMOOTH_WINDOW = 5
     }
 
     private val pitchDetector = PitchDetector(SAMPLE_RATE)
@@ -51,6 +52,7 @@ class AudioProcessor(private val context: Context) {
     suspend fun startListening() = withContext(Dispatchers.IO) {
         if (!hasPermission()) return@withContext
         if (_isListening.value) return@withContext
+        resetSmoothing()
 
         try {
             val record = tryCreateRecord(AudioFormat.ENCODING_PCM_FLOAT)
@@ -107,7 +109,10 @@ class AudioProcessor(private val context: Context) {
                 val now = System.currentTimeMillis()
                 val detected = if (hasSignal(floatBuffer, read)) {
                     detectAdaptive(floatBuffer, read)
-                } else null
+                } else {
+                    resetSmoothing()
+                    null
+                }
 
                 // Raw pitch for tuner/free mode (unchanged behavior)
                 if (detected != null) {
@@ -132,25 +137,62 @@ class AudioProcessor(private val context: Context) {
     }
 
     private fun detectAdaptive(buffer: FloatArray, samplesRead: Int): PitchDetector.PitchResult? {
+        // Always try the full buffer first for best accuracy on low frequencies
+        val fullWindow = buffer.copyOfRange(0, LOW_FREQ_BUFFER.coerceAtMost(samplesRead))
+        val fullResult = pitchDetector.detect(fullWindow)
+
+        if (fullResult != null) {
+            return smoothPitch(fullResult)
+        }
+
+        // Fallback to smaller buffer for higher frequencies only
         val highWindow = buffer.copyOfRange(0, HIGH_FREQ_BUFFER.coerceAtMost(samplesRead))
         val quickResult = pitchDetector.detect(highWindow)
+        return if (quickResult != null) smoothPitch(quickResult) else null
+    }
 
-        if (quickResult == null) {
-            val fullWindow = buffer.copyOfRange(0, LOW_FREQ_BUFFER.coerceAtMost(samplesRead))
-            return pitchDetector.detect(fullWindow)
+    // --- Pitch smoothing: median filter + outlier rejection ---
+    private val recentFrequencies = FloatArray(SMOOTH_WINDOW)
+    private var smoothIndex = 0
+    private var smoothFilled = 0
+    private var lastStableFreq = 0f
+
+    private fun smoothPitch(result: PitchDetector.PitchResult): PitchDetector.PitchResult? {
+        val freq = result.frequency
+
+        // Outlier rejection: if we have a stable frequency, reject sudden jumps > 20%
+        if (lastStableFreq > 0f) {
+            val ratio = freq / lastStableFreq
+            if (ratio > 1.35f || ratio < 0.74f) {
+                // Likely a harmonic or octave error — reject this frame
+                return null
+            }
         }
 
-        if (quickResult.frequency < LOW_FREQ_THRESHOLD) {
-            val fullWindow = buffer.copyOfRange(0, LOW_FREQ_BUFFER.coerceAtMost(samplesRead))
-            val refinedResult = pitchDetector.detect(fullWindow)
-            return refinedResult ?: quickResult
-        }
+        // Add to rolling buffer
+        recentFrequencies[smoothIndex] = freq
+        smoothIndex = (smoothIndex + 1) % SMOOTH_WINDOW
+        if (smoothFilled < SMOOTH_WINDOW) smoothFilled++
 
-        return quickResult
+        // Compute median
+        val sorted = recentFrequencies.copyOf(smoothFilled)
+        sorted.sort()
+        val medianFreq = sorted[smoothFilled / 2]
+        lastStableFreq = medianFreq
+
+        // Return result with median-smoothed frequency
+        return PitchDetector.frequencyToNote(medianFreq, result.confidence)
     }
 
     fun stopListening() {
         _isListening.value = false
+        resetSmoothing()
+    }
+
+    private fun resetSmoothing() {
+        smoothIndex = 0
+        smoothFilled = 0
+        lastStableFreq = 0f
     }
 
     private fun releaseAudioRecord() {
