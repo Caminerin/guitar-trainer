@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.caminerin.guitartrainer.audio.AudioProcessor
+import com.caminerin.guitartrainer.audio.ScaleEvaluation
 import com.caminerin.guitartrainer.audio.NoteEvent
 import com.caminerin.guitartrainer.audio.NoteRecognizer
 import com.caminerin.guitartrainer.ui.MainScreen
@@ -78,6 +79,7 @@ private fun GuitarTrainerApp() {
     if (micPermissionState.status.isGranted) {
         val pitchResult by audioProcessor.currentPitch.collectAsState()
         val noteEvent by audioProcessor.currentNoteEvent.collectAsState()
+        val scaleEvaluation by audioProcessor.currentScaleEvaluation.collectAsState()
         val isListening by audioProcessor.isListening.collectAsState()
 
         LaunchedEffect(Unit) {
@@ -94,7 +96,9 @@ private fun GuitarTrainerApp() {
             pitchResult = pitchResult,
             isListening = isListening,
             noteEvent = noteEvent,
-            noteRecognizer = audioProcessor.noteRecognizer
+            noteRecognizer = audioProcessor.noteRecognizer,
+            audioProcessor = audioProcessor,
+            scaleEvaluation = scaleEvaluation
         )
     } else {
         PermissionRequest(

@@ -61,9 +61,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.caminerin.guitartrainer.audio.AudioProcessor
 import com.caminerin.guitartrainer.audio.NoteEvent
 import com.caminerin.guitartrainer.audio.NoteRecognizer
 import com.caminerin.guitartrainer.audio.PitchDetector
+import com.caminerin.guitartrainer.audio.ScaleEvaluation
 import java.util.Calendar
 
 // ===== NEW NAVIGATION: 3 TABS =====
@@ -107,7 +109,9 @@ fun MainScreen(
     pitchResult: PitchDetector.PitchResult?,
     isListening: Boolean,
     noteEvent: NoteEvent? = null,
-    noteRecognizer: NoteRecognizer? = null
+    noteRecognizer: NoteRecognizer? = null,
+    audioProcessor: AudioProcessor? = null,
+    scaleEvaluation: ScaleEvaluation? = null
 ) {
     val context = LocalContext.current
     LaunchedEffect(Unit) {
@@ -190,7 +194,9 @@ fun MainScreen(
                             onChordsSubScreenChange = { chordsSubScreen = it },
                             pitchResult = pitchResult,
                             noteEvent = noteEvent,
-                            noteRecognizer = noteRecognizer
+                            noteRecognizer = noteRecognizer,
+                            audioProcessor = audioProcessor,
+                            scaleEvaluation = scaleEvaluation
                         )
                         NavDestination.TOOLS -> ToolsSection(
                             subScreen = toolsSubScreen,
@@ -413,7 +419,9 @@ private fun PracticeSection(
     onChordsSubScreenChange: (Int) -> Unit,
     pitchResult: PitchDetector.PitchResult?,
     noteEvent: NoteEvent?,
-    noteRecognizer: NoteRecognizer?
+    noteRecognizer: NoteRecognizer?,
+    audioProcessor: AudioProcessor? = null,
+    scaleEvaluation: ScaleEvaluation? = null
 ) {
     when (subScreen) {
         -1 -> PracticeHub(onItemClick = { onSubScreenChange(it) })
@@ -421,7 +429,9 @@ private fun PracticeSection(
             onBack = { onSubScreenChange(-1) },
             pitchResult = pitchResult,
             noteEvent = noteEvent,
-            noteRecognizer = noteRecognizer
+            noteRecognizer = noteRecognizer,
+            audioProcessor = audioProcessor,
+            scaleEvaluation = scaleEvaluation
         )
         1 -> ChordsSubSection(
             chordsSubScreen = chordsSubScreen,

@@ -38,11 +38,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import com.caminerin.guitartrainer.audio.ExerciseContext
+import com.caminerin.guitartrainer.audio.AudioProcessor
+import com.caminerin.guitartrainer.audio.FretboardConstraint
 import com.caminerin.guitartrainer.audio.NoteEvent
 import com.caminerin.guitartrainer.audio.NoteRecognizer
 import com.caminerin.guitartrainer.audio.PitchDetector
-import com.caminerin.guitartrainer.audio.RecognitionResult
+import com.caminerin.guitartrainer.audio.ScaleEvaluation
+import com.caminerin.guitartrainer.audio.ScaleJudgement
+import com.caminerin.guitartrainer.audio.ScalePracticeContext
 import com.caminerin.guitartrainer.audio.TickPlayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
@@ -91,6 +94,8 @@ fun CagedPracticeScreen(
     pitchResult: PitchDetector.PitchResult? = null,
     noteEvent: NoteEvent? = null,
     noteRecognizer: NoteRecognizer? = null,
+    audioProcessor: AudioProcessor? = null,
+    scaleEvaluation: ScaleEvaluation? = null,
     onOverlayChanged: (Boolean) -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -174,42 +179,55 @@ fun CagedPracticeScreen(
     var lastWrongNote by remember { mutableIntStateOf(-1) }
     var lastWrongTime by remember { mutableStateOf(0L) }
 
-    // Reset NoteRecognizer when entering/leaving guitar mode
+    // Reset engines when entering/leaving guitar mode
     LaunchedEffect(guitarMode) {
-        if (guitarMode) noteRecognizer?.reset()
+        if (guitarMode) {
+            noteRecognizer?.reset()
+            audioProcessor?.scalePracticeEngine?.reset()
+        }
     }
 
-    // Build exercise context from current scale + position
-    val exerciseContext = remember(selectedKey, selectedScaleIndex, currentPositionIndex, currentNoteIndex) {
+    // Build ScalePracticeContext and push it to AudioProcessor
+    LaunchedEffect(selectedKey, selectedScaleIndex, currentPositionIndex, currentNoteIndex, guitarMode) {
+        if (!guitarMode) {
+            audioProcessor?.practiceContext = null
+            return@LaunchedEffect
+        }
         val scaleNotes = scale.intervals.map { (selectedKey + it) % 12 }.toSet()
         val expectedIdx = currentNote?.noteIndex ?: 0
         val prevSeqIdx = currentNoteIndex - 1
-        val prevNote = if (prevSeqIdx >= 0) noteSequence.getOrNull(prevSeqIdx)?.noteIndex ?: -1 else -1
-        // Constrain MIDI range to current position on fretboard
-        val posMinMidi = (0 until 6).minOf { s -> STANDARD_TUNING_MIDI[s] + currentPosition.startFret }
-        val posMaxMidi = (0 until 6).maxOf { s -> STANDARD_TUNING_MIDI[s] + currentPosition.endFret }
-        ExerciseContext(
+        val prevNote = if (prevSeqIdx >= 0) noteSequence.getOrNull(prevSeqIdx)?.noteIndex else null
+        val nextSeqIdx = currentNoteIndex + 1
+        val nextNote = if (nextSeqIdx < noteSequence.size) noteSequence.getOrNull(nextSeqIdx)?.noteIndex else null
+
+        val allowedMidi = FretboardConstraint.allowedMidiNotes(
+            currentPosition.startFret, currentPosition.endFret, scaleNotes
+        )
+        val midiRange = FretboardConstraint.midiRange(
+            currentPosition.startFret, currentPosition.endFret
+        )
+
+        audioProcessor?.practiceContext = ScalePracticeContext(
+            rootNoteIndex = selectedKey,
             scaleNoteIndices = scaleNotes,
             expectedNoteIndex = expectedIdx,
             previousNoteIndex = prevNote,
-            minMidi = posMinMidi,
-            maxMidi = posMaxMidi
+            nextNoteIndex = nextNote,
+            allowedMidiNotes = allowedMidi,
+            allowedMidiRange = midiRange
         )
     }
 
-    // Guitar evaluation mode: use NoteRecognizer for smart note detection
-    LaunchedEffect(guitarMode, noteEvent) {
+    // Guitar evaluation: consume ScaleEvaluation from the new pipeline
+    LaunchedEffect(guitarMode, scaleEvaluation) {
         if (!guitarMode) return@LaunchedEffect
-        val event = noteEvent ?: return@LaunchedEffect
-        val recognizer = noteRecognizer ?: return@LaunchedEffect
-
-        val evaluated = recognizer.evaluate(event, exerciseContext)
-        val detectedNote = event.noteIndex
+        val eval = scaleEvaluation ?: return@LaunchedEffect
         val expected = currentNote?.noteIndex ?: return@LaunchedEffect
+        val detectedNote = eval.noteEvent.noteIndex
         val now = System.currentTimeMillis()
 
-        when (evaluated.result) {
-            RecognitionResult.EXPECTED_NOTE -> {
+        when (eval.judgement) {
+            ScaleJudgement.EXPECTED -> {
                 if (lastEvalNoteIdx != currentNoteIndex) {
                     correctCount++
                     lastEvalNoteIdx = currentNoteIndex
@@ -232,14 +250,37 @@ fun CagedPracticeScreen(
                     lastEvalNoteIdx = -1
                 }
             }
-            RecognitionResult.PREVIOUS_NOTE -> {
-                // Ignore — still hearing the previous note ringing
+            ScaleJudgement.PREVIOUS_STILL_RINGING -> {
+                // Ignore — still hearing the previous note
             }
-            RecognitionResult.NOISE, RecognitionResult.UNCERTAIN -> {
-                // Ignore noise and uncertain detections
+            ScaleJudgement.NEXT_NOTE_EARLY -> {
+                // Player is ahead — treat as correct for next note
+                if (lastEvalNoteIdx != currentNoteIndex) {
+                    correctCount++
+                    lastEvalNoteIdx = currentNoteIndex
+                }
+                evalFeedback = "✓ (adelantada)"
+                evalFeedbackColor = Color(0xFF4CAF50)
+                val seq = getPositionNoteSequence(
+                    selectedKey, scale.intervals,
+                    positions.getOrElse(currentPositionIndex) { positions.first() }
+                )
+                val nextIdx = currentNoteIndex + 1
+                if (nextIdx >= seq.size) {
+                    val nextPos = (currentPositionIndex + 1) % positions.size
+                    currentPositionIndex = nextPos
+                    currentNoteIndex = 0
+                    lastEvalNoteIdx = -1
+                } else {
+                    currentNoteIndex = nextIdx
+                    lastEvalNoteIdx = -1
+                }
+            }
+            ScaleJudgement.UNCERTAIN -> {
+                // Not confident enough — ignore
             }
             else -> {
-                // Wrong note (in-scale or out-of-scale)
+                // WRONG_SCALE_NOTE or OUT_OF_SCALE_NOTE
                 if (detectedNote != lastWrongNote || (now - lastWrongTime) > 1500L) {
                     wrongCount++
                     lastWrongNote = detectedNote
