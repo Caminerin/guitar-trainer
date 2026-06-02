@@ -427,7 +427,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     .background(Color(0xFF2A2A2A))
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.Start
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -520,9 +520,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                             .padding(horizontal = 20.dp, vertical = 14.dp)
                     ) {
                         val count = if (hasSelectedRoot) {
-                            ChordRepository.getChordsByLevelAndQuality(l,
-                                ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
-                            ).count { it.root == AMERICAN_NOTE_NAMES[selectedRoot] }
+                            ChordRepository.countChordsByRootAndLevel(AMERICAN_NOTE_NAMES[selectedRoot], l)
                         } else 0
                         Row(
                             modifier = Modifier.fillMaxWidth(),

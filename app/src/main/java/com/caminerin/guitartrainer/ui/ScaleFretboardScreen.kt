@@ -461,6 +461,8 @@ private fun DrawScope.drawGuitarFretboard(
             }
 
             if (positionsEnabled && !isInPos) {
+                // Skip dimmed notes at fret 0 — open string labels are already drawn there
+                if (fret == 0) continue
                 val dimR = noteRadius * 0.65f
                 drawCircle(COLOR_DIM.copy(alpha = 0.35f), dimR, Offset(cx, y))
                 if (noteDisplay != NoteDisplay.NONE) {
