@@ -19,7 +19,7 @@ object ChordSynth {
     private const val SAMPLE_FILE_RATE = 22050
     private const val CROSSFADE_SAMPLES = 4410
     private val STANDARD_TUNING_HZ = doubleArrayOf(82.41, 110.0, 146.83, 196.0, 246.94, 329.63)
-    private val STRUM_DELAYS_MS = intArrayOf(0, 12, 24, 36, 48, 60) // ms between strings
+    private val STRUM_DELAYS_MS = intArrayOf(0, 7, 7, 7, 7, 7) // ~35ms total strum
 
     // AudioTrack streaming state (fallback engine)
     private var streamTrack: AudioTrack? = null

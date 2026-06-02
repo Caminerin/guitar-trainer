@@ -13,7 +13,7 @@ import kotlin.math.roundToInt
  */
 class PitchDetector(
     private val sampleRate: Int,
-    private val threshold: Double = 0.30
+    private val threshold: Double = 0.15
 ) {
 
     data class PitchResult(

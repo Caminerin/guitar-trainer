@@ -181,105 +181,76 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             modifier = Modifier
                 .fillMaxWidth()
                 .background(CHORD_TOOLBAR)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = 6.dp, vertical = 4.dp)
+                .horizontalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Back button
             if (showBackButton) {
-                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onBack, modifier = Modifier.size(34.dp)) {
                     Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
 
-            // Root selector
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (hasSelectedRoot) CHROMATIC_COLORS[selectedRoot].copy(alpha = 0.4f) else Color.White.copy(alpha = 0.12f))
-                    .clickable { showRootSelector = true }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    if (hasSelectedRoot) getChromaticNames(selectedRoot)[selectedRoot] else "Raíz",
-                    color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold
-                )
-            }
+            // Root selector (chromatic color to identify root)
+            ToolbarChip(
+                text = if (hasSelectedRoot) getChromaticNames(selectedRoot)[selectedRoot] else "Raíz",
+                onClick = { showRootSelector = true },
+                backgroundColor = if (hasSelectedRoot) CHROMATIC_COLORS[selectedRoot].copy(alpha = 0.5f) else TOOLBAR_CHIP_BG
+            )
 
             // Quality selector
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background((QUALITY_COLORS[selectedQuality] ?: Color.Gray).copy(alpha = 0.4f))
-                    .clickable { showQualitySelector = true }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Text(quality.displayName, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
+            ToolbarChip(text = quality.displayName, onClick = { showQualitySelector = true })
 
             // Level selector
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background((LEVEL_COLORS[selectedLevel] ?: Color(0xFF5C6BC0)).copy(alpha = 0.4f))
-                    .clickable { showLevelSelector = true }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Text("Nivel: ${level.displayName}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
+            ToolbarChip(text = "Nivel: ${level.displayName}", onClick = { showLevelSelector = true })
 
             // Scale filter
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (scaleFilterEnabled) Color(0xFF7C4DFF).copy(alpha = 0.5f) else Color.White.copy(alpha = 0.08f))
-                    .clickable {
-                        if (hasSelectedRoot) showScaleSelector = true
-                    }
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
-            ) {
-                val scaleLabel = if (scaleFilterEnabled) {
-                    selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
-                } else "Escala"
-                Text(scaleLabel, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
+            val scaleLabel = if (scaleFilterEnabled) {
+                selectedScaleName.replace(" (Jónica)", "").replace(" (Eólica)", "")
+            } else "Escala"
+            ToolbarChip(
+                text = scaleLabel,
+                onClick = { if (hasSelectedRoot) showScaleSelector = true },
+                backgroundColor = if (scaleFilterEnabled) SHARED_ACCENT else TOOLBAR_CHIP_BG
+            )
 
-            // Display mode selector (N+G)
+            // Display mode selector
             NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
 
             // Colors button
-            Box(
+            ToolbarChip(text = "Colores", onClick = { showColorSelector = true })
+        }
+
+        // Navigation row (separate from toolbar for clarity)
+        if (filteredChords.size > 1) {
+            Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFff6b9d).copy(alpha = 0.3f))
-                    .clickable { showColorSelector = true }
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .fillMaxWidth()
+                    .background(CHORD_TOOLBAR)
+                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
             ) {
-                Text("Colores", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Navigation arrows
-            if (filteredChords.size > 1) {
                 IconButton(
                     onClick = {
                         selectedChordIndex = (safeIndex - 1 + filteredChords.size) % filteredChords.size
                     },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(34.dp)
                 ) {
                     Icon(Icons.Default.KeyboardArrowLeft, "Anterior", tint = Color.White)
                 }
                 Text(
                     "${safeIndex + 1}/${filteredChords.size}",
                     color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 13.sp
+                    fontSize = 12.sp
                 )
                 IconButton(
                     onClick = {
                         selectedChordIndex = (safeIndex + 1) % filteredChords.size
                     },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(34.dp)
                 ) {
                     Icon(Icons.Default.KeyboardArrowRight, "Siguiente", tint = Color.White)
                 }
@@ -293,24 +264,13 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     .fillMaxWidth()
                     .background(Color(0xFF252525))
                     .padding(horizontal = 12.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val color = QUALITY_COLORS[selectedQuality] ?: Color.Gray
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(color.copy(alpha = 0.3f))
-                        .clickable { showShapeSelector = true }
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        currentChord?.shortLabel ?: "Posición",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
+                ToolbarChip(
+                    text = currentChord?.shortLabel ?: "Posición",
+                    onClick = { showShapeSelector = true }
+                )
                 Text(
                     "${safeIndex + 1}/${filteredChords.size} posiciones",
                     color = Color.White.copy(alpha = 0.5f),
@@ -427,7 +387,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     .background(Color(0xFF2A2A2A))
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.Start
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -520,9 +480,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                             .padding(horizontal = 20.dp, vertical = 14.dp)
                     ) {
                         val count = if (hasSelectedRoot) {
-                            ChordRepository.getChordsByLevelAndQuality(l,
-                                ChordQuality.entries.find { it.csvValue == selectedQuality } ?: ChordQuality.MAJOR
-                            ).count { it.root == AMERICAN_NOTE_NAMES[selectedRoot] }
+                            ChordRepository.countChordsByRootAndLevel(AMERICAN_NOTE_NAMES[selectedRoot], l)
                         } else 0
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -847,6 +805,21 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
         drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], fbRight + 8f, y + 12f, openStringPaint)
     }
 
+    // Chord name (top of bottom area)
+    val chordNamePaint = android.graphics.Paint().apply {
+        color = android.graphics.Color.WHITE
+        textSize = 64f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isFakeBoldText = true
+        isAntiAlias = true
+    }
+    drawContext.canvas.nativeCanvas.drawText(
+        chord.displayName,
+        w / 2f,
+        h - bottomPad * 0.55f,
+        chordNamePaint
+    )
+
     // Notes annotation at bottom (context-aware: use flats when appropriate)
     val chordNoteNames = mutableListOf<String>()
     for (s in 0 until 6) {
@@ -864,23 +837,8 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
             isAntiAlias = true
         }
         val notesText = chordNoteNames.joinToString(" - ")
-        drawContext.canvas.nativeCanvas.drawText(notesText, w / 2f, h - bottomPad * 0.08f, notePaint)
+        drawContext.canvas.nativeCanvas.drawText(notesText, w / 2f, h - bottomPad * 0.12f, notePaint)
     }
-
-    // Chord name
-    val chordNamePaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE
-        textSize = 64f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
-        isAntiAlias = true
-    }
-    drawContext.canvas.nativeCanvas.drawText(
-        chord.displayName,
-        w / 2f,
-        h - bottomPad * 0.35f,
-        chordNamePaint
-    )
 }
 
 private fun buildChordNoteLabel(noteName: String, interval: String, display: NoteDisplay): String {

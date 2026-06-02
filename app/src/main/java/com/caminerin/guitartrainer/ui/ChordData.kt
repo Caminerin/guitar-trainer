@@ -200,6 +200,9 @@ object ChordRepository {
             it.quality == quality.csvValue
         }
 
+    fun countChordsByRootAndLevel(root: String, level: ChordLevel): Int =
+        allChords.count { it.root == root && (level == ChordLevel.ALL || it.level == level.csvValue) }
+
     fun getAvailableRoots(): List<String> =
         allChords.map { it.root }.distinct().sortedBy {
             AMERICAN_NOTE_NAMES.indexOf(it)
