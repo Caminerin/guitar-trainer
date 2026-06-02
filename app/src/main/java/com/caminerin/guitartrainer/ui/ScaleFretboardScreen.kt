@@ -391,14 +391,20 @@ private fun DrawScope.drawGuitarFretboard(
         isFakeBoldText = true
         isAntiAlias = true
     }
-    for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (6 - s)
-        drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], nutX * 0.5f, y + 24f, openPaint)
-    }
-
     // Position range
     val posStart = if (positionsEnabled && positions.isNotEmpty()) positions[currentPosition].startFret else 0
     val posEnd = if (positionsEnabled && positions.isNotEmpty()) positions[currentPosition].endFret else TOTAL_FRETS
+    val fret0InPos = 0 in posStart..posEnd
+    for (s in 0 until 6) {
+        val y = fbTop + stringSpacing * (6 - s)
+        val openNote = STANDARD_TUNING_MIDI[s]
+        val noteIdx = openNote % 12
+        val hasScaleNote = isNoteInScale(noteIdx, rootNote, scale.intervals)
+        val willDrawCircle = hasScaleNote && (!positionsEnabled || fret0InPos)
+        if (!willDrawCircle) {
+            drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], nutX * 0.5f, y + 24f, openPaint)
+        }
+    }
 
     // Note text paints - 3x bigger
     val notePaintBig = android.graphics.Paint().apply {

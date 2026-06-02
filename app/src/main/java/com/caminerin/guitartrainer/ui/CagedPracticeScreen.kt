@@ -2,7 +2,6 @@ package com.caminerin.guitartrainer.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.horizontalScroll
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,11 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
@@ -51,7 +47,6 @@ import com.caminerin.guitartrainer.audio.TickPlayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -272,84 +267,48 @@ fun CagedPracticeScreen(
                 .fillMaxSize()
                 .background(COLOR_BG)
         ) {
-            // Toolbar
+            // Toolbar — all buttons same height via ToolbarChip, single scrollable row
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(COLOR_TOOLBAR)
-                    .padding(horizontal = 6.dp, vertical = 4.dp),
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+                    .horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                IconButton(onClick = { isPlaying = false; onBack() }, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = { isPlaying = false; onBack() }, modifier = Modifier.size(34.dp)) {
                     Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
 
-                // Key selector -> chromatic circle
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
-                        .clickable { showKeyCircle = true }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text(getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey], color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                }
+                // Key selector (chromatic color — same as Biblioteca)
+                ToolbarChip(
+                    text = getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey],
+                    onClick = { showKeyCircle = true },
+                    backgroundColor = CHROMATIC_COLORS[selectedKey].copy(alpha = 0.5f)
+                )
 
-                // Scale selector -> overlay
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
-                        .clickable { showScaleSelector = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+                // Scale selector (same as Biblioteca)
+                ToolbarChip(text = scale.name, onClick = { showScaleSelector = true })
 
                 // BPM control
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable { bpm = (bpm - 5).coerceAtLeast(20) }
-                            .padding(horizontal = 7.dp, vertical = 5.dp)
-                    ) { Text("-", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                    ToolbarChip(text = "-", onClick = { bpm = (bpm - 5).coerceAtLeast(20) })
                     Text(" $bpm ", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .clickable { bpm = (bpm + 5).coerceAtMost(240) }
-                            .padding(horizontal = 7.dp, vertical = 5.dp)
-                    ) { Text("+", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
+                    ToolbarChip(text = "+", onClick = { bpm = (bpm + 5).coerceAtMost(240) })
                 }
 
                 // Subdivision selector
                 val subLabel = when (subdivision) {
                     1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
                 }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF7C4DFF).copy(alpha = 0.3f))
-                        .clickable { showSubdivisionMenu = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text(subLabel, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                }
+                ToolbarChip(text = subLabel, onClick = { showSubdivisionMenu = true })
 
-                // Colors button
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFff6b9d).copy(alpha = 0.3f))
-                        .clickable { showColorSelector = true }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text("Colores", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+                // Colores (same name as Biblioteca)
+                ToolbarChip(text = "Colores", onClick = { showColorSelector = true })
+
+                // Info (same name as Biblioteca)
+                ToolbarChip(text = "Info", onClick = { showInfo = true })
 
                 // Play/Pause/Stop
                 IconButton(
@@ -365,7 +324,7 @@ fun CagedPracticeScreen(
                             isPaused = false
                         }
                     },
-                    modifier = Modifier.size(36.dp)
+                    modifier = Modifier.size(34.dp)
                 ) {
                     val icon = if (isPlaying && !isPaused) Icons.Default.Pause else Icons.Default.PlayArrow
                     val tint = if (isPlaying && !isPaused) Color(0xFFFF9800) else Color(0xFF4CAF50)
@@ -374,61 +333,38 @@ fun CagedPracticeScreen(
                 if (isPlaying) {
                     IconButton(
                         onClick = { isPlaying = false; isPaused = false; currentNoteIndex = 0; currentPositionIndex = 0 },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(34.dp)
                     ) {
                         Icon(Icons.Default.Stop, "Stop", tint = Color(0xFFF44336), modifier = Modifier.size(20.dp))
                     }
                 }
 
-                // Info button
-                IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(20.dp))
-                }
+                // Pos toggle (same name as Biblioteca: "Pos")
+                ToolbarChip(
+                    text = "Pos",
+                    onClick = { positionsEnabled = !positionsEnabled },
+                    backgroundColor = if (positionsEnabled) SHARED_ACCENT else TOOLBAR_CHIP_BG
+                )
 
-                // Positions toggle
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (positionsEnabled) COLOR_TONIC.copy(alpha = 0.3f) else Color.White.copy(alpha = 0.08f))
-                        .clickable { positionsEnabled = !positionsEnabled }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text("Posiciones", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // Guitar evaluation toggle
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (guitarMode) Color(0xFF4CAF50).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
-                        .clickable {
-                            guitarMode = !guitarMode
-                            if (!guitarMode) { evalFeedback = null; correctCount = 0; wrongCount = 0 }
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                ) {
-                    Text("\uD83C\uDFB8", fontSize = 14.sp)
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-            }
-
-            // Position bar (separate row)
-            if (positionsEnabled && positions.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(COLOR_TOOLBAR)
-                        .padding(horizontal = 12.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                // Position chips — ALWAYS visible, dimmed when disabled
+                if (positions.isNotEmpty()) {
                     CagedPositionBar(
                         positions = positions,
                         currentIndex = currentPositionIndex,
-                        onSelect = { currentPositionIndex = it; currentNoteIndex = 0 }
+                        onSelect = { currentPositionIndex = it; currentNoteIndex = 0 },
+                        enabled = positionsEnabled
                     )
                 }
+
+                // Guitar evaluation toggle
+                ToolbarChip(
+                    text = "\uD83C\uDFB8",
+                    onClick = {
+                        guitarMode = !guitarMode
+                        if (!guitarMode) { evalFeedback = null; correctCount = 0; wrongCount = 0 }
+                    },
+                    backgroundColor = if (guitarMode) Color(0xFF4CAF50).copy(alpha = 0.4f) else TOOLBAR_CHIP_BG
+                )
             }
 
             // Guitar evaluation status bar
@@ -529,12 +465,16 @@ fun CagedPracticeScreen(
             )
         }
         if (showScaleSelector) {
-            ScaleSelectorOverlay(
-                currentIndex = selectedScaleIndex,
-                onSelected = {
-                    selectedScaleIndex = it; showScaleSelector = false
-                    AppPreferences.saveScale(it, context)
-                    currentNoteIndex = 0; currentPositionIndex = 0
+            ScaleNameSelectorOverlay(
+                currentName = scale.name,
+                onSelected = { name ->
+                    val idx = ALL_SCALES.indexOfFirst { it.name == name }
+                    if (idx >= 0) {
+                        selectedScaleIndex = idx
+                        AppPreferences.saveScale(idx, context)
+                        currentNoteIndex = 0; currentPositionIndex = 0
+                    }
+                    showScaleSelector = false
                 },
                 onDismiss = { showScaleSelector = false }
             )
@@ -645,9 +585,18 @@ private fun DrawScope.drawCagedFretboard(
         isFakeBoldText = true
         isAntiAlias = true
     }
+    val posStart = position.startFret
+    val posEnd = position.endFret
+    val fret0InPos = 0 in posStart..posEnd
     for (s in 0 until 6) {
         val y = fbTop + stringSpacing * (6 - s)
-        drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 24f, openPaint)
+        val openNote = STANDARD_TUNING_MIDI[s]
+        val noteIdx = openNote % 12
+        val hasScaleNote = isNoteInScale(noteIdx, rootNote, scale.intervals)
+        val willDrawCircle = hasScaleNote && (!positionsEnabled || fret0InPos)
+        if (!willDrawCircle) {
+            drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 24f, openPaint)
+        }
     }
 
     val noteRadius = (stringSpacing * 0.44f).coerceIn(36f, 80f)
@@ -667,8 +616,6 @@ private fun DrawScope.drawCagedFretboard(
         isAntiAlias = true
     }
 
-    val posStart = position.startFret
-    val posEnd = position.endFret
     val notePaintDim = android.graphics.Paint().apply {
         color = android.graphics.Color.argb(100, 255, 255, 255)
         textSize = 28f
@@ -692,6 +639,7 @@ private fun DrawScope.drawCagedFretboard(
             val isCurrentNote = currentNote != null && currentNote.string == s && currentNote.fret == fret
 
             if (positionsEnabled && !isInPos) {
+                if (fret == 0) continue
                 val dimR = noteRadius * 0.65f
                 drawCircle(COLOR_DIM.copy(alpha = 0.35f), dimR, Offset(cx, y))
                 val lbl = getSpanishNoteName(noteIdx, rootNote, scale.relativeMajorOffset)
