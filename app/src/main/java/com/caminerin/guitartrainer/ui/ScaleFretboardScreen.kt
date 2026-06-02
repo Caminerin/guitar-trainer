@@ -113,15 +113,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
             .background(COLOR_BG)
     ) {
         // ===== TOOLBAR =====
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(COLOR_TOOLBAR)
-                .padding(horizontal = 6.dp, vertical = 4.dp)
-                .horizontalScroll(rememberScrollState()),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
+        ScrollableToolbar(bgColor = COLOR_TOOLBAR) {
             // Back button
             if (showBackButton) {
                 IconButton(onClick = onBack, modifier = Modifier.size(34.dp)) {

@@ -6,13 +6,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Speed
@@ -76,6 +80,70 @@ val SHARED_BG = Color(0xFF1A1A1A)
 val SHARED_TOOLBAR = Color(0xFF1E1E1E)
 val SHARED_ACCENT = Color(0xFFff6b9d)
 val TOOLBAR_CHIP_BG = Color(0xFF3A3A3A) // Standard toolbar button background
+
+// ===== SCROLLABLE TOOLBAR WITH EDGE INDICATORS =====
+@Composable
+fun ScrollableToolbar(
+    bgColor: Color = SHARED_TOOLBAR,
+    content: @Composable RowScope.() -> Unit
+) {
+    val scrollState = rememberScrollState()
+    Box(modifier = Modifier.fillMaxWidth().background(bgColor)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 4.dp)
+                .horizontalScroll(scrollState),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            content = content
+        )
+        // Left fade + chevron when scrolled right
+        if (scrollState.value > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .fillMaxHeight()
+                    .width(28.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(bgColor, Color.Transparent)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "\u2039",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        // Right fade + chevron when more content to scroll
+        if (scrollState.maxValue > 0 && scrollState.value < scrollState.maxValue) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxHeight()
+                    .width(28.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(Color.Transparent, bgColor)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "\u203A",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
 
 // ===== STANDARD TOOLBAR CHIP =====
 @Composable
