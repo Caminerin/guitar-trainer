@@ -213,8 +213,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             ToolbarChip(
                 text = scaleLabel,
                 onClick = { if (hasSelectedRoot) showScaleSelector = true },
-                backgroundColor = if (scaleFilterEnabled) SHARED_ACCENT else TOOLBAR_CHIP_BG,
-                isActive = scaleFilterEnabled || !hasSelectedRoot
+                backgroundColor = if (scaleFilterEnabled) SHARED_ACCENT else TOOLBAR_CHIP_BG
             )
 
             // Display mode selector
@@ -265,24 +264,13 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     .fillMaxWidth()
                     .background(Color(0xFF252525))
                     .padding(horizontal = 12.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val color = QUALITY_COLORS[selectedQuality] ?: Color.Gray
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(color.copy(alpha = 0.3f))
-                        .clickable { showShapeSelector = true }
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        currentChord?.shortLabel ?: "Posición",
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
+                ToolbarChip(
+                    text = currentChord?.shortLabel ?: "Posición",
+                    onClick = { showShapeSelector = true }
+                )
                 Text(
                     "${safeIndex + 1}/${filteredChords.size} posiciones",
                     color = Color.White.copy(alpha = 0.5f),

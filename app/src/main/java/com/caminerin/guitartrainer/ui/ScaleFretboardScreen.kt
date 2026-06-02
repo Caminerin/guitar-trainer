@@ -152,8 +152,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
             ToolbarChip(
                 text = "Pos",
                 onClick = { positionsEnabled = !positionsEnabled },
-                backgroundColor = if (positionsEnabled) SHARED_ACCENT else TOOLBAR_CHIP_BG,
-                isActive = positionsEnabled
+                backgroundColor = if (positionsEnabled) SHARED_ACCENT else TOOLBAR_CHIP_BG
             )
 
             // Position chips - ALWAYS visible, dimmed when positions disabled
