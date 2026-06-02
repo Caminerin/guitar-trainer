@@ -20,24 +20,30 @@ class AudioProcessor(private val context: Context) {
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val BUFFER_SIZE_SAMPLES = 4096
         private const val HOLD_DURATION_MS = 800L
-        private const val LOW_FREQ_THRESHOLD = 150f
-        private const val LOW_FREQ_BUFFER = 4096
-        private const val HIGH_FREQ_BUFFER = 2048
-        private const val SIGNAL_RMS_THRESHOLD = 0.0015
         private const val SMOOTH_WINDOW = 5
     }
 
     private val pitchDetector = PitchDetector(SAMPLE_RATE)
     val noteRecognizer = NoteRecognizer()
+    val scalePracticeEngine = ScalePracticeEngine()
     private var audioRecord: AudioRecord? = null
     private var lastDetectionTimeMs = 0L
     private var useFloatFormat = true
 
+    // --- Tuner/free mode: smoothed pitch for display ---
     private val _currentPitch = MutableStateFlow<PitchDetector.PitchResult?>(null)
     val currentPitch: StateFlow<PitchDetector.PitchResult?> = _currentPitch
 
+    // --- Legacy NoteEvent for backward compat (tuner, other modes) ---
     private val _currentNoteEvent = MutableStateFlow<NoteEvent?>(null)
     val currentNoteEvent: StateFlow<NoteEvent?> = _currentNoteEvent
+
+    // --- Scale practice: evaluated events from the full pipeline ---
+    private val _currentScaleEvaluation = MutableStateFlow<ScaleEvaluation?>(null)
+    val currentScaleEvaluation: StateFlow<ScaleEvaluation?> = _currentScaleEvaluation
+
+    // --- Exercise context: set by CagedPracticeScreen, read by engine ---
+    var practiceContext: ScalePracticeContext? = null
 
     private val _isListening = MutableStateFlow(false)
     val isListening: StateFlow<Boolean> = _isListening
@@ -107,16 +113,14 @@ class AudioProcessor(private val context: Context) {
             }
             if (read > 0) {
                 val now = System.currentTimeMillis()
-                val detected = if (hasSignal(floatBuffer, read)) {
-                    detectAdaptive(floatBuffer, read)
-                } else {
-                    resetSmoothing()
-                    null
-                }
 
-                // Raw pitch for tuner/free mode (unchanged behavior)
-                if (detected != null) {
-                    _currentPitch.value = detected
+                // --- RAW MPM DETECTION ---
+                val rawResult = pitchDetector.detect(floatBuffer.copyOfRange(0, read))
+
+                // --- TUNER PATH: smoothed pitch for display ---
+                val smoothed = if (rawResult != null) smoothPitch(rawResult) else null
+                if (smoothed != null) {
+                    _currentPitch.value = smoothed
                     lastDetectionTimeMs = now
                 } else {
                     val elapsed = now - lastDetectionTimeMs
@@ -125,33 +129,26 @@ class AudioProcessor(private val context: Context) {
                     }
                 }
 
-                // Smart note recognition (onset + hysteresis + noise gate)
+                // --- LEGACY NOTE RECOGNIZER (for tuner/other modes) ---
                 val noteEvent = noteRecognizer.processFrame(
-                    floatBuffer, read, detected, now
+                    floatBuffer, read, smoothed, now
                 )
                 if (noteEvent != null) {
                     _currentNoteEvent.value = noteEvent
+                }
+
+                // --- SCALE PRACTICE PATH: full pipeline ---
+                val scaleEval = scalePracticeEngine.processFrame(
+                    floatBuffer, read, rawResult, now, practiceContext
+                )
+                if (scaleEval != null) {
+                    _currentScaleEvaluation.value = scaleEval
                 }
             }
         }
     }
 
-    private fun detectAdaptive(buffer: FloatArray, samplesRead: Int): PitchDetector.PitchResult? {
-        // Always try the full buffer first for best accuracy on low frequencies
-        val fullWindow = buffer.copyOfRange(0, LOW_FREQ_BUFFER.coerceAtMost(samplesRead))
-        val fullResult = pitchDetector.detect(fullWindow)
-
-        if (fullResult != null) {
-            return smoothPitch(fullResult)
-        }
-
-        // Fallback to smaller buffer for higher frequencies only
-        val highWindow = buffer.copyOfRange(0, HIGH_FREQ_BUFFER.coerceAtMost(samplesRead))
-        val quickResult = pitchDetector.detect(highWindow)
-        return if (quickResult != null) smoothPitch(quickResult) else null
-    }
-
-    // --- Pitch smoothing: median filter + outlier rejection ---
+    // --- Pitch smoothing for tuner mode: median filter ---
     private val recentFrequencies = FloatArray(SMOOTH_WINDOW)
     private var smoothIndex = 0
     private var smoothFilled = 0
@@ -160,27 +157,21 @@ class AudioProcessor(private val context: Context) {
     private fun smoothPitch(result: PitchDetector.PitchResult): PitchDetector.PitchResult? {
         val freq = result.frequency
 
-        // Outlier rejection: if we have a stable frequency, reject extreme jumps
+        // Mild outlier rejection for tuner stability
         if (lastStableFreq > 0f) {
             val ratio = freq / lastStableFreq
-            if (ratio > 1.8f || ratio < 0.55f) {
-                // Likely a harmonic or octave error — reject this frame
-                return null
-            }
+            if (ratio > 2.0f || ratio < 0.5f) return null
         }
 
-        // Add to rolling buffer
         recentFrequencies[smoothIndex] = freq
         smoothIndex = (smoothIndex + 1) % SMOOTH_WINDOW
         if (smoothFilled < SMOOTH_WINDOW) smoothFilled++
 
-        // Compute median
         val sorted = recentFrequencies.copyOf(smoothFilled)
         sorted.sort()
         val medianFreq = sorted[smoothFilled / 2]
         lastStableFreq = medianFreq
 
-        // Return result with median-smoothed frequency
         return PitchDetector.frequencyToNote(medianFreq, result.confidence)
     }
 
@@ -208,14 +199,5 @@ class AudioProcessor(private val context: Context) {
         }
         audioRecord = null
         _isListening.value = false
-    }
-
-    private fun hasSignal(buffer: FloatArray, length: Int): Boolean {
-        var sumSquares = 0.0
-        for (i in 0 until length) {
-            sumSquares += buffer[i] * buffer[i]
-        }
-        val rms = kotlin.math.sqrt(sumSquares / length)
-        return rms > SIGNAL_RMS_THRESHOLD
     }
 }

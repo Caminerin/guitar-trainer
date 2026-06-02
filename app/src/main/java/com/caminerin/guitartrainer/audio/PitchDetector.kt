@@ -5,15 +5,23 @@ import kotlin.math.ln
 import kotlin.math.roundToInt
 
 /**
- * YIN pitch detection algorithm.
+ * MPM (McLeod Pitch Method) pitch detection algorithm.
  *
- * Detects the fundamental frequency (pitch) of a monophonic audio signal.
- * Based on: de Cheveigné & Kawahara (2002) "YIN, a fundamental frequency
- * estimator for speech and music".
+ * Designed specifically for musical instruments — finds the true fundamental
+ * frequency by computing the Normalized Square Difference Function (NSDF) and
+ * picking the first peak above a threshold relative to the global maximum.
+ *
+ * Advantages over YIN for guitar:
+ * - Picks the FIRST strong NSDF peak → resolves to fundamental, not harmonics
+ * - "Clarity" metric (peak height 0..1) is a reliable confidence measure
+ * - Fewer octave errors on low guitar strings
+ *
+ * Based on: McLeod & Wyvill (2005) "A Smarter Way to Find Pitch"
  */
 class PitchDetector(
     private val sampleRate: Int,
-    private val threshold: Double = 0.10
+    private val smallCutoff: Double = 0.5,
+    private val cutoff: Double = 0.93
 ) {
 
     data class PitchResult(
@@ -28,80 +36,112 @@ class PitchDetector(
     }
 
     fun detect(buffer: FloatArray): PitchResult? {
-        val halfLen = buffer.size / 2
-        val diff = differenceFunction(buffer, halfLen)
-        val cmndf = cumulativeMeanNormalizedDifference(diff, halfLen)
-        val tauEstimate = absoluteThreshold(cmndf, halfLen) ?: return null
-        val refinedTau = parabolicInterpolation(cmndf, tauEstimate, halfLen)
+        val n = buffer.size
+        val nsdf = normalizedSquareDifference(buffer, n)
+
+        // Find key maxima: peaks after positive zero crossings
+        val peaks = findKeyMaxima(nsdf, n)
+        if (peaks.isEmpty()) return null
+
+        // Find the highest peak value (global max clarity)
+        val globalMaxClarity = peaks.maxOf { nsdf[it] }
+        if (globalMaxClarity < smallCutoff) return null
+
+        // Pick the first peak above cutoff * globalMaxClarity (MPM's key insight)
+        val threshold = cutoff * globalMaxClarity
+        val selectedTau = peaks.firstOrNull { nsdf[it] >= threshold } ?: return null
+
+        // Parabolic interpolation for sub-sample accuracy
+        val refinedTau = parabolicInterpolation(nsdf, selectedTau, n)
+        if (refinedTau <= 0f) return null
 
         val frequency = sampleRate.toFloat() / refinedTau
-        if (frequency < 50f || frequency > 2000f) return null
+        if (frequency < 60f || frequency > 1500f) return null
 
-        val confidence = 1f - (cmndf[tauEstimate].coerceIn(0.0, 1.0)).toFloat()
-        return frequencyToNote(frequency, confidence)
+        val clarity = nsdf[selectedTau].toFloat().coerceIn(0f, 1f)
+        return frequencyToNote(frequency, clarity)
     }
 
-    private fun differenceFunction(buffer: FloatArray, halfLen: Int): DoubleArray {
-        val diff = DoubleArray(halfLen)
-        for (tau in 1 until halfLen) {
-            var sum = 0.0
-            for (i in 0 until halfLen) {
-                val delta = (buffer[i] - buffer[i + tau]).toDouble()
-                sum += delta * delta
+    /**
+     * Compute the Normalized Square Difference Function (NSDF).
+     * NSDF(τ) = 2 * r(τ) / (m(τ))
+     * where r(τ) is the autocorrelation and m(τ) is the normalizing term.
+     * Range: -1 to 1. Peaks near 1 = strong periodicity at lag τ.
+     */
+    private fun normalizedSquareDifference(buffer: FloatArray, n: Int): DoubleArray {
+        val nsdf = DoubleArray(n)
+        for (tau in 0 until n) {
+            var acf = 0.0   // autocorrelation at lag tau
+            var m = 0.0     // normalizing energy term
+            val limit = n - tau
+            for (i in 0 until limit) {
+                val xi = buffer[i].toDouble()
+                val xj = buffer[i + tau].toDouble()
+                acf += xi * xj
+                m += xi * xi + xj * xj
             }
-            diff[tau] = sum
+            nsdf[tau] = if (m > 0.0) 2.0 * acf / m else 0.0
         }
-        return diff
+        return nsdf
     }
 
-    private fun cumulativeMeanNormalizedDifference(
-        diff: DoubleArray,
-        halfLen: Int
-    ): DoubleArray {
-        val cmndf = DoubleArray(halfLen)
-        cmndf[0] = 1.0
-        var runningSum = 0.0
-        for (tau in 1 until halfLen) {
-            runningSum += diff[tau]
-            cmndf[tau] = if (runningSum != 0.0) {
-                diff[tau] * tau / runningSum
-            } else {
-                1.0
+    /**
+     * Find key maxima of the NSDF: local peaks that appear after the NSDF
+     * crosses zero from negative to positive. These represent candidate
+     * periods (the first strong one is usually the fundamental).
+     */
+    private fun findKeyMaxima(nsdf: DoubleArray, n: Int): List<Int> {
+        val peaks = mutableListOf<Int>()
+        val minTau = (sampleRate / 1500f).toInt().coerceAtLeast(2)  // ~1500 Hz max
+        val maxTau = (sampleRate / 60f).toInt().coerceAtMost(n - 2) // ~60 Hz min
+
+        var positiveZeroCrossing = false
+        var peakTau = minTau
+        var peakVal = Double.NEGATIVE_INFINITY
+
+        for (tau in minTau..maxTau) {
+            // Detect positive zero crossing
+            if (nsdf[tau] > 0 && nsdf[tau - 1] <= 0) {
+                positiveZeroCrossing = true
+                peakTau = tau
+                peakVal = nsdf[tau]
             }
-        }
-        return cmndf
-    }
 
-    private fun absoluteThreshold(cmndf: DoubleArray, halfLen: Int): Int? {
-        var tau = 2
-        while (tau < halfLen) {
-            if (cmndf[tau] < threshold) {
-                while (tau + 1 < halfLen && cmndf[tau + 1] < cmndf[tau]) {
-                    tau++
+            // Track the peak within this positive lobe
+            if (positiveZeroCrossing && nsdf[tau] > peakVal) {
+                peakTau = tau
+                peakVal = nsdf[tau]
+            }
+
+            // End of positive lobe → save the peak
+            if (positiveZeroCrossing && nsdf[tau] <= 0) {
+                if (peakVal > smallCutoff) {
+                    peaks.add(peakTau)
                 }
-                return tau
+                positiveZeroCrossing = false
+                peakVal = Double.NEGATIVE_INFINITY
             }
-            tau++
         }
-        return null
+
+        // Capture last peak if NSDF stays positive
+        if (positiveZeroCrossing && peakVal > smallCutoff) {
+            peaks.add(peakTau)
+        }
+
+        return peaks
     }
 
-    private fun parabolicInterpolation(
-        cmndf: DoubleArray,
-        tau: Int,
-        halfLen: Int
-    ): Float {
-        if (tau < 1 || tau >= halfLen - 1) return tau.toFloat()
+    private fun parabolicInterpolation(nsdf: DoubleArray, tau: Int, n: Int): Float {
+        if (tau < 1 || tau >= n - 1) return tau.toFloat()
 
-        val s0 = cmndf[tau - 1]
-        val s1 = cmndf[tau]
-        val s2 = cmndf[tau + 1]
+        val s0 = nsdf[tau - 1]
+        val s1 = nsdf[tau]
+        val s2 = nsdf[tau + 1]
 
         val denominator = 2.0 * s1 - s2 - s0
         if (abs(denominator) < 1e-12) return tau.toFloat()
 
         val adjustment = (s2 - s0) / (2.0 * denominator)
-
         return if (abs(adjustment) < 1.0) {
             tau + adjustment.toFloat()
         } else {
@@ -136,6 +176,10 @@ class PitchDetector(
                 centsOff = centsOff,
                 confidence = confidence
             )
+        }
+
+        fun frequencyToMidi(freq: Float): Float {
+            return (69f + 12f * (ln(freq / 440f) / ln(2f)))
         }
     }
 }
