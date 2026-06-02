@@ -20,8 +20,8 @@ import kotlin.math.roundToInt
  */
 class PitchDetector(
     private val sampleRate: Int,
-    private val smallCutoff: Double = 0.5,
-    private val cutoff: Double = 0.93
+    private val smallCutoff: Double = 0.3,
+    private val cutoff: Double = 0.90
 ) {
 
     data class PitchResult(
@@ -56,7 +56,7 @@ class PitchDetector(
         if (refinedTau <= 0f) return null
 
         val frequency = sampleRate.toFloat() / refinedTau
-        if (frequency < 60f || frequency > 1500f) return null
+        if (frequency < 50f || frequency > 1500f) return null
 
         val clarity = nsdf[selectedTau].toFloat().coerceIn(0f, 1f)
         return frequencyToNote(frequency, clarity)
@@ -93,7 +93,7 @@ class PitchDetector(
     private fun findKeyMaxima(nsdf: DoubleArray, n: Int): List<Int> {
         val peaks = mutableListOf<Int>()
         val minTau = (sampleRate / 1500f).toInt().coerceAtLeast(2)  // ~1500 Hz max
-        val maxTau = (sampleRate / 60f).toInt().coerceAtMost(n - 2) // ~60 Hz min
+        val maxTau = (sampleRate / 50f).toInt().coerceAtMost(n - 2) // ~50 Hz min (covers detuned low E)
 
         var positiveZeroCrossing = false
         var peakTau = minTau

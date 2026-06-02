@@ -158,9 +158,10 @@ class AudioProcessor(private val context: Context) {
         val freq = result.frequency
 
         // Mild outlier rejection for tuner stability
+        // Widened range to allow natural string changes (e.g. A2→E2 = 0.75x)
         if (lastStableFreq > 0f) {
             val ratio = freq / lastStableFreq
-            if (ratio > 2.0f || ratio < 0.5f) return null
+            if (ratio > 3.0f || ratio < 0.33f) return null
         }
 
         recentFrequencies[smoothIndex] = freq
