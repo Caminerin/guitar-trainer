@@ -23,7 +23,7 @@ class AudioProcessor(private val context: Context) {
         private const val LOW_FREQ_THRESHOLD = 150f
         private const val LOW_FREQ_BUFFER = 4096
         private const val HIGH_FREQ_BUFFER = 2048
-        private const val SIGNAL_RMS_THRESHOLD = 0.002
+        private const val SIGNAL_RMS_THRESHOLD = 0.0015
         private const val SMOOTH_WINDOW = 5
     }
 
@@ -160,10 +160,10 @@ class AudioProcessor(private val context: Context) {
     private fun smoothPitch(result: PitchDetector.PitchResult): PitchDetector.PitchResult? {
         val freq = result.frequency
 
-        // Outlier rejection: if we have a stable frequency, reject sudden jumps > 20%
+        // Outlier rejection: if we have a stable frequency, reject extreme jumps
         if (lastStableFreq > 0f) {
             val ratio = freq / lastStableFreq
-            if (ratio > 1.35f || ratio < 0.74f) {
+            if (ratio > 1.8f || ratio < 0.55f) {
                 // Likely a harmonic or octave error — reject this frame
                 return null
             }

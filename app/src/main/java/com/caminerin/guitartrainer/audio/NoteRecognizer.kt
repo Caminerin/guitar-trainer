@@ -71,7 +71,7 @@ class NoteRecognizer {
         private const val INITIAL_NOISE_FLOOR = 0.002f
 
         // Confidence
-        private const val MIN_CONFIDENCE = 0.55f
+        private const val MIN_CONFIDENCE = 0.45f
     }
 
     // ── State ───────────────────────────────────────────────────────────
