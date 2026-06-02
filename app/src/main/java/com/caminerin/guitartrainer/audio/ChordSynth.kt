@@ -123,11 +123,17 @@ object ChordSynth {
         root: String? = null,
         quality: String? = null
     ) {
-        // Try full chord sample first if root+quality provided
+        val strokeType = if (upStrum) StrokeType.UP else StrokeType.DOWN
+        // Prefer per-string strum (each fingering sounds different)
+        if (samplesLoaded && canUseSamples(frets)) {
+            playSampledChord(frets, strokeType, velocity)
+            return
+        }
+        // Fall back to full chord sample if per-string samples can't cover it
         if (root != null && quality != null && samplesLoaded) {
             if (playFullChordSample(root, quality, velocity)) return
         }
-        val strokeType = if (upStrum) StrokeType.UP else StrokeType.DOWN
+        // Last resort: Karplus-Strong synthesis
         playStroke(frets, durationMs, strokeType, velocity)
     }
 
