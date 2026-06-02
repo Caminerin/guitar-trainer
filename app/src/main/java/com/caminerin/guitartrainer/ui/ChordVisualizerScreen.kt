@@ -480,7 +480,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                             .padding(horizontal = 20.dp, vertical = 14.dp)
                     ) {
                         val count = if (hasSelectedRoot) {
-                            ChordRepository.countChordsByRootAndLevel(AMERICAN_NOTE_NAMES[selectedRoot], l)
+                            ChordRepository.getChordsByRootLevelQuality(AMERICAN_NOTE_NAMES[selectedRoot], l, quality).size
                         } else 0
                         Row(
                             modifier = Modifier.fillMaxWidth(),
