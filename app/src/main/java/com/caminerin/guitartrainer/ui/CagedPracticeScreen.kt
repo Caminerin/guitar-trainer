@@ -268,15 +268,7 @@ fun CagedPracticeScreen(
                 .background(COLOR_BG)
         ) {
             // Toolbar — all buttons same height via ToolbarChip, single scrollable row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(COLOR_TOOLBAR)
-                    .padding(horizontal = 6.dp, vertical = 4.dp)
-                    .horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
+            ScrollableToolbar(bgColor = COLOR_TOOLBAR) {
                 IconButton(onClick = { isPlaying = false; onBack() }, modifier = Modifier.size(34.dp)) {
                     Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
