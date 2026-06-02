@@ -65,16 +65,16 @@ private val COLOR_DIM = Color(0xFF78909C)         // muted for out-of-position
 // Fretboard aesthetic
 private val COLOR_BG = SHARED_BG
 private val COLOR_TOOLBAR = SHARED_TOOLBAR
-private val COLOR_WOOD = Color(0xFF3E2415)
-private val COLOR_NUT = Color(0xFFF0EAD6)
-private val COLOR_FRET_WIRE = Color(0xFFBBBBBB)
-private val COLOR_INLAY = Color(0xFFCCC4B0)
+private val COLOR_WOOD = Color(0xFFFAFAF5)       // cream paper background
+private val COLOR_NUT = Color(0xFF333333)         // dark nut (tab style)
+private val COLOR_FRET_WIRE = Color(0xFFCCCCCC)    // subtle fret lines
+private val COLOR_INLAY = Color(0xFF999999)        // subtle dot markers
 
 private val STRING_COLORS = listOf(
-    Color(0xFFB0A080), Color(0xFFB8A888), Color(0xFFC0B090),
-    Color(0xFFD0C4B0), Color(0xFFD8D0C0), Color(0xFFE0D8C8)
+    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999),
+    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999)
 )
-private val STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
+private val STRING_WIDTHS = listOf(1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 1.5f)
 
 
 
@@ -291,96 +291,81 @@ private fun DrawScope.drawGuitarFretboard(
     val nutX = openStringWidthPx
     val nutWidth = 12f
 
-    // Wood background
+    // Paper/cream background
     drawRoundRect(
         color = COLOR_WOOD,
         topLeft = Offset(nutX, fbTop - 4f),
         size = Size(size.width - nutX, fbHeight + 8f),
-        cornerRadius = CornerRadius(3f)
+        cornerRadius = CornerRadius(6f)
     )
-    for (i in 0..4) {
-        val yOff = fbTop + fbHeight * (0.15f + i * 0.17f)
-        drawRect(
-            color = Color(0x0CFFFFFF),
-            topLeft = Offset(nutX, yOff),
-            size = Size(size.width - nutX, fbHeight * 0.04f)
-        )
-    }
 
-    // Position highlight
+    // Position bracket with golden border
     if (positionsEnabled && positions.isNotEmpty()) {
         val pos = positions[currentPosition]
         val startX = if (pos.startFret == 0) nutX else nutX + nutWidth + (pos.startFret - 1) * fretWidthPx
         val endX = nutX + nutWidth + pos.endFret * fretWidthPx
         drawRect(
-            color = Color(0x22FFD54F),
+            color = Color(0x1AFFD54F),
             topLeft = Offset(startX, fbTop - 4f),
             size = Size(endX - startX, fbHeight + 8f)
         )
+        drawRect(
+            color = Color(0xFFC8A84E),
+            topLeft = Offset(startX, fbTop - 4f),
+            size = Size(endX - startX, fbHeight + 8f),
+            style = Stroke(2f)
+        )
     }
 
-    // Nut
+    // Nut (dark, tab style)
     drawRect(color = COLOR_NUT, topLeft = Offset(nutX, fbTop - 6f), size = Size(nutWidth, fbHeight + 12f))
-    drawRect(color = Color(0x33000000), topLeft = Offset(nutX + nutWidth, fbTop - 6f), size = Size(3f, fbHeight + 12f))
 
-    // Fret wires
+    // Fret lines — subtle
     for (fret in 1..TOTAL_FRETS) {
         val x = nutX + nutWidth + fret * fretWidthPx
-        drawLine(Color(0x33000000), Offset(x + 1.5f, fbTop - 2f), Offset(x + 1.5f, fbBottom + 2f), strokeWidth = 3f)
-        drawLine(COLOR_FRET_WIRE, Offset(x, fbTop - 2f), Offset(x, fbBottom + 2f), strokeWidth = 2.5f)
-        drawLine(Color(0x33FFFFFF), Offset(x - 0.5f, fbTop), Offset(x - 0.5f, fbBottom), strokeWidth = 0.5f)
+        drawLine(COLOR_FRET_WIRE, Offset(x, fbTop), Offset(x, fbBottom), strokeWidth = 1f)
     }
 
-    // Inlay markers
-    val singleDots = listOf(3, 5, 7, 9, 15, 17, 19, 21)
-    val doubleDots = listOf(12)
-    val dotRadius = (fretWidthPx * 0.08f).coerceIn(4f, 12f)
-
-    for (fret in singleDots) {
-        if (fret > TOTAL_FRETS) continue
-        val cx = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
-        val cy = fbBottom + bottomPad * 0.5f
-        drawCircle(Color(0xFF222222), dotRadius + 1f, Offset(cx, cy))
-        drawCircle(COLOR_INLAY, dotRadius, Offset(cx, cy))
-    }
-    for (fret in doubleDots) {
-        if (fret > TOTAL_FRETS) continue
-        val cx = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
-        val cy1 = fbBottom + bottomPad * 0.3f
-        val cy2 = fbBottom + bottomPad * 0.7f
-        for (cy in listOf(cy1, cy2)) {
-            drawCircle(Color(0xFF222222), dotRadius + 1f, Offset(cx, cy))
-            drawCircle(COLOR_INLAY, dotRadius, Offset(cx, cy))
-        }
-    }
-
-    // Fret numbers - 3x bigger
+    // Fret numbers below the fretboard
     val fretNumPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(200, 200, 200, 200)
-        textSize = 66f
+        color = android.graphics.Color.argb(150, 100, 100, 100)
+        textSize = 36f
         textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
         isAntiAlias = true
     }
     for (fret in 1..TOTAL_FRETS) {
         val x = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
-        drawContext.canvas.nativeCanvas.drawText("$fret", x, fbTop - 10f, fretNumPaint)
+        drawContext.canvas.nativeCanvas.drawText("$fret", x, fbBottom + bottomPad * 0.7f, fretNumPaint)
     }
 
-    // Strings (6th=bottom, 1st=top like tablature)
+    // Dot markers (subtle, below fretboard)
+    val singleDots = listOf(3, 5, 7, 9, 15, 17, 19, 21)
+    val doubleDots = listOf(12)
+    val dotRadius = (fretWidthPx * 0.05f).coerceIn(3f, 8f)
+
+    for (fret in singleDots) {
+        if (fret > TOTAL_FRETS) continue
+        val cx = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
+        drawCircle(COLOR_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.35f))
+    }
+    for (fret in doubleDots) {
+        if (fret > TOTAL_FRETS) continue
+        val cx = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
+        drawCircle(COLOR_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.2f))
+        drawCircle(COLOR_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.5f))
+    }
+
+    // Staff lines (strings) — thin uniform like tab notation
     for (s in 0 until 6) {
         val y = fbTop + stringSpacing * (6 - s)
-        drawLine(Color(0x33000000), Offset(nutX, y + 1f), Offset(size.width, y + 1f), strokeWidth = STRING_WIDTHS[s] + 1f)
         drawLine(STRING_COLORS[s], Offset(nutX, y), Offset(size.width, y), strokeWidth = STRING_WIDTHS[s])
-        drawLine(Color(0x22FFFFFF), Offset(nutX, y - STRING_WIDTHS[s] * 0.3f), Offset(size.width, y - STRING_WIDTHS[s] * 0.3f), strokeWidth = 0.5f)
     }
 
     // Open string labels
     val openPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(220, 240, 240, 240)
-        textSize = 72f
+        color = android.graphics.Color.argb(180, 80, 80, 80)
+        textSize = 48f
         textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
         isAntiAlias = true
     }
     // Position range
@@ -438,10 +423,11 @@ private fun DrawScope.drawGuitarFretboard(
                 // Skip dimmed notes at fret 0 — open string labels are already drawn there
                 if (fret == 0) continue
                 val dimR = noteRadius * 0.65f
-                drawCircle(COLOR_DIM.copy(alpha = 0.35f), dimR, Offset(cx, y))
+                drawCircle(COLOR_WOOD, dimR + 1f, Offset(cx, y))
+                drawCircle(COLOR_DIM.copy(alpha = 0.25f), dimR, Offset(cx, y))
                 if (noteDisplay != NoteDisplay.NONE) {
                     val lbl = buildNoteLabel(noteIdx, degree, noteDisplay, rootNote, scale.relativeMajorOffset)
-                    notePaintSmall.color = android.graphics.Color.argb(100, 255, 255, 255)
+                    notePaintSmall.color = android.graphics.Color.argb(100, 100, 100, 100)
                     notePaintSmall.textSize = 28f
                     drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + 10f, notePaintSmall)
                     notePaintSmall.color = android.graphics.Color.WHITE
@@ -454,9 +440,10 @@ private fun DrawScope.drawGuitarFretboard(
             val noteColor = DegreeColorPrefs.getScaleColor(degree)
             val r = if (degree == 1 && isFiltered) noteRadius * 1.1f else if (!isFiltered) noteRadius * 0.7f else noteRadius
 
-            drawCircle(Color(0x55000000), r + 3f, Offset(cx + 1.5f, y + 2f))
+            // White background to break the staff line
+            drawCircle(COLOR_WOOD, r + 2f, Offset(cx, y))
             drawCircle(noteColor, r, Offset(cx, y))
-            drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
+            drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(1.5f))
 
             if (noteDisplay != NoteDisplay.NONE && isFiltered) {
                 val label = buildNoteLabel(noteIdx, degree, noteDisplay, rootNote, scale.relativeMajorOffset)

@@ -60,14 +60,14 @@ import com.caminerin.guitartrainer.audio.ChordSynth
 
 private val CHORD_BG = SHARED_BG
 private val CHORD_TOOLBAR = SHARED_TOOLBAR
-private val CHORD_WOOD = Color(0xFF3E2415)
-private val CHORD_NUT = Color(0xFFF0EAD6)
-private val CHORD_FRET_WIRE = Color(0xFFBBBBBB)
+private val CHORD_WOOD = Color(0xFFFAFAF5)       // cream paper background
+private val CHORD_NUT = Color(0xFF333333)         // dark nut (tab style)
+private val CHORD_FRET_WIRE = Color(0xFFCCCCCC)    // subtle fret lines
 private val CHORD_STRING_COLORS = listOf(
-    Color(0xFFB0A080), Color(0xFFB8A888), Color(0xFFC0B090),
-    Color(0xFFD0C4B0), Color(0xFFD8D0C0), Color(0xFFE0D8C8)
+    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999),
+    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999)
 )
-private val CHORD_STRING_WIDTHS = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
+private val CHORD_STRING_WIDTHS = listOf(1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 1.5f)
 
 private val QUALITY_COLORS = mapOf(
     "major" to Color(0xFF5C6BC0),
@@ -642,41 +642,31 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
 
     val intervalParts = chord.intervals.split(" ")
 
-    // Wood background
+    // Paper/cream background
     drawRoundRect(
         color = CHORD_WOOD,
         topLeft = Offset(fbLeft, fbTop - 4f),
         size = Size(fbRight - fbLeft, fbHeight + 8f),
         cornerRadius = CornerRadius(6f)
     )
-    for (i in 0..4) {
-        val yOff = fbTop + fbHeight * (0.15f + i * 0.17f)
-        drawRect(
-            color = Color(0x0CFFFFFF),
-            topLeft = Offset(fbLeft, yOff),
-            size = Size(fbRight - fbLeft, fbHeight * 0.04f)
-        )
-    }
 
-    // Nut (only if showing from fret 0)
+    // Nut (dark, tab style — only if showing from fret 0)
     if (startFret == 0) {
         val nutWidth = 14f
         drawRect(color = CHORD_NUT, topLeft = Offset(fbLeft, fbTop - 6f), size = Size(nutWidth, fbHeight + 12f))
     }
 
-    // Fret wires
+    // Fret lines — subtle
     for (fret in 1..fretsToShow) {
         val x = fbLeft + fret * fretWidth
-        drawLine(Color(0x33000000), Offset(x + 1.5f, fbTop - 2f), Offset(x + 1.5f, fbBottom + 2f), strokeWidth = 3f)
-        drawLine(CHORD_FRET_WIRE, Offset(x, fbTop - 2f), Offset(x, fbBottom + 2f), strokeWidth = 2.5f)
+        drawLine(CHORD_FRET_WIRE, Offset(x, fbTop), Offset(x, fbBottom), strokeWidth = 1f)
     }
 
     // Fret numbers
     val fretNumPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(200, 200, 200, 200)
-        textSize = 48f
+        color = android.graphics.Color.argb(150, 100, 100, 100)
+        textSize = 36f
         textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
         isAntiAlias = true
     }
     for (fret in 1..fretsToShow) {
@@ -685,10 +675,9 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
         drawContext.canvas.nativeCanvas.drawText("$displayFret", x, fbTop - 12f, fretNumPaint)
     }
 
-    // Strings (1st at top, 6th at bottom)
+    // Staff lines (strings) — thin uniform like tab notation
     for (s in 0 until 6) {
         val y = fbTop + stringSpacing * (6 - s)
-        drawLine(Color(0x33000000), Offset(fbLeft, y + 1f), Offset(fbRight, y + 1f), strokeWidth = CHORD_STRING_WIDTHS[s] + 1f)
         drawLine(CHORD_STRING_COLORS[s], Offset(fbLeft, y), Offset(fbRight, y), strokeWidth = CHORD_STRING_WIDTHS[s])
     }
 
@@ -739,9 +728,9 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
 
                 val cx = fbLeft * 0.5f
                 val r = if (isFiltered) noteRadius else noteRadius * 0.7f
-                drawCircle(Color(0x55000000), r + 2f, Offset(cx + 1f, y + 1.5f))
+                drawCircle(CHORD_WOOD, r + 2f, Offset(cx, y))
                 drawCircle(noteColor, r, Offset(cx, y))
-                drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
+                drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(1.5f))
 
                 if (noteDisplay != NoteDisplay.NONE && isFiltered) {
                     val lbl = if (noteDisplay == NoteDisplay.FINGERING && fingering.size > s) {
@@ -767,9 +756,9 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
                     }
                     val r = if (interval == "1" && isFiltered2) noteRadius * 1.1f else if (!isFiltered2) noteRadius * 0.7f else noteRadius
 
-                    drawCircle(Color(0x55000000), r + 3f, Offset(cx + 1.5f, y + 2f))
+                    drawCircle(CHORD_WOOD, r + 2f, Offset(cx, y))
                     drawCircle(noteColor, r, Offset(cx, y))
-                    drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(2f))
+                    drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(1.5f))
 
                     if (noteDisplay != NoteDisplay.NONE && isFiltered2) {
                         val lbl = if (noteDisplay == NoteDisplay.FINGERING && fingering.size > s) {
@@ -787,8 +776,8 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
 
     // Open string labels on right side
     val openStringPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(220, 240, 240, 240)
-        textSize = 72f
+        color = android.graphics.Color.argb(180, 80, 80, 80)
+        textSize = 48f
         textAlign = android.graphics.Paint.Align.LEFT
         isAntiAlias = true
     }
