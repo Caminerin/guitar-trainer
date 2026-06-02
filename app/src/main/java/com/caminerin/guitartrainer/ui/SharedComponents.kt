@@ -75,6 +75,36 @@ fun smartSplit(line: String): List<String> {
 val SHARED_BG = Color(0xFF1A1A1A)
 val SHARED_TOOLBAR = Color(0xFF1E1E1E)
 val SHARED_ACCENT = Color(0xFFff6b9d)
+val TOOLBAR_CHIP_BG = Color(0xFF3A3A3A) // Standard toolbar button background
+
+// ===== STANDARD TOOLBAR CHIP =====
+@Composable
+fun ToolbarChip(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    backgroundColor: Color = TOOLBAR_CHIP_BG,
+    textColor: Color = Color.White,
+    isActive: Boolean = true
+) {
+    Box(
+        modifier = modifier
+            .height(34.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (isActive) backgroundColor else backgroundColor.copy(alpha = 0.4f))
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text,
+            color = if (isActive) textColor else textColor.copy(alpha = 0.5f),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+    }
+}
 
 // ===== CENTRALIZED APP COLOR SYSTEM =====
 object AppColors {
@@ -558,7 +588,8 @@ fun CagedPositionBar(
     positions: List<ScalePosition>,
     currentIndex: Int,
     onSelect: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = modifier,
@@ -566,24 +597,15 @@ fun CagedPositionBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         positions.forEachIndexed { i, pos ->
-            val isCurrent = i == currentIndex
-            val color = SHARED_POSITION_COLORS.getOrElse(i) { Color.Gray }
+            val isCurrent = i == currentIndex && enabled
             val isLetter = pos.name.length == 1 && pos.name[0].isLetter()
             val label = if (isLetter) "P${i + 1}(${pos.name})" else "P${pos.name}"
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isCurrent) color else color.copy(alpha = 0.2f))
-                    .clickable { onSelect(i) }
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    label,
-                    color = if (isCurrent) Color.White else color,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            ToolbarChip(
+                text = label,
+                onClick = { if (enabled) onSelect(i) },
+                isActive = if (isCurrent) true else enabled,
+                backgroundColor = if (isCurrent) SHARED_POSITION_COLORS.getOrElse(i) { Color.Gray } else TOOLBAR_CHIP_BG
+            )
         }
     }
 }
@@ -977,15 +999,7 @@ fun NoteDisplayToolbarButton(noteDisplay: NoteDisplay, onClick: () -> Unit) {
         NoteDisplay.FINGERING -> "Digit."
         NoteDisplay.NONE -> "\u2205"
     }
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF26A69A).copy(alpha = 0.25f))
-            .clickable { onClick() }
-            .padding(horizontal = 8.dp, vertical = 6.dp)
-    ) {
-        Text(label, color = Color(0xFF80CBC4), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-    }
+    ToolbarChip(text = label, onClick = onClick)
 }
 
 @Composable

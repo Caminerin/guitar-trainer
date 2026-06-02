@@ -21,8 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Info
-
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -122,78 +120,49 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
                 .padding(horizontal = 6.dp, vertical = 4.dp)
                 .horizontalScroll(rememberScrollState()),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Back button
             if (showBackButton) {
-                IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onBack, modifier = Modifier.size(34.dp)) {
                     Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
 
-            // Key selector
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CHROMATIC_COLORS[selectedKey].copy(alpha = 0.4f))
-                    .clickable { showChromaticCircle = true }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey],
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            // Key selector (only one with chromatic color to identify the root)
+            ToolbarChip(
+                text = getChromaticNames(selectedKey, scale.relativeMajorOffset)[selectedKey],
+                onClick = { showChromaticCircle = true },
+                backgroundColor = CHROMATIC_COLORS[selectedKey].copy(alpha = 0.5f)
+            )
 
             // Scale selector
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
-                    .clickable { showScaleSelector = true }
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-            ) {
-                Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
+            ToolbarChip(text = scale.name, onClick = { showScaleSelector = true })
 
             // Display mode
             NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
 
             // Colors
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFff6b9d).copy(alpha = 0.3f))
-                    .clickable { showColorSelector = true }
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-            ) {
-                Text("Colores", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
+            ToolbarChip(text = "Colores", onClick = { showColorSelector = true })
 
             // Info
-            IconButton(onClick = { showInfo = true }, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.Default.Info, "Info", tint = Color(0xFF90A4AE), modifier = Modifier.size(18.dp))
-            }
+            ToolbarChip(text = "Info", onClick = { showInfo = true })
 
             // Posiciones toggle
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (positionsEnabled) Color(0xFFff6b9d).copy(alpha = 0.4f) else Color.White.copy(alpha = 0.08f))
-                    .clickable { positionsEnabled = !positionsEnabled }
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
-            ) {
-                Text("Pos", color = if (positionsEnabled) Color.White else Color(0xFF90A4AE), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
+            ToolbarChip(
+                text = "Pos",
+                onClick = { positionsEnabled = !positionsEnabled },
+                backgroundColor = if (positionsEnabled) SHARED_ACCENT else TOOLBAR_CHIP_BG,
+                isActive = positionsEnabled
+            )
 
-            // Position chips (when enabled) - inline, same row, no gap
-            if (positionsEnabled && positions.isNotEmpty()) {
+            // Position chips - ALWAYS visible, dimmed when positions disabled
+            if (positions.isNotEmpty()) {
                 CagedPositionBar(
                     positions = positions,
                     currentIndex = currentPosition,
-                    onSelect = { currentPosition = it }
+                    onSelect = { currentPosition = it },
+                    enabled = positionsEnabled
                 )
             }
         }
