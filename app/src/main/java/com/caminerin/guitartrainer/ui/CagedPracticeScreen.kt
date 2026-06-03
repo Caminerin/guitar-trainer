@@ -416,7 +416,8 @@ fun CagedPracticeScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .pointerInput(Unit) {
+                    .pointerInput(anyOverlayOpen) {
+                        if (anyOverlayOpen) return@pointerInput
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
                             var prevSpan = 0f

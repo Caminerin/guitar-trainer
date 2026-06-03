@@ -1335,34 +1335,42 @@ fun ScaleNameSelectorOverlay(
         modifier = Modifier
             .fillMaxSize()
             .zIndex(10f)
-            .background(Color.Black.copy(alpha = 0.7f))
+            .background(Color.Black.copy(alpha = 0.75f))
             .clickable { onDismiss() },
         contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(Color(0xFF2A2A2A))
                 .clickable(enabled = false) {}
-                .padding(16.dp)
+                .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Escala", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Escala", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
             if (showDisableOption) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(Color(0xFFE53935).copy(alpha = 0.3f))
                         .clickable { onDisable() }
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
-                    Text("Desactivar filtro", color = Color(0xFFEF9A9A), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text("Desactivar filtro", color = Color(0xFFEF9A9A), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
             }
             ALL_SCALES.forEach { scaleEntry ->
                 val name = scaleEntry.name
@@ -1372,14 +1380,15 @@ fun ScaleNameSelectorOverlay(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) Color(0xFF7C4DFF).copy(alpha = 0.5f) else Color.Transparent)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.06f))
                         .clickable { onSelected(name) }
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
                     Text(name, color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
-                        fontSize = 15.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        fontSize = 16.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                 }
+                Spacer(modifier = Modifier.height(6.dp))
             }
         }
     }

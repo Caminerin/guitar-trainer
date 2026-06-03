@@ -121,7 +121,7 @@ fun ScaleInfoSheet(
                 chords.forEach { chord ->
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
+                            .size(63.dp)
                             .clip(CircleShape)
                             .background(getDegreeColor(chord.degree)),
                         contentAlignment = Alignment.Center
@@ -129,7 +129,7 @@ fun ScaleInfoSheet(
                         Text(
                             chord.noteName,
                             color = Color.White,
-                            fontSize = 13.sp,
+                            fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center
                         )
