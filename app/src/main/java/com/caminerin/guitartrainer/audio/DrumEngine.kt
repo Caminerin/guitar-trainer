@@ -44,11 +44,14 @@ data class DrumEvent(
 )
 
 object DrumEngine {
-    private const val SAMPLE_RATE = 44100
+    private const val SAMPLE_RATE = 22050
     /** Write audio in small chunks (~10ms) so stop() is responsive */
-    private const val CHUNK_SAMPLES = 441 // 10ms at 44100
+    private const val CHUNK_SAMPLES = 220 // ~10ms at 22050
     private var audioTrack: AudioTrack? = null
-    private val samples = mutableMapOf<DrumHit, ShortArray>()
+    /** Round-robin sample banks: each DrumHit has multiple variants */
+    private val sampleBanks = mutableMapOf<DrumHit, List<ShortArray>>()
+    /** Current round-robin index per hit — rotates on each play */
+    private val rrIndex = mutableMapOf<DrumHit, Int>()
     private var initialized = false
     private val lock = Any()
 
@@ -93,27 +96,43 @@ object DrumEngine {
     }
 
     private fun loadSamples(context: Context) {
-        val fileMap = mapOf(
-            DrumHit.KICK_HARD to "drums/kick_hard.wav",
-            DrumHit.KICK_SOFT to "drums/kick_soft.wav",
-            DrumHit.SNARE_HARD to "drums/snare_hard.wav",
-            DrumHit.SNARE_SOFT to "drums/snare_soft.wav",
-            DrumHit.SNARE_CROSSSTICK to "drums/snare_crossstick.wav",
-            DrumHit.SNARE_RIMSHOT to "drums/snare_rimshot.wav",
-            DrumHit.HH_CLOSED to "drums/hh_closed.wav",
-            DrumHit.HH_OPEN to "drums/hh_open.wav",
-            DrumHit.HH_HALF to "drums/hh_half.wav",
-            DrumHit.HH_PEDAL to "drums/hh_pedal.wav",
-            DrumHit.RIDE_NORMAL to "drums/ride_normal.wav",
-            DrumHit.RIDE_BELL to "drums/ride_bell.wav",
-            DrumHit.CRASH to "drums/crash.wav"
+        // Each DrumHit maps to a base name; files are named {base}_1.wav, {base}_2.wav, {base}_3.wav
+        val hitBaseMap = mapOf(
+            DrumHit.KICK_HARD to "kick_hard",
+            DrumHit.KICK_SOFT to "kick_soft",
+            DrumHit.SNARE_HARD to "snare_hard",
+            DrumHit.SNARE_SOFT to "snare_soft",
+            DrumHit.SNARE_CROSSSTICK to "snare_crossstick",
+            DrumHit.SNARE_RIMSHOT to "snare_rimshot",
+            DrumHit.HH_CLOSED to "hh_closed",
+            DrumHit.HH_OPEN to "hh_open",
+            DrumHit.HH_HALF to "hh_half",
+            DrumHit.HH_PEDAL to "hh_pedal",
+            DrumHit.RIDE_NORMAL to "ride_normal",
+            DrumHit.RIDE_BELL to "ride_bell",
+            DrumHit.CRASH to "crash"
         )
-        for ((hit, file) in fileMap) {
-            try {
-                val pcm = readWavPcm(context.assets.open(file))
-                if (pcm != null && pcm.isNotEmpty()) samples[hit] = pcm
-            } catch (_: Exception) { }
+        for ((hit, base) in hitBaseMap) {
+            val variants = mutableListOf<ShortArray>()
+            for (rr in 1..4) {
+                try {
+                    val pcm = readWavPcm(context.assets.open("drums/${base}_${rr}.wav"))
+                    if (pcm != null && pcm.isNotEmpty()) variants.add(pcm)
+                } catch (_: Exception) { /* no more round-robins */ }
+            }
+            if (variants.isNotEmpty()) {
+                sampleBanks[hit] = variants
+                rrIndex[hit] = 0
+            }
         }
+    }
+
+    /** Get the next round-robin sample for a hit */
+    private fun nextSample(hit: DrumHit): ShortArray? {
+        val bank = sampleBanks[hit] ?: return null
+        val idx = rrIndex[hit] ?: 0
+        rrIndex[hit] = (idx + 1) % bank.size
+        return bank[idx]
     }
 
     /** Read WAV PCM data by properly locating the 'data' chunk (not assuming 44-byte header) */
@@ -200,7 +219,7 @@ object DrumEngine {
                             val beatSamples = (SAMPLE_RATE * beatDurationMs / 1000.0).toInt()
                             val buffer = ShortArray(beatSamples)
                             for (event in events) {
-                                val sample = samples[event.hit] ?: continue
+                                val sample = nextSample(event.hit) ?: continue
                                 val offsetSamples = (event.positionInBeat * beatSamples).toInt()
                                 mixInto(buffer, sample, offsetSamples, event.velocity)
                             }
@@ -238,7 +257,8 @@ object DrumEngine {
                 audioTrack?.release()
             } catch (_: Exception) { }
             audioTrack = null
-            samples.clear()
+            sampleBanks.clear()
+            rrIndex.clear()
             initialized = false
         }
     }
