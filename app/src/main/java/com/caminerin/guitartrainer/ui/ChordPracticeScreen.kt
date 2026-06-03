@@ -507,97 +507,139 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                         }
                     }
                     1 -> {
-                        // Sentimiento list with scroll
-                        Column(
-                            modifier = Modifier.verticalScroll(rememberScrollState())
+                        // Sentimiento grid 4x3 with icons
+                        val catIcons = mapOf(
+                            "Triste" to "\uD83D\uDE22", "Agridulce" to "\uD83E\uDE79",
+                            "Bella" to "✨", "Romántica" to "\uD83D\uDC96",
+                            "Feliz" to "\uD83D\uDE04", "Épica" to "⚔\uFE0F",
+                            "Oscura" to "\uD83C\uDF11", "Misteriosa" to "\uD83D\uDD2E",
+                            "Dramática" to "\uD83C\uDFAD", "Neutral" to "⚖\uFE0F",
+                            "Buena" to "\uD83D\uDC4D", "Jazz" to "\uD83C\uDFB7"
+                        )
+                        // "Todos" button
+                        val allSelected = selectedCategory == null
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (allSelected) ACCENT else Color.White.copy(alpha = 0.08f))
+                                .clickable { selectedCategory = null; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
+                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            val allSelected = selectedCategory == null
+                            Text(
+                                "Todos",
+                                color = if (allSelected) Color.Black else Color.White.copy(alpha = 0.6f),
+                                fontSize = 14.sp,
+                                fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        // 4-column grid
+                        val rows = allCategories.chunked(4)
+                        for (row in rows) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                for (cat in row) {
+                                    val catColor = ALL_PROGRESSIONS.first { it.category == cat }.categoryColor
+                                    val isSelected = selectedCategory == cat
+                                    val icon = catIcons[cat] ?: "\uD83C\uDFB5"
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
+                                            .clickable { selectedCategory = cat; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
+                                            .padding(horizontal = 4.dp, vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(icon, fontSize = 22.sp)
+                                            Text(
+                                                cat,
+                                                color = if (isSelected) Color.White else catColor,
+                                                fontSize = 11.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    }
+                                }
+                                // Fill empty cells if row has less than 4
+                                repeat(4 - row.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                        }
+                    }
+                    2 -> {
+                        // Interval selector split: Mayores / Menores
+                        val majorDegrees = availableDegrees.filter { d ->
+                            val clean = d.replace("b", "").replace("#", "").replace("7", "")
+                            clean.firstOrNull()?.isUpperCase() == true
+                        }
+                        val minorDegrees = availableDegrees.filter { d ->
+                            val clean = d.replace("b", "").replace("#", "").replace("7", "")
+                            clean.firstOrNull()?.isLowerCase() == true
+                        }
+
+                        @Composable
+                        fun DegreeChip(deg: String) {
+                            val isSelected = deg in selectedDegrees
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) ACCENT else Color.White.copy(alpha = 0.1f))
+                                    .clickable {
+                                        selectedDegrees = if (isSelected) selectedDegrees - deg else selectedDegrees + deg
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Text(
+                                    deg,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Text("Mayores", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            for (deg in majorDegrees) { DegreeChip(deg) }
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Text("Menores", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            for (deg in minorDegrees) { DegreeChip(deg) }
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
+                        if (selectedDegrees.isNotEmpty()) {
+                            val matchCount = ALL_PROGRESSIONS.count { prog ->
+                                selectedDegrees.all { deg -> deg in extractDegrees(prog.degreeLabel) }
+                            }
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (allSelected) ACCENT else Color.White.copy(alpha = 0.08f))
-                                    .clickable { selectedCategory = null; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    .background(ACCENT)
+                                    .clickable { selectedCategory = null; showFilterOverlay = false; filterPage = 0 }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    "Todos",
-                                    color = if (allSelected) Color.Black else Color.White.copy(alpha = 0.6f),
-                                    fontSize = 14.sp,
-                                    fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            for (cat in allCategories) {
-                                val catColor = ALL_PROGRESSIONS.first { it.category == cat }.categoryColor
-                                val isSelected = selectedCategory == cat
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
-                                        .clickable { selectedCategory = cat; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                                ) {
-                                    Text(
-                                        cat,
-                                        color = if (isSelected) Color.White else catColor,
-                                        fontSize = 14.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
-                            }
-                        }
-                    }
-                    2 -> {
-                        // Interval selector (multi-select, AND logic)
-                        Text("Selecciona intervalos (filtro Y):", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Column(
-                            modifier = Modifier.verticalScroll(rememberScrollState())
-                        ) {
-                            @OptIn(ExperimentalLayoutApi::class)
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                for (deg in availableDegrees) {
-                                    val isSelected = deg in selectedDegrees
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) ACCENT else Color.White.copy(alpha = 0.1f))
-                                            .clickable {
-                                                selectedDegrees = if (isSelected) selectedDegrees - deg else selectedDegrees + deg
-                                            }
-                                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                                    ) {
-                                        Text(
-                                            deg,
-                                            color = if (isSelected) Color.Black else Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(14.dp))
-                            if (selectedDegrees.isNotEmpty()) {
-                                val matchCount = ALL_PROGRESSIONS.count { prog ->
-                                    selectedDegrees.all { deg -> deg in extractDegrees(prog.degreeLabel) }
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(ACCENT)
-                                        .clickable { selectedCategory = null; showFilterOverlay = false; filterPage = 0 }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Aplicar ($matchCount resultados)", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                }
+                                Text("Aplicar ($matchCount resultados)", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
