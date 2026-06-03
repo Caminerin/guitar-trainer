@@ -6,6 +6,8 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -50,14 +52,14 @@ object DrumEngine {
     private var initialized = false
     private val lock = Any()
 
+    /** Mutex serializes playLoop so only one loop writes to AudioTrack at a time */
+    private val playMutex = Mutex()
+
     @Volatile var isPlaying = false
         private set
 
     /** Set this to change BPM in real-time while playing */
     @Volatile var liveBpm = 120
-
-    /** Generation counter — prevents stale coroutines from writing to AudioTrack */
-    @Volatile private var generation = 0
 
     fun init(context: Context) {
         synchronized(lock) {
@@ -169,7 +171,7 @@ object DrumEngine {
     /**
      * Play a drum loop. Reads [liveBpm] each beat so tempo changes take effect immediately.
      * Writes audio in small chunks (~10ms) so [stop] responds within ~10ms.
-     * Uses a generation counter to prevent stale coroutines from writing after a new loop starts.
+     * Uses a Mutex to guarantee only one loop writes to AudioTrack at any time.
      */
     suspend fun playLoop(
         context: Context,
@@ -178,48 +180,54 @@ object DrumEngine {
         beatsPerMeasure: Int = 4,
         onBeat: ((Int) -> Unit)? = null
     ) {
-        init(context)
-        liveBpm = bpm
-        val myGeneration = ++generation
-        isPlaying = true
-        withContext(Dispatchers.Default) {
-            try {
-                val pattern = getPattern(style, beatsPerMeasure)
-                while (coroutineContext.isActive && isPlaying && generation == myGeneration) {
-                    for ((beatIdx, events) in pattern.withIndex()) {
-                        if (!coroutineContext.isActive || !isPlaying || generation != myGeneration) break
-                        onBeat?.invoke(beatIdx)
-                        // Read BPM live each beat
-                        val currentBpm = liveBpm.coerceIn(30, 300)
-                        val beatDurationMs = 60_000.0 / currentBpm
-                        val beatSamples = (SAMPLE_RATE * beatDurationMs / 1000.0).toInt()
-                        val buffer = ShortArray(beatSamples)
-                        for (event in events) {
-                            val sample = samples[event.hit] ?: continue
-                            val offsetSamples = (event.positionInBeat * beatSamples).toInt()
-                            mixInto(buffer, sample, offsetSamples, event.velocity)
-                        }
-                        // Write in small chunks for responsive stop
-                        var written = 0
-                        val track = audioTrack ?: break
-                        while (written < buffer.size && isPlaying && coroutineContext.isActive && generation == myGeneration) {
-                            val remaining = buffer.size - written
-                            val chunkSize = minOf(CHUNK_SAMPLES, remaining)
-                            try {
-                                track.write(buffer, written, chunkSize)
-                            } catch (_: Exception) { break }
-                            written += chunkSize
+        stop() // signal any existing loop to exit
+        playMutex.withLock {
+            // Guaranteed: no other loop is writing to AudioTrack now
+            init(context)
+            liveBpm = bpm
+            isPlaying = true
+            try { audioTrack?.flush() } catch (_: Exception) { }
+            withContext(Dispatchers.Default) {
+                try {
+                    val pattern = getPattern(style, beatsPerMeasure)
+                    while (coroutineContext.isActive && isPlaying) {
+                        for ((beatIdx, events) in pattern.withIndex()) {
+                            if (!coroutineContext.isActive || !isPlaying) break
+                            onBeat?.invoke(beatIdx)
+                            // Read BPM live each beat
+                            val currentBpm = liveBpm.coerceIn(30, 300)
+                            val beatDurationMs = 60_000.0 / currentBpm
+                            val beatSamples = (SAMPLE_RATE * beatDurationMs / 1000.0).toInt()
+                            val buffer = ShortArray(beatSamples)
+                            for (event in events) {
+                                val sample = samples[event.hit] ?: continue
+                                val offsetSamples = (event.positionInBeat * beatSamples).toInt()
+                                mixInto(buffer, sample, offsetSamples, event.velocity)
+                            }
+                            // Write in small chunks for responsive stop
+                            var written = 0
+                            val track = audioTrack ?: break
+                            while (written < buffer.size && isPlaying && coroutineContext.isActive) {
+                                val remaining = buffer.size - written
+                                val chunkSize = minOf(CHUNK_SAMPLES, remaining)
+                                try {
+                                    track.write(buffer, written, chunkSize)
+                                } catch (_: Exception) { break }
+                                written += chunkSize
+                            }
                         }
                     }
-                }
-            } catch (_: Exception) { }
+                } catch (_: Exception) { }
+            }
+            // Clean up when loop exits
+            try { audioTrack?.flush() } catch (_: Exception) { }
         }
     }
 
     fun stop() {
         isPlaying = false
-        generation++ // invalidate any running loop immediately
-        try { audioTrack?.flush() } catch (_: Exception) { }
+        // Do NOT flush here — the mutex-holding loop will flush on exit.
+        // Flushing here would race with write() on the audio thread.
     }
 
     fun release() {
