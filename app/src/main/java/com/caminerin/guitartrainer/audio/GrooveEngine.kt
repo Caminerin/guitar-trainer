@@ -221,7 +221,7 @@ object GrooveEngine {
     data class PlayConfig(
         val bpm: Int = 100,
         val pattern: GroovePattern,
-        val fill: GroovePattern? = null,
+        val fills: List<GroovePattern> = emptyList(), // multiple fills for rotation
         val complexityLevel: Int = 3,
         val feel: Feel = Feel.NATURAL,
         val swing: Float = 0f, // 0.0 = straight, 0.5 = shuffle, 0.67 = heavy shuffle
@@ -265,13 +265,16 @@ object GrooveEngine {
                     barCount > 0 &&
                     (barCount % (config.silenceEveryBars + config.silenceDurationBars)) >= config.silenceEveryBars
 
-                // Determine if this bar is a fill
-                val isFill = !isSilence && config.fill != null && config.fillEveryBars > 0 &&
+                // Determine if this bar is a fill (rotate through available fills)
+                val isFill = !isSilence && config.fills.isNotEmpty() && config.fillEveryBars > 0 &&
                     barCount > 0 && (barCount + 1) % config.fillEveryBars == 0
 
                 val patternToUse = when {
                     isSilence -> null
-                    isFill -> config.fill ?: config.pattern
+                    isFill -> {
+                        val fillIdx = (barCount / config.fillEveryBars) % config.fills.size
+                        config.fills[fillIdx]
+                    }
                     else -> config.pattern
                 }
 
@@ -281,13 +284,16 @@ object GrooveEngine {
                 val buffer = ShortArray(barSamples)
 
                 if (patternToUse != null) {
+                    lastHiHatOpenEnd = 0 // reset choke tracking per bar
                     val events = filterByComplexity(patternToUse.events, config.complexityLevel)
-                    for (event in events) {
+                    // Sort by step to ensure hi-hat choke works in order
+                    val sortedEvents = events.sortedBy { it.step }
+                    for (event in sortedEvents) {
                         // Probability check
                         if (event.probability < 1f && Random.nextFloat() > event.probability) continue
 
                         var step = event.step
-                        // Apply swing to even 8th notes (steps 1, 3, 5, 7, 9, 11, 13, 15)
+                        // Apply swing to off-beat 8th notes
                         if (config.swing > 0f && step.toInt() % 2 == 1) {
                             step += config.swing * 0.5f
                         }
@@ -301,7 +307,7 @@ object GrooveEngine {
                             getVolumeForHit(event.hit, config.volumes)
 
                         val sample = samples[event.hit] ?: continue
-                        mixInto(buffer, sample, sampleOffset, velocity)
+                        mixWithChoke(buffer, event.hit, sample, sampleOffset, velocity)
                     }
                 }
 
@@ -353,6 +359,12 @@ object GrooveEngine {
         return volumes[group] ?: 1.0f
     }
 
+    /**
+     * Mix sample into buffer with hi-hat choke support.
+     * When a closed hi-hat plays, it cuts any ringing open hi-hat.
+     */
+    private var lastHiHatOpenEnd = 0 // track where the open HH is still ringing
+
     private fun mixInto(buffer: ShortArray, sample: ShortArray, offset: Int, velocity: Float) {
         for (i in sample.indices) {
             val idx = offset + i
@@ -362,8 +374,49 @@ object GrooveEngine {
         }
     }
 
+    private fun mixWithChoke(
+        buffer: ShortArray,
+        hit: DrumHit,
+        sample: ShortArray,
+        offset: Int,
+        velocity: Float
+    ) {
+        // Hi-hat choke: closed HH cuts open HH resonance
+        if (hit == DrumHit.HH_CLOSED || hit == DrumHit.HH_PEDAL) {
+            // Fade out any open HH ringing in the buffer from offset
+            if (lastHiHatOpenEnd > offset) {
+                val fadeLen = (SAMPLE_RATE * 0.005).toInt() // 5ms fade
+                for (i in 0 until fadeLen) {
+                    val idx = offset + i
+                    if (idx >= buffer.size || idx >= lastHiHatOpenEnd) break
+                    val fade = 1f - (i.toFloat() / fadeLen)
+                    buffer[idx] = (buffer[idx] * fade).toInt().toShort()
+                }
+                // Zero out the rest
+                for (idx in (offset + fadeLen) until lastHiHatOpenEnd.coerceAtMost(buffer.size)) {
+                    buffer[idx] = 0
+                }
+                lastHiHatOpenEnd = 0
+            }
+        }
+
+        // Track open HH end position
+        if (hit == DrumHit.HH_OPEN) {
+            lastHiHatOpenEnd = offset + sample.size
+        }
+
+        mixInto(buffer, sample, offset, velocity)
+    }
+
     fun stop() {
         isPlaying = false
+        // Fade out to prevent click (write a short silent fade)
+        try {
+            val fadeLen = (SAMPLE_RATE * 0.02).toInt() // 20ms fade
+            val fadeBuffer = ShortArray(fadeLen)
+            // The buffer is already zeros, which provides a quick fade-to-silence
+            audioTrack?.write(fadeBuffer, 0, fadeBuffer.size)
+        } catch (_: Exception) { }
         audioTrack?.flush()
     }
 

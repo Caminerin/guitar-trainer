@@ -1,9 +1,13 @@
 package com.caminerin.guitartrainer.ui
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,7 +19,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,8 +28,8 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -34,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -41,11 +45,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.GrooveCategory
@@ -54,9 +59,8 @@ import com.caminerin.guitartrainer.audio.GrooveEngine
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
-// Tab modes for the Groove Trainer
 private enum class GrooveTab(val label: String) {
-    QUICK_PLAY("Tocar"),
+    QUICK_PLAY("Tocar ya"),
     TRAINER("Entrenar")
 }
 
@@ -98,11 +102,12 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
     var tempoIncrement by remember { mutableIntStateOf(5) }
 
     // Tap tempo
-    var lastTapTime by remember { mutableStateOf(0L) }
+    var lastTapTime by remember { mutableLongStateOf(0L) }
     var tapCount by remember { mutableIntStateOf(0) }
-    var tapSum by remember { mutableStateOf(0L) }
+    var tapSum by remember { mutableLongStateOf(0L) }
+    var tapFlash by remember { mutableStateOf(false) }
 
-    // Load categories on first compose
+    // Load categories
     LaunchedEffect(Unit) {
         GrooveEngine.init(context)
         categories = GrooveEngine.getCategories()
@@ -117,7 +122,7 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
         }
     }
 
-    // Stop when leaving
+    // Stop on leave
     DisposableEffect(Unit) {
         onDispose {
             GrooveEngine.stop()
@@ -129,12 +134,11 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
         val data = categoryData ?: return
         if (data.patterns.isEmpty()) return
         val pattern = data.patterns[selectedPatternIdx.coerceIn(0, data.patterns.size - 1)]
-        val fill = if (data.fills.isNotEmpty()) data.fills[0] else null
 
         val config = GrooveEngine.PlayConfig(
             bpm = bpm,
             pattern = pattern,
-            fill = fill,
+            fills = data.fills,
             complexityLevel = complexityLevel,
             feel = feel,
             swing = swing,
@@ -142,7 +146,10 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             silenceEveryBars = silenceEveryBars,
             silenceDurationBars = 1,
             countIn = countIn,
-            volumes = mapOf("kick" to kickVol, "snare" to snareVol, "hihat" to hihatVol, "ride" to rideVol, "crash" to rideVol),
+            volumes = mapOf(
+                "kick" to kickVol, "snare" to snareVol,
+                "hihat" to hihatVol, "ride" to rideVol, "crash" to rideVol
+            ),
             tempoProgression = if (tempoTarget > bpm) GrooveEngine.TempoProgression(
                 targetBpm = tempoTarget,
                 bpmIncrement = tempoIncrement,
@@ -155,13 +162,8 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             GrooveEngine.playGroove(
                 context = context,
                 config = config,
-                onBeat = { bar, beat ->
-                    currentBar = bar
-                    currentBeat = beat
-                },
-                onBpmChange = { newBpm ->
-                    bpm = newBpm
-                }
+                onBeat = { bar, beat -> currentBar = bar; currentBeat = beat },
+                onBpmChange = { newBpm -> bpm = newBpm }
             )
         }
         isPlaying = true
@@ -177,7 +179,8 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
 
     fun handleTapTempo() {
         val now = System.currentTimeMillis()
-        if (lastTapTime > 0 && now - lastTapTime < 2000) {
+        tapFlash = true
+        if (lastTapTime > 0L && now - lastTapTime < 2000L) {
             tapSum += (now - lastTapTime)
             tapCount++
             if (tapCount >= 2) {
@@ -191,16 +194,24 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
         lastTapTime = now
     }
 
-    // UI
+    // Reset tap flash
+    LaunchedEffect(tapFlash) {
+        if (tapFlash) {
+            kotlinx.coroutines.delay(150)
+            tapFlash = false
+        }
+    }
+
+    // ==================== UI LAYOUT ====================
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Brush.linearGradient(listOf(Color(0xFF1a1033), Color(0xFF0d1b2a))))
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        // Top bar with back button
+        // Header with back button (matches ToolScreenWrapper / SettingsScreen style)
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
+            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 4.dp)
         ) {
             Icon(
                 Icons.Default.ArrowBack,
@@ -211,24 +222,34 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                     .clickable { onBack() }
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Caja de Ritmos", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Caja de Ritmos",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                val catName = categories.getOrNull(selectedCategoryIdx)?.displayName ?: ""
+                val patName = categoryData?.patterns?.getOrNull(selectedPatternIdx)?.name ?: ""
+                if (catName.isNotEmpty()) {
+                    Text(
+                        "$catName · $patName",
+                        fontSize = 11.sp,
+                        color = AppColors.textMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
         }
 
-        // Category + Pattern info
-        val catName = categories.getOrNull(selectedCategoryIdx)?.displayName ?: ""
-        val patName = categoryData?.patterns?.getOrNull(selectedPatternIdx)?.name ?: ""
-        Text(
-            "$catName · $patName",
-            fontSize = 12.sp,
-            color = Color(0xFF8899aa),
-            modifier = Modifier.padding(start = 48.dp, bottom = 8.dp)
-        )
-
-        // Tab selector
+        // Tab selector (pill style like metronome)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             GrooveTab.entries.forEach { tab ->
@@ -237,25 +258,39 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (selected) Color(0xFF2a4a6a) else Color(0xFF1a2a3a))
-                        .border(1.dp, if (selected) Color(0xFF4a8aba) else Color.Transparent, RoundedCornerShape(8.dp))
+                        .background(
+                            if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
                         .clickable { selectedTab = tab }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 10.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(tab.label, color = if (selected) Color.White else Color(0xFF6688aa), fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(
+                        tab.label,
+                        color = if (selected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        // Beat indicator row
+        GrooveBeatIndicator(
+            isPlaying = isPlaying,
+            currentBeat = currentBeat,
+            currentBar = currentBar
+        )
 
-        // Main content - scrollable
+        // Main content (scrollable)
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
+                .animateContentSize()
         ) {
             when (selectedTab) {
                 GrooveTab.QUICK_PLAY -> QuickPlayContent(
@@ -290,126 +325,165 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                     bpm = bpm
                 )
             }
+            Spacer(modifier = Modifier.height(8.dp))
         }
 
-        // Bottom control bar: BPM + Play/Stop + Tap + Beat indicator
-        BottomControlBar(
+        // Bottom control bar
+        GrooveBottomBar(
             bpm = bpm,
             onBpmChange = { bpm = it },
             isPlaying = isPlaying,
             onPlayStop = { if (isPlaying) stopPlaying() else startPlaying() },
             onTapTempo = { handleTapTempo() },
-            currentBeat = currentBeat,
-            currentBar = currentBar
+            tapFlash = tapFlash
         )
     }
 }
 
+// ==================== BEAT INDICATOR ====================
+
 @Composable
-private fun BottomControlBar(
+private fun GrooveBeatIndicator(isPlaying: Boolean, currentBeat: Int, currentBar: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        for (beat in 0 until 4) {
+            val isActive = isPlaying && currentBeat == beat
+
+            val baseColor = when {
+                isActive && beat == 0 -> AppColors.error  // downbeat = red
+                isActive -> AppColors.success             // other beats = green
+                else -> MaterialTheme.colorScheme.surfaceVariant
+            }
+            val color by animateColorAsState(targetValue = baseColor, animationSpec = tween(80), label = "beat$beat")
+            val pulseScale by animateFloatAsState(
+                targetValue = if (isActive) 1.25f else 1.0f,
+                animationSpec = tween(100),
+                label = "pulse$beat"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .scale(pulseScale)
+                    .clip(CircleShape)
+                    .background(color),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "${beat + 1}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isActive) Color.White
+                    else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+            if (beat < 3) Spacer(modifier = Modifier.width(8.dp))
+        }
+        // Bar counter
+        if (isPlaying) {
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                "Compás ${currentBar + 1}",
+                fontSize = 11.sp,
+                color = AppColors.textMuted,
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
+        }
+    }
+}
+
+// ==================== BOTTOM BAR ====================
+
+@Composable
+private fun GrooveBottomBar(
     bpm: Int,
     onBpmChange: (Int) -> Unit,
     isPlaying: Boolean,
     onPlayStop: () -> Unit,
     onTapTempo: () -> Unit,
-    currentBeat: Int,
-    currentBar: Int
+    tapFlash: Boolean
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF0d1520))
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .background(AppColors.navBar)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Beat indicator
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            for (i in 0 until 4) {
-                val isActive = isPlaying && currentBeat == i
-                val color by animateColorAsState(
-                    if (isActive) {
-                        if (i == 0) Color(0xFFff6644) else Color(0xFF44aaff)
-                    } else Color(0xFF2a3a4a),
-                    label = "beat"
-                )
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                )
-                if (i < 3) Spacer(modifier = Modifier.width(8.dp))
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Controls row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // BPM control
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xFF1a2a3a))
-                        .clickable { onBpmChange((bpm - 1).coerceAtLeast(40)) }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text("−", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("$bpm", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Text("BPM", color = Color(0xFF6688aa), fontSize = 10.sp)
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color(0xFF1a2a3a))
-                        .clickable { onBpmChange((bpm + 1).coerceAtMost(240)) }
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text("+", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            // Play/Stop button
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(if (isPlaying) Color(0xFFcc3333) else Color(0xFF22aa55))
-                    .clickable { onPlayStop() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Stop" else "Play",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
-
-            // Tap tempo
+        // BPM control
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFF1a2a3a))
-                    .clickable { onTapTempo() }
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onBpmChange((bpm - 1).coerceAtLeast(40)) }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
-                Text("TAP", color = Color(0xFF88aacc), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text("−", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("$bpm", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                Text("BPM", fontSize = 9.sp, color = Color.White.copy(alpha = 0.5f))
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onBpmChange((bpm + 1).coerceAtMost(240)) }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Text("+", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+
+        // Play/Stop button
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .background(if (isPlaying) AppColors.error else AppColors.success)
+                .clickable { onPlayStop() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "Parar" else "Tocar",
+                tint = Color.White,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+
+        // Tap tempo with flash feedback
+        val tapBg by animateColorAsState(
+            targetValue = if (tapFlash) GradientColors.accent else MaterialTheme.colorScheme.surfaceVariant,
+            animationSpec = tween(100),
+            label = "tap"
+        )
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(tapBg)
+                .clickable { onTapTempo() }
+                .padding(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Text(
+                "TAP",
+                color = if (tapFlash) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
+
+// ==================== QUICK PLAY TAB ====================
 
 @Composable
 private fun QuickPlayContent(
@@ -434,9 +508,9 @@ private fun QuickPlayContent(
     hihatVol: Float, onHihatVolChange: (Float) -> Unit,
     rideVol: Float, onRideVolChange: (Float) -> Unit
 ) {
-    // Category selector (horizontal chips)
-    SectionLabel("Estilo")
-    ChipRow(
+    // Category selector
+    GrooveSectionLabel("Estilo")
+    ScrollableChipRow(
         items = categories.map { it.displayName },
         selectedIdx = selectedCategoryIdx,
         onSelect = onCategoryChange
@@ -446,8 +520,8 @@ private fun QuickPlayContent(
 
     // Pattern selector
     if (categoryData != null && categoryData.patterns.isNotEmpty()) {
-        SectionLabel("Groove")
-        ChipRow(
+        GrooveSectionLabel("Groove (${categoryData.patterns.size})")
+        ScrollableChipRow(
             items = categoryData.patterns.map { it.name },
             selectedIdx = selectedPatternIdx,
             onSelect = onPatternChange
@@ -456,10 +530,10 @@ private fun QuickPlayContent(
     }
 
     // Complexity level
-    SectionLabel("Intensidad")
+    GrooveSectionLabel("Intensidad")
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         val labels = listOf("Simple", "Normal", "Groove", "Ghost", "Full")
         labels.forEachIndexed { idx, label ->
@@ -468,22 +542,32 @@ private fun QuickPlayContent(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (selected) Color(0xFF2a5a8a) else Color(0xFF1a2a3a))
-                    .border(1.dp, if (selected) Color(0xFF4a9aca) else Color.Transparent, RoundedCornerShape(6.dp))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    )
                     .clickable { onComplexityChange(level) }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(label, color = if (selected) Color.White else Color(0xFF6688aa), fontSize = 11.sp)
+                Text(
+                    label,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    // Feel
-    SectionLabel("Feel")
+    // Feel selector
+    GrooveSectionLabel("Feel")
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -498,59 +582,72 @@ private fun QuickPlayContent(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (selected) Color(0xFF2a5a3a) else Color(0xFF1a2a3a))
-                    .border(1.dp, if (selected) Color(0xFF4aca6a) else Color.Transparent, RoundedCornerShape(6.dp))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    )
                     .clickable { onFeelChange(f) }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(label, color = if (selected) Color.White else Color(0xFF6688aa), fontSize = 12.sp)
+                Text(
+                    label,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                )
             }
         }
     }
 
     Spacer(modifier = Modifier.height(12.dp))
 
-    // Swing
-    SectionLabel("Swing: ${(swing * 100).toInt()}%")
+    // Swing slider
+    val swingLabel = when {
+        swing < 0.05f -> "Straight"
+        swing < 0.3f -> "Light Swing"
+        swing < 0.5f -> "Shuffle"
+        else -> "Heavy Shuffle"
+    }
+    GrooveSectionLabel("Swing: $swingLabel")
     Slider(
         value = swing,
         onValueChange = onSwingChange,
         valueRange = 0f..0.67f,
-        steps = 5,
-        colors = SliderDefaults.colors(
-            thumbColor = Color(0xFF4a9aca),
-            activeTrackColor = Color(0xFF2a5a8a)
-        ),
         modifier = Modifier.fillMaxWidth()
     )
 
     Spacer(modifier = Modifier.height(8.dp))
 
-    // Fills
-    SectionLabel("Fill automático")
+    // Fill frequency
+    GrooveSectionLabel("Fill automático")
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        val fillOptions = listOf(0 to "Off", 4 to "4", 8 to "8", 12 to "12")
+        val fillOptions = listOf(0 to "Off", 4 to "c/4", 8 to "c/8", 12 to "c/12")
         fillOptions.forEach { (bars, label) ->
             val selected = fillEveryBars == bars
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (selected) Color(0xFF5a2a5a) else Color(0xFF1a2a3a))
-                    .border(1.dp, if (selected) Color(0xFFaa4aaa) else Color.Transparent, RoundedCornerShape(6.dp))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    )
                     .clickable { onFillChange(bars) }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    if (bars == 0) label else "c/$label",
-                    color = if (selected) Color.White else Color(0xFF6688aa),
-                    fontSize = 12.sp
+                    label,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
                 )
             }
         }
@@ -562,28 +659,47 @@ private fun QuickPlayContent(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(6.dp))
-            .background(if (countIn) Color(0xFF2a4a3a) else Color(0xFF1a2a3a))
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                if (countIn) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.surfaceVariant
+            )
+            .border(
+                1.dp,
+                if (countIn) MaterialTheme.colorScheme.primary else Color.Transparent,
+                RoundedCornerShape(8.dp)
+            )
             .clickable { onCountInChange(!countIn) }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("Count-in (4 clicks)", color = if (countIn) Color.White else Color(0xFF6688aa), fontSize = 13.sp)
-        Spacer(modifier = Modifier.weight(1f))
-        Text(if (countIn) "ON" else "OFF", color = if (countIn) Color(0xFF44cc66) else Color(0xFF556677), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Count-in (4 clicks)",
+            color = if (countIn) Color.White else AppColors.textSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            if (countIn) "ON" else "OFF",
+            color = if (countIn) AppColors.success else AppColors.textMuted,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
     // Mixer
-    SectionLabel("Mixer")
-    MixerSlider("Kick", kickVol, onKickVolChange)
-    MixerSlider("Snare", snareVol, onSnareVolChange)
-    MixerSlider("Hi-Hat", hihatVol, onHihatVolChange)
-    MixerSlider("Ride/Crash", rideVol, onRideVolChange)
+    GrooveSectionLabel("Mixer")
+    GrooveMixerSlider("Kick", kickVol, onKickVolChange)
+    GrooveMixerSlider("Snare", snareVol, onSnareVolChange)
+    GrooveMixerSlider("Hi-Hat", hihatVol, onHihatVolChange)
+    GrooveMixerSlider("Ride / Crash", rideVol, onRideVolChange)
 
     Spacer(modifier = Modifier.height(16.dp))
 }
+
+// ==================== TRAINER TAB ====================
 
 @Composable
 private fun TrainerContent(
@@ -595,30 +711,39 @@ private fun TrainerContent(
     onTempoIncrementChange: (Int) -> Unit,
     bpm: Int
 ) {
-    SectionLabel("Silencio inteligente")
+    GrooveSectionLabel("Silencio inteligente")
     Text(
         "La batería desaparece cada X compases para entrenar tu pulso interno.",
-        color = Color(0xFF6688aa), fontSize = 11.sp,
+        color = AppColors.textMuted,
+        fontSize = 11.sp,
         modifier = Modifier.padding(bottom = 8.dp)
     )
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        val options = listOf(0 to "Off", 4 to "c/4", 8 to "c/8", 2 to "c/2")
+        val options = listOf(0 to "Off", 2 to "c/2", 4 to "c/4", 8 to "c/8")
         options.forEach { (bars, label) ->
             val selected = silenceEveryBars == bars
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(if (selected) Color(0xFF4a3a2a) else Color(0xFF1a2a3a))
-                    .border(1.dp, if (selected) Color(0xFFcc8844) else Color.Transparent, RoundedCornerShape(6.dp))
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    )
                     .clickable { onSilenceChange(bars) }
                     .padding(vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(label, color = if (selected) Color.White else Color(0xFF6688aa), fontSize = 12.sp)
+                Text(
+                    label,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                )
             }
         }
     }
@@ -626,10 +751,11 @@ private fun TrainerContent(
     Spacer(modifier = Modifier.height(20.dp))
 
     // Tempo progression
-    SectionLabel("Progresión de tempo")
+    GrooveSectionLabel("Progresión de tempo")
     Text(
         "Sube el BPM automáticamente cada 8 compases hasta el objetivo.",
-        color = Color(0xFF6688aa), fontSize = 11.sp,
+        color = AppColors.textMuted,
+        fontSize = 11.sp,
         modifier = Modifier.padding(bottom = 8.dp)
     )
 
@@ -637,99 +763,110 @@ private fun TrainerContent(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("Objetivo:", color = Color(0xFF8899aa), fontSize = 12.sp)
+        Text("Objetivo:", color = AppColors.textSecondary, fontSize = 12.sp)
         Spacer(modifier = Modifier.width(8.dp))
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color(0xFF1a2a3a))
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clickable { onTempoTargetChange((tempoTarget - 5).coerceAtLeast(0)) }
-                .padding(horizontal = 10.dp, vertical = 4.dp)
-        ) { Text("−", color = Color.White, fontSize = 16.sp) }
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) { Text("−", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             if (tempoTarget > 0) "$tempoTarget BPM" else "Off",
-            color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.width(8.dp))
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color(0xFF1a2a3a))
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clickable { onTempoTargetChange((tempoTarget + 5).coerceAtMost(240)) }
-                .padding(horizontal = 10.dp, vertical = 4.dp)
-        ) { Text("+", color = Color.White, fontSize = 16.sp) }
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) { Text("+", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
     }
 
     if (tempoTarget > 0) {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text("Incremento:", color = Color(0xFF8899aa), fontSize = 12.sp)
-            Spacer(modifier = Modifier.width(8.dp))
-            val increments = listOf(2, 5, 10)
-            increments.forEach { inc ->
+            Text("Incremento:", color = AppColors.textSecondary, fontSize = 12.sp)
+            listOf(2, 5, 10).forEach { inc ->
                 val selected = tempoIncrement == inc
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (selected) Color(0xFF2a4a3a) else Color(0xFF1a2a3a))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        )
                         .clickable { onTempoIncrementChange(inc) }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text("+$inc", color = if (selected) Color.White else Color(0xFF6688aa), fontSize = 12.sp)
+                    Text(
+                        "+$inc",
+                        color = if (selected) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 12.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                    )
                 }
-                Spacer(modifier = Modifier.width(6.dp))
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
-            "De $bpm a $tempoTarget BPM (+$tempoIncrement c/8 compases)",
-            color = Color(0xFF88aacc), fontSize = 11.sp
+            "De $bpm → $tempoTarget BPM (+$tempoIncrement cada 8 compases)",
+            color = AppColors.textSecondary,
+            fontSize = 11.sp
         )
     }
 
-    Spacer(modifier = Modifier.height(20.dp))
+    Spacer(modifier = Modifier.height(24.dp))
 
     // Preset routines
-    SectionLabel("Rutinas rápidas")
+    GrooveSectionLabel("Rutinas rápidas")
     val routines = listOf(
-        "5 min calentamiento" to "70→100 BPM, silencio c/8",
-        "10 min resistencia" to "90 BPM fijo, silencio c/4",
-        "15 min progresivo" to "60→120 BPM, +5 c/8 compases"
+        Triple("5 min calentamiento", "70→100 BPM, silencio c/8", Triple(100, 5, 8)),
+        Triple("10 min resistencia", "90 BPM fijo, silencio c/4", Triple(0, 5, 4)),
+        Triple("15 min progresivo", "60→120 BPM, +5 c/8 compases", Triple(120, 5, 0))
     )
-    routines.forEach { (name, desc) ->
+    routines.forEach { (name, desc, config) ->
+        val (target, inc, silence) = config
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp)
+                .padding(vertical = 3.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFF1a2a3a))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
                 .clickable {
-                    when (name) {
-                        "5 min calentamiento" -> {
-                            onTempoTargetChange(100)
-                            onTempoIncrementChange(5)
-                            onSilenceChange(8)
-                        }
-                        "10 min resistencia" -> {
-                            onTempoTargetChange(0)
-                            onSilenceChange(4)
-                        }
-                        "15 min progresivo" -> {
-                            onTempoTargetChange(120)
-                            onTempoIncrementChange(5)
-                            onSilenceChange(0)
-                        }
-                    }
+                    onTempoTargetChange(target)
+                    onTempoIncrementChange(inc)
+                    onSilenceChange(silence)
                 }
                 .padding(12.dp)
         ) {
             Column {
-                Text(name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                Text(desc, color = Color(0xFF6688aa), fontSize = 11.sp)
+                Text(
+                    name,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    desc,
+                    color = AppColors.textMuted,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -737,21 +874,21 @@ private fun TrainerContent(
     Spacer(modifier = Modifier.height(16.dp))
 }
 
-// ==================== REUSABLE COMPONENTS ====================
+// ==================== SHARED COMPONENTS ====================
 
 @Composable
-private fun SectionLabel(text: String) {
+private fun GrooveSectionLabel(text: String) {
     Text(
         text,
-        color = Color(0xFFaabbcc),
+        color = AppColors.textSecondary,
         fontSize = 12.sp,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(bottom = 6.dp)
     )
 }
 
 @Composable
-private fun ChipRow(items: List<String>, selectedIdx: Int, onSelect: (Int) -> Unit) {
+private fun ScrollableChipRow(items: List<String>, selectedIdx: Int, onSelect: (Int) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -763,37 +900,55 @@ private fun ChipRow(items: List<String>, selectedIdx: Int, onSelect: (Int) -> Un
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
-                    .background(if (selected) Color(0xFF2a5a8a) else Color(0xFF1a2a3a))
-                    .border(1.dp, if (selected) Color(0xFF4a9aca) else Color(0xFF2a3a4a), RoundedCornerShape(16.dp))
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    )
                     .clickable { onSelect(idx) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                    .padding(horizontal = 12.dp, vertical = 7.dp)
             ) {
-                Text(label, color = if (selected) Color.White else Color(0xFF6688aa), fontSize = 12.sp)
+                Text(
+                    label,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
 }
 
 @Composable
-private fun MixerSlider(label: String, value: Float, onValueChange: (Float) -> Unit) {
+private fun GrooveMixerSlider(label: String, value: Float, onValueChange: (Float) -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = Color(0xFF8899aa), fontSize = 11.sp, modifier = Modifier.width(70.dp))
+        Text(
+            label,
+            color = AppColors.textSecondary,
+            fontSize = 11.sp,
+            modifier = Modifier.width(72.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
         Slider(
             value = value,
             onValueChange = onValueChange,
             valueRange = 0f..1f,
-            colors = SliderDefaults.colors(
-                thumbColor = Color(0xFF4a9aca),
-                activeTrackColor = Color(0xFF2a5a8a),
-                inactiveTrackColor = Color(0xFF1a2a3a)
-            ),
             modifier = Modifier.weight(1f)
         )
-        Text("${(value * 100).toInt()}%", color = Color(0xFF6688aa), fontSize = 10.sp, modifier = Modifier.width(35.dp), textAlign = TextAlign.End)
+        Text(
+            "${(value * 100).toInt()}%",
+            color = AppColors.textMuted,
+            fontSize = 10.sp,
+            modifier = Modifier.width(34.dp),
+            textAlign = TextAlign.End
+        )
     }
 }
-
-
