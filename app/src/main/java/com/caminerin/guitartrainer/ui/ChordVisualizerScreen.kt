@@ -108,7 +108,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
         ChordRepository.loadChords(context)
         ScaleChordRepository.load(context)
         AppPreferences.loadChordState(context)
-        ChordSynth.init(context)
+        ChordSynth.initAsync(context)
     }
 
     var selectedRoot by rememberSaveable { mutableIntStateOf(AppPreferences.chordRoot) }

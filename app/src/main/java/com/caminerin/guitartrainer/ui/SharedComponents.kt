@@ -254,15 +254,22 @@ fun DrawScope.drawSharedFretboard(
 
     val noteRadius = (stringSpacing * 0.44f).coerceIn(36f, 80f)
 
+    // Precompute scale membership + degree for all 12 pitch classes (cached per draw call)
+    val scaleDegreeMap = IntArray(12) { -1 }  // noteIdx -> degree (1-based), -1 = not in scale
+    for (interval in scale.intervals) {
+        val noteIdx = (rootNote + interval) % 12
+        val degree = getDegreeInScale(noteIdx, rootNote, scale.intervals)
+        if (degree != null) scaleDegreeMap[noteIdx] = degree
+    }
+
     for (s in 0 until 6) {
         val openNote = STANDARD_TUNING_MIDI[s]
         val y = fbTop + stringSpacing * (6 - s)
 
         for (fret in 0..FRETBOARD_TOTAL_FRETS) {
             val noteIdx = (openNote + fret) % 12
-            if (!isNoteInScale(noteIdx, rootNote, scale.intervals)) continue
-
-            val degree = getDegreeInScale(noteIdx, rootNote, scale.intervals) ?: continue
+            val degree = scaleDegreeMap[noteIdx]
+            if (degree < 0) continue // not in scale
             val isInPos = fret in posStart..posEnd
 
             val cx = if (fret == 0) {

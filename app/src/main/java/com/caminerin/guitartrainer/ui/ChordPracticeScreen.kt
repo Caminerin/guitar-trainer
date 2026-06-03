@@ -74,12 +74,13 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 
-// ─── Theme (Warm Dark) ───
-private val BG = Color(0xFF0F0D0A)
-private val TOP_BAR = Color(0xFF12100C)
-private val ACCENT = Color(0xFFD4960A)
-private val CARD_BG = Color(0xFF1A1714)
+// ─── Theme (Warm Dark) — references centralized AppColors ───
+private val BG = SHARED_BG
+private val TOP_BAR = SHARED_TOOLBAR
+private val ACCENT = SHARED_ACCENT
+private val CARD_BG = AppColors.cardBg
 
 // ─── Data model ───
 private data class ProgressionChord(val semitones: Int, val quality: String)
@@ -113,209 +114,57 @@ private val CAT_ROMANTICA = Color(0xFFEC407A)
 private val CAT_DRAMATICA = Color(0xFFAB47BC)
 
 // ══════════════════════════════════════════════════════════════════
-// All chord progressions — offsets are semitones from key center
-// (user picks root = I/i, offsets derive actual chord names)
+// All chord progressions — loaded from assets/progressions.csv
 // ══════════════════════════════════════════════════════════════════
-private val ALL_PROGRESSIONS = listOf(
-
-    // ─── TRISTE (Sad) ───
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Clásica pop triste", "i – VI – III – VII",
-        listOf(min(0), maj(8), maj(3), maj(10))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Cinematográfica profunda", "i – VII – VI – V",
-        listOf(min(0), maj(10), maj(8), maj(7))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Melancólica suave", "I – vi – iii – IV",
-        listOf(maj(0), min(9), min(4), maj(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Tensión oscura", "i – VII – VI – V7",
-        listOf(min(0), maj(10), maj(8), dom7(7))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Narrativa emocional", "i – v – VI – III – VII",
-        listOf(min(0), min(7), maj(8), maj(3), maj(10))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Brillo emocional", "i – III – VII – IV",
-        listOf(min(0), maj(3), maj(10), maj(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Vacía y fría", "i – VII – VI – III",
-        listOf(min(0), maj(10), maj(8), maj(3))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Bajo fluido", "I – V – vi – iii – IV",
-        listOf(maj(0), maj(7), min(9), min(4), maj(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Triste simple", "i – III – i – VII",
-        listOf(min(0), maj(3), min(0), maj(10))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Nostálgica", "I – vi – V – II",
-        listOf(maj(0), min(9), maj(7), maj(2))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Triste emotiva", "i – VII – VI – iv",
-        listOf(min(0), maj(10), maj(8), min(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Tristeza pura", "I – iii",
-        listOf(maj(0), min(4))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Trágica", "i – iv",
-        listOf(min(0), min(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Trágica (variante)", "i – v",
-        listOf(min(0), min(7))),
-
-    // ─── AGRIDULCE (Bittersweet) ───
-    ChordProgressionDef("Agridulce", CAT_AGRIDULCE,
-        "Menor con dominante", "i – V",
-        listOf(min(0), maj(7))),
-    ChordProgressionDef("Agridulce", CAT_AGRIDULCE,
-        "Menor con séptima natural", "i – VII",
-        listOf(min(0), maj(10))),
-    ChordProgressionDef("Agridulce", CAT_AGRIDULCE,
-        "Mayor con segundo menor", "I – ii",
-        listOf(maj(0), min(2))),
-
-    // ─── BELLA (Beautiful) ───
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Pop cálida universal", "I – V – vi – IV",
-        listOf(maj(0), maj(7), min(9), maj(5))),
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Luminosa y elevadora", "I – vi – IV – V",
-        listOf(maj(0), min(9), maj(5), maj(7))),
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Balada emocional", "vi – IV – I – V",
-        listOf(min(9), maj(5), maj(0), maj(7))),
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Reflexiva suave", "vi – IV – V – I",
-        listOf(min(9), maj(5), maj(7), maj(0))),
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Bucle cálido extendido", "I – vi – IV – V – IV – I",
-        listOf(maj(0), min(9), maj(5), maj(7), maj(5), maj(0))),
-
-    // ─── ROMÁNTICA (Romantic) ───
-    ChordProgressionDef("Romántica", CAT_ROMANTICA,
-        "Emotiva en movimiento", "i – v – VI – III",
-        listOf(min(0), min(7), maj(8), maj(3))),
-    ChordProgressionDef("Romántica", CAT_ROMANTICA,
-        "Celestial", "I – vi",
-        listOf(maj(0), min(9))),
-    ChordProgressionDef("Romántica", CAT_ROMANTICA,
-        "Exótica romántica", "I – IV",
-        listOf(maj(0), maj(5))),
-
-    // ─── FELIZ (Happy) ───
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Feliz y estable", "I – IV – V – I",
-        listOf(maj(0), maj(5), maj(7), maj(0))),
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Simple y alegre", "I – I – IV – V",
-        listOf(maj(0), maj(0), maj(5), maj(7))),
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Luminosa positiva", "I – iii – IV – V",
-        listOf(maj(0), min(4), maj(5), maj(7))),
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Rock clásico", "I – V – IV – I",
-        listOf(maj(0), maj(7), maj(5), maj(0))),
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Alegre ascendente", "i – bII – III – IV",
-        listOf(min(0), maj(1), maj(3), maj(5))),
-
-    // ─── ÉPICA (Epic) ───
-    ChordProgressionDef("Épica", CAT_EPICA,
-        "Épica poderosa", "I – bIII – bVII – IV",
-        listOf(maj(0), maj(3), maj(10), maj(5))),
-    ChordProgressionDef("Épica", CAT_EPICA,
-        "Heroica", "I – bVI – bVII",
-        listOf(maj(0), maj(8), maj(10))),
-    ChordProgressionDef("Épica", CAT_EPICA,
-        "Emocional e intensa", "I – ii – bVII – IV",
-        listOf(maj(0), min(2), maj(10), maj(5))),
-
-    // ─── OSCURA (Dark) ───
-    ChordProgressionDef("Oscura", CAT_OSCURA,
-        "Oscura profunda", "I – V – iii – vii",
-        listOf(maj(0), maj(7), min(4), min(11))),
-    ChordProgressionDef("Oscura", CAT_OSCURA,
-        "Misteriosa neutra", "i – bII – VI – vii",
-        listOf(min(0), maj(1), maj(8), min(10))),
-    ChordProgressionDef("Oscura", CAT_OSCURA,
-        "Espeluznante", "i – II – i – VII",
-        listOf(min(0), maj(2), min(0), maj(10))),
-
-    // ─── MISTERIOSA (Mysterious / Evil) ───
-    ChordProgressionDef("Misteriosa", CAT_MISTERIOSA,
-        "Tensa frigia", "i – bii",
-        listOf(min(0), min(1))),
-    ChordProgressionDef("Misteriosa", CAT_MISTERIOSA,
-        "Siniestra cercana", "i – iii",
-        listOf(min(0), min(3))),
-    ChordProgressionDef("Misteriosa", CAT_MISTERIOSA,
-        "Antagónica (tritono)", "i – #iv",
-        listOf(min(0), min(6))),
-    ChordProgressionDef("Misteriosa", CAT_MISTERIOSA,
-        "Ominosa y oscura", "i – vi",
-        listOf(min(0), min(8))),
-
-    // ─── DRAMÁTICA (Dramatic) ───
-    ChordProgressionDef("Dramática", CAT_DRAMATICA,
-        "Tensión y resolución", "I – iv – V – vi",
-        listOf(maj(0), min(5), maj(7), min(9))),
-    ChordProgressionDef("Dramática", CAT_DRAMATICA,
-        "Dramática menor", "i – #VII",
-        listOf(min(0), maj(11))),
-    ChordProgressionDef("Dramática", CAT_DRAMATICA,
-        "Comedia oscura", "I – bvii",
-        listOf(maj(0), min(10))),
-
-    // ─── NEUTRAL ───
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Exótica / Western", "I – bII",
-        listOf(maj(0), maj(1))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Cowboy", "I – VII",
-        listOf(maj(0), maj(11))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Espacio exterior", "I – #IV",
-        listOf(maj(0), maj(6))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Acción creciente", "i – III",
-        listOf(min(0), maj(3))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Poderosa y misteriosa", "i – #III",
-        listOf(min(0), maj(4))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Resolución natural", "i – VI",
-        listOf(min(0), maj(8))),
-
-    // ─── BUENA (Good sounding) ───
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Buena energía", "I – V",
-        listOf(maj(0), maj(7))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Protagonista", "I – bVII",
-        listOf(maj(0), maj(10))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Heroica", "I – bIII",
-        listOf(maj(0), maj(3))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Fantástica", "I – III",
-        listOf(maj(0), maj(4))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Fantástica (variante)", "I – bVI",
-        listOf(maj(0), maj(8))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Heroica luminosa", "I – VI",
-        listOf(maj(0), maj(9))),
-
-    // ─── JAZZ ───
-    ChordProgressionDef("Jazz", CAT_JAZZ,
-        "II-V-I clásico", "ii7 – V7 – I",
-        listOf(min7(2), dom7(7), maj(0))),
-    ChordProgressionDef("Jazz", CAT_JAZZ,
-        "Indie / Jazz suave", "I – vi – ii – V",
-        listOf(maj(0), min(9), min(2), maj(7))),
-    ChordProgressionDef("Jazz", CAT_JAZZ,
-        "Circular", "I – V – ii – IV",
-        listOf(maj(0), maj(7), min(2), maj(5)))
+private val CATEGORY_COLORS = mapOf(
+    "Triste" to CAT_TRISTE, "Agridulce" to CAT_AGRIDULCE,
+    "Bella" to CAT_BELLA, "Romántica" to CAT_ROMANTICA,
+    "Feliz" to CAT_FELIZ, "Épica" to CAT_EPICA,
+    "Oscura" to CAT_OSCURA, "Misteriosa" to CAT_MISTERIOSA,
+    "Dramática" to CAT_DRAMATICA, "Neutral" to CAT_NEUTRAL,
+    "Buena" to CAT_BUENA, "Jazz" to CAT_JAZZ
 )
+
+private fun parseStep(token: String): ProgressionChord {
+    // Format: "quality-semitones" or "qualitySemitones" e.g. "maj0", "min9", "dom7-7", "m7-2"
+    return when {
+        token.startsWith("dom7-") -> dom7(token.removePrefix("dom7-").toInt())
+        token.startsWith("m7-") -> min7(token.removePrefix("m7-").toInt())
+        token.startsWith("maj") -> maj(token.removePrefix("maj").toInt())
+        token.startsWith("min") -> min(token.removePrefix("min").toInt())
+        else -> maj(0)
+    }
+}
+
+private fun loadProgressionsFromCsv(context: android.content.Context): List<ChordProgressionDef> {
+    val result = mutableListOf<ChordProgressionDef>()
+    try {
+        val reader = context.assets.open("progressions.csv").bufferedReader()
+        reader.readLine() // skip header
+        reader.forEachLine { line ->
+            if (line.isBlank()) return@forEachLine
+            val parts = line.split(",", limit = 4)
+            if (parts.size < 4) return@forEachLine
+            val category = parts[0].trim()
+            val emotion = parts[1].trim()
+            val degreeLabel = parts[2].trim()
+            val stepsRaw = parts[3].trim()
+            val steps = stepsRaw.split(" ").map { parseStep(it) }
+            val color = CATEGORY_COLORS[category] ?: CAT_NEUTRAL
+            result.add(ChordProgressionDef(category, color, emotion, degreeLabel, steps))
+        }
+        reader.close()
+    } catch (e: Exception) {
+        android.util.Log.w("ChordPractice", "Failed to load progressions.csv", e)
+    }
+    return result
+}
+
+// Lazy-loaded cache — populated on first access per context
+private var cachedProgressions: List<ChordProgressionDef>? = null
+private fun getAllProgressions(context: android.content.Context): List<ChordProgressionDef> {
+    return cachedProgressions ?: loadProgressionsFromCsv(context).also { cachedProgressions = it }
+}
 
 // ═══════════════════════════════════════════════════════
 // Chord name generation from root index + step
@@ -386,6 +235,8 @@ private val ALL_DEGREES = listOf(
 
 @Composable
 private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, onOverlayChanged: (Boolean) -> Unit = {}) {
+    val context = LocalContext.current
+    val allProgressions = remember { getAllProgressions(context) }
     var selectedCategories by remember { mutableStateOf(setOf<String>()) }
     var selectedDegrees by remember { mutableStateOf(setOf<String>()) }
     var showFilterOverlay by remember { mutableStateOf(false) }
@@ -395,16 +246,16 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
     LaunchedEffect(showFilterOverlay) { onOverlayChanged(showFilterOverlay) }
 
     val allCategories = remember {
-        ALL_PROGRESSIONS.map { it.category }.distinct()
+        allProgressions.map { it.category }.distinct()
     }
 
     val availableDegrees = remember {
-        ALL_PROGRESSIONS.flatMap { extractDegrees(it.degreeLabel) }.distinct()
+        allProgressions.flatMap { extractDegrees(it.degreeLabel) }.distinct()
             .sortedWith(compareBy { ALL_DEGREES.indexOf(it).let { idx -> if (idx < 0) 999 else idx } })
     }
 
     val filtered = remember(selectedCategories, selectedDegrees) {
-        ALL_PROGRESSIONS
+        allProgressions
             .filter { prog ->
                 (selectedCategories.isEmpty() || prog.category in selectedCategories) &&
                 (selectedDegrees.isEmpty() || selectedDegrees.all { deg -> deg in extractDegrees(prog.degreeLabel) })
@@ -415,7 +266,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
         filtered.groupBy { it.category }
             .toList()
             .sortedBy { (cat, _) ->
-                ALL_PROGRESSIONS.indexOfFirst { it.category == cat }
+                allProgressions.indexOfFirst { it.category == cat }
             }
     }
 
@@ -525,7 +376,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     for (cat in row) {
-                                        val catColor = ALL_PROGRESSIONS.first { it.category == cat }.categoryColor
+                                        val catColor = allProgressions.first { it.category == cat }.categoryColor
                                         val isSelected = cat in selectedCategories
                                         val icon = catIcons[cat] ?: "\uD83C\uDFB5"
                                         Box(
@@ -559,8 +410,8 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                             }
                             Spacer(modifier = Modifier.height(10.dp))
                             // "Filtrar" confirm button
-                            val matchCount = if (selectedCategories.isEmpty()) ALL_PROGRESSIONS.size
-                                else ALL_PROGRESSIONS.count { it.category in selectedCategories }
+                            val matchCount = if (selectedCategories.isEmpty()) allProgressions.size
+                                else allProgressions.count { it.category in selectedCategories }
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -633,8 +484,8 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                             }
                             Spacer(modifier = Modifier.height(14.dp))
                             // "Filtrar" confirm button — always visible
-                            val matchCount = if (selectedDegrees.isEmpty()) ALL_PROGRESSIONS.size
-                                else ALL_PROGRESSIONS.count { prog ->
+                            val matchCount = if (selectedDegrees.isEmpty()) allProgressions.size
+                                else allProgressions.count { prog ->
                                     selectedDegrees.all { deg -> deg in extractDegrees(prog.degreeLabel) }
                                 }
                             Box(
@@ -825,14 +676,15 @@ private fun ProgressionPlayerScreen(
     progression: ChordProgressionDef,
     onBack: () -> Unit
 ) {
-    var rootIndex by remember { mutableIntStateOf(0) } // C = 0
-    var isPlaying by remember { mutableStateOf(false) }
-    var bpm by remember { mutableIntStateOf(100) }
-    var loopEnabled by remember { mutableStateOf(true) }
-    var metronomeEnabled by remember { mutableStateOf(true) }
-    var currentBeatGlobal by remember { mutableIntStateOf(-1) }
-    var beatsPerMeasure by remember { mutableIntStateOf(4) } // 3=3/4, 4=4/4, 6=6/8
-    var selectedDrumStyle by remember { mutableStateOf<DrumStyle?>(null) }
+    // rememberSaveable so config survives rotation
+    var rootIndex by rememberSaveable { mutableIntStateOf(0) } // C = 0
+    var isPlaying by remember { mutableStateOf(false) } // transient — reset on rotation
+    var bpm by rememberSaveable { mutableIntStateOf(100) }
+    var loopEnabled by rememberSaveable { mutableStateOf(true) }
+    var metronomeEnabled by rememberSaveable { mutableStateOf(true) }
+    var currentBeatGlobal by remember { mutableIntStateOf(-1) } // transient
+    var beatsPerMeasure by rememberSaveable { mutableIntStateOf(4) } // 3=3/4, 4=4/4, 6=6/8
+    var selectedDrumStyle by remember { mutableStateOf<DrumStyle?>(null) } // transient — needs reinit
     var drumJob by remember { mutableStateOf<Job?>(null) }
     val drumScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -865,12 +717,12 @@ private fun ProgressionPlayerScreen(
     else
         chordNames.firstOrNull() ?: "—"
 
-    // Pre-init drum engine so first play has no delay
-    LaunchedEffect(Unit) { DrumEngine.init(context) }
+    // Pre-init drum engine so first play has no delay (ref-counted)
+    LaunchedEffect(Unit) { DrumEngine.addRef(context) }
 
     // Single TickPlayer instance, reused across play/stop cycles
     val tickPlayer = remember { TickPlayer() }
-    DisposableEffect(Unit) { onDispose { tickPlayer.release(); drumJob?.cancel(); DrumEngine.release() } }
+    DisposableEffect(Unit) { onDispose { tickPlayer.release(); drumJob?.cancel(); DrumEngine.stop(); DrumEngine.releaseRef() } }
 
     // Keep DrumEngine.liveBpm in sync with UI bpm at all times
     LaunchedEffect(bpm) { DrumEngine.liveBpm = bpm }
@@ -1327,27 +1179,27 @@ private fun DrawScope.drawCompactChord(chord: ChordShape) {
     val fretWidth = (fbRight - fbLeft) / fretsToShow
 
     drawRoundRect(
-        color = Color(0xFF2C1E10),
+        color = FRETBOARD_WOOD,
         topLeft = Offset(fbLeft, fbTop - 4f),
         size = Size(fbRight - fbLeft, fbHeight + 8f),
         cornerRadius = CornerRadius(4f)
     )
 
     if (startFret == 0) {
-        drawRect(color = Color(0xFFF5E6C8), topLeft = Offset(fbLeft, fbTop - 6f), size = Size(8f, fbHeight + 12f))
+        drawRect(color = FRETBOARD_NUT, topLeft = Offset(fbLeft, fbTop - 6f), size = Size(8f, fbHeight + 12f))
     }
 
     for (fret in 1..fretsToShow) {
         val xPos = fbLeft + fret * fretWidth
-        drawLine(Color(0xFF8B7355), Offset(xPos, fbTop - 2f), Offset(xPos, fbBottom + 2f), strokeWidth = 1.5f)
+        drawLine(FRETBOARD_FRET_WIRE, Offset(xPos, fbTop - 2f), Offset(xPos, fbBottom + 2f), strokeWidth = 1.5f)
     }
 
     for (stringNum in 0 until 6) {
         val yPos = fbTop + stringSpacing * (6 - stringNum)
-        drawLine(Color(0xFFC8B090), Offset(fbLeft, yPos), Offset(fbRight, yPos), strokeWidth = 1.5f)
+        drawLine(FRETBOARD_STRING_COLORS[stringNum.coerceIn(0, 5)], Offset(fbLeft, yPos), Offset(fbRight, yPos), strokeWidth = 1.5f)
     }
 
-    val chordColor = Color(0xFFD4960A)
+    val chordColor = SHARED_ACCENT
     val noteRadius = (stringSpacing * 0.35f).coerceIn(8f, 20f)
     val labelPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.WHITE
@@ -1368,7 +1220,7 @@ private fun DrawScope.drawCompactChord(chord: ChordShape) {
             }
             fretVal == 0 -> {
                 val centerX = fbLeft * 0.5f
-                drawCircle(Color(0xFF8BC34A), noteRadius, Offset(centerX, yPos))
+                drawCircle(AppColors.success, noteRadius, Offset(centerX, yPos))
                 drawCircle(Color(0x44000000), noteRadius, Offset(centerX, yPos), style = Stroke(1.5f))
             }
             else -> {

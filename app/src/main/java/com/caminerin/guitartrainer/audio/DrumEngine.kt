@@ -54,6 +54,8 @@ object DrumEngine {
     private val rrIndex = mutableMapOf<DrumHit, Int>()
     private var initialized = false
     private val lock = Any()
+    /** Reference count: tracks how many screens are using DrumEngine */
+    private var refCount = 0
 
     /** Mutex serializes playLoop so only one loop writes to AudioTrack at a time */
     private val playMutex = Mutex()
@@ -63,6 +65,25 @@ object DrumEngine {
 
     /** Set this to change BPM in real-time while playing */
     @Volatile var liveBpm = 120
+
+    /** Call when a screen starts using DrumEngine. Pairs with [releaseRef]. */
+    fun addRef(context: Context) {
+        synchronized(lock) {
+            refCount++
+        }
+        init(context)
+    }
+
+    /** Call from DisposableEffect. Only truly releases when last screen leaves. */
+    fun releaseRef() {
+        synchronized(lock) {
+            refCount--
+            if (refCount <= 0) {
+                refCount = 0
+                doRelease()
+            }
+        }
+    }
 
     fun init(context: Context) {
         synchronized(lock) {
@@ -90,7 +111,7 @@ object DrumEngine {
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .build()
                 audioTrack?.play()
-            } catch (_: Exception) { }
+            } catch (e: Exception) { android.util.Log.w("DrumEngine", "AudioTrack init failed", e) }
             initialized = true
         }
     }
@@ -118,7 +139,7 @@ object DrumEngine {
                 try {
                     val pcm = readWavPcm(context.assets.open("drums/${base}_${rr}.wav"))
                     if (pcm != null && pcm.isNotEmpty()) variants.add(pcm)
-                } catch (_: Exception) { /* no more round-robins */ }
+                } catch (_: Exception) { /* no more round-robins for $base */ }
             }
             if (variants.isNotEmpty()) {
                 sampleBanks[hit] = variants
@@ -250,7 +271,13 @@ object DrumEngine {
     }
 
     fun release() {
+        // Legacy release — forces immediate cleanup regardless of refCount
+        synchronized(lock) { refCount = 0 }
         stop()
+        doRelease()
+    }
+
+    private fun doRelease() {
         synchronized(lock) {
             try {
                 audioTrack?.stop()

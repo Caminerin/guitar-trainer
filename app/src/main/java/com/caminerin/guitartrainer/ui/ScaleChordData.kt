@@ -111,7 +111,8 @@ object ScaleChordRepository {
                 rootSemitoneFromTonic = rootSemitone,
                 quality = quality
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w("ScaleChordData", "Failed to load scale chord data", e)
             return null
         }
     }

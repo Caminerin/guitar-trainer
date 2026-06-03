@@ -47,26 +47,29 @@ object RiffSynth {
         val technique: String = ""
     )
 
+    @Volatile private var initContext: Context? = null
+
     /**
-     * Load WAV samples from assets into memory as float PCM arrays.
-     * Upsamples from 22050 to 44100 Hz with linear interpolation.
+     * Register the context for lazy sample loading.
+     * Samples are loaded on-demand when first needed, not eagerly.
+     * Currently playSequence() uses Karplus-Strong synthesis exclusively,
+     * so samples are not loaded unless explicitly requested.
      */
     fun init(context: Context) {
-        if (samplesLoaded) return
-        val assets = context.assets
-        try {
-            val files = assets.list("samples") ?: emptyArray()
-            for (file in files) {
-                if (!file.endsWith(".wav")) continue
-                val key = file.removeSuffix(".wav")
-                try {
-                    val pcm = loadWavAsFloat(assets.open("samples/$file"))
-                    // Upsample 22050 -> 44100 with linear interpolation
-                    sampleCache[key] = upsample2x(pcm)
-                } catch (_: Exception) { }
-            }
-            samplesLoaded = sampleCache.isNotEmpty()
-        } catch (_: Exception) { }
+        initContext = context.applicationContext
+        // Samples are loaded lazily — no eager loading to save memory and startup time
+    }
+
+    /** Load a specific sample on demand (if needed in the future). */
+    private fun loadSampleIfNeeded(key: String): FloatArray? {
+        sampleCache[key]?.let { return it }
+        val ctx = initContext ?: return null
+        return try {
+            val pcm = loadWavAsFloat(ctx.assets.open("samples/$key.wav"))
+            val upsampled = upsample2x(pcm)
+            sampleCache[key] = upsampled
+            upsampled
+        } catch (e: Exception) { android.util.Log.w("RiffSynth", "Failed to load sample on demand", e); null }
     }
 
     private fun loadWavAsFloat(inputStream: java.io.InputStream): FloatArray {
@@ -586,6 +589,7 @@ object RiffSynth {
         track.play()
 
         writerThread = Thread {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
             val chunkSize = 1024
             val chunk = FloatArray(chunkSize)
 
@@ -613,11 +617,10 @@ object RiffSynth {
                 }
                 try {
                     track.write(chunk, 0, chunkSize, AudioTrack.WRITE_BLOCKING)
-                } catch (_: Exception) { break }
+                } catch (e: Exception) { android.util.Log.w("RiffSynth", "AudioTrack write error", e); break }
             }
             try { track.stop(); track.release() } catch (_: Exception) {}
         }.apply {
-            priority = Thread.MAX_PRIORITY
             start()
         }
     }
