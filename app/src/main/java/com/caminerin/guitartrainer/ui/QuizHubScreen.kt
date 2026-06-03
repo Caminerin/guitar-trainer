@@ -34,12 +34,12 @@ import kotlin.random.Random
 // Quiz Hub — 18 exercises in 3 categories
 // ═══════════════════════════════════════════════════════
 
-private val HUB_BG = Color(0xFF121212)
-private val HUB_BAR = Color(0xFF1A1A2E)
-private val HUB_ACCENT = Color(0xFFFFC107)
-private val HUB_CARD = Color(0xFF1E1E2E)
-private val HUB_GREEN = Color(0xFF4CAF50)
-private val HUB_RED = Color(0xFFE53935)
+private val HUB_BG = SHARED_BG
+private val HUB_BAR = SHARED_TOOLBAR
+private val HUB_ACCENT = SHARED_ACCENT
+private val HUB_CARD = AppColors.cardBg
+private val HUB_GREEN = AppColors.success
+private val HUB_RED = AppColors.error
 
 // Category colors
 private val CAT_EAR = Color(0xFF42A5F5)    // Blue - Ear Training

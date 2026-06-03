@@ -65,7 +65,7 @@ fun ScaleSelectorOverlay(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF1E1E1E))
+                .background(Color(0xFF1A1714))
                 .clickable(enabled = false) {}
                 .padding(20.dp)
                 .verticalScroll(rememberScrollState())

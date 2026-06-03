@@ -6,6 +6,8 @@ import android.media.AudioFormat
 import android.media.AudioTrack
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -42,72 +44,146 @@ data class DrumEvent(
 )
 
 object DrumEngine {
-    private const val SAMPLE_RATE = 44100
+    private const val SAMPLE_RATE = 22050
+    /** Write audio in small chunks (~10ms) so stop() is responsive */
+    private const val CHUNK_SAMPLES = 220 // ~10ms at 22050
     private var audioTrack: AudioTrack? = null
-    private val samples = mutableMapOf<DrumHit, ShortArray>()
+    /** Round-robin sample banks: each DrumHit has multiple variants */
+    private val sampleBanks = mutableMapOf<DrumHit, List<ShortArray>>()
+    /** Current round-robin index per hit — rotates on each play */
+    private val rrIndex = mutableMapOf<DrumHit, Int>()
     private var initialized = false
+    private val lock = Any()
+    /** Reference count: tracks how many screens are using DrumEngine */
+    private var refCount = 0
+
+    /** Mutex serializes playLoop so only one loop writes to AudioTrack at a time */
+    private val playMutex = Mutex()
 
     @Volatile var isPlaying = false
         private set
 
-    fun init(context: Context) {
-        if (initialized) return
-        loadSamples(context)
+    /** Set this to change BPM in real-time while playing */
+    @Volatile var liveBpm = 120
 
-        val minBuf = AudioTrack.getMinBufferSize(
-            SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
-        )
-        audioTrack = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(SAMPLE_RATE)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .build()
-            )
-            .setBufferSizeInBytes(minBuf.coerceAtLeast(SAMPLE_RATE * 2))
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
-        audioTrack?.play()
-        initialized = true
+    /** Call when a screen starts using DrumEngine. Pairs with [releaseRef]. */
+    fun addRef(context: Context) {
+        synchronized(lock) {
+            refCount++
+        }
+        init(context)
     }
 
-    private fun loadSamples(context: Context) {
-        val fileMap = mapOf(
-            DrumHit.KICK_HARD to "drums/kick_hard.wav",
-            DrumHit.KICK_SOFT to "drums/kick_soft.wav",
-            DrumHit.SNARE_HARD to "drums/snare_hard.wav",
-            DrumHit.SNARE_SOFT to "drums/snare_soft.wav",
-            DrumHit.SNARE_CROSSSTICK to "drums/snare_crossstick.wav",
-            DrumHit.SNARE_RIMSHOT to "drums/snare_rimshot.wav",
-            DrumHit.HH_CLOSED to "drums/hh_closed.wav",
-            DrumHit.HH_OPEN to "drums/hh_open.wav",
-            DrumHit.HH_HALF to "drums/hh_half.wav",
-            DrumHit.HH_PEDAL to "drums/hh_pedal.wav",
-            DrumHit.RIDE_NORMAL to "drums/ride_normal.wav",
-            DrumHit.RIDE_BELL to "drums/ride_bell.wav",
-            DrumHit.CRASH to "drums/crash.wav"
-        )
-        for ((hit, file) in fileMap) {
-            try {
-                val pcm = readWavPcm(context.assets.open(file))
-                if (pcm != null) samples[hit] = pcm
-            } catch (_: Exception) { }
+    /** Call from DisposableEffect. Only truly releases when last screen leaves. */
+    fun releaseRef() {
+        synchronized(lock) {
+            refCount--
+            if (refCount <= 0) {
+                refCount = 0
+                doRelease()
+            }
         }
     }
 
+    fun init(context: Context) {
+        synchronized(lock) {
+            if (initialized) return
+            loadSamples(context)
+            val minBuf = AudioTrack.getMinBufferSize(
+                SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            )
+            try {
+                audioTrack = AudioTrack.Builder()
+                    .setAudioAttributes(
+                        AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .build()
+                    )
+                    .setAudioFormat(
+                        AudioFormat.Builder()
+                            .setSampleRate(SAMPLE_RATE)
+                            .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .build()
+                    )
+                    .setBufferSizeInBytes(minBuf.coerceAtLeast(SAMPLE_RATE * 2))
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+                audioTrack?.play()
+            } catch (e: Exception) { android.util.Log.w("DrumEngine", "AudioTrack init failed", e) }
+            initialized = true
+        }
+    }
+
+    private fun loadSamples(context: Context) {
+        // Each DrumHit maps to a base name; files are named {base}_1.wav, {base}_2.wav, {base}_3.wav
+        val hitBaseMap = mapOf(
+            DrumHit.KICK_HARD to "kick_hard",
+            DrumHit.KICK_SOFT to "kick_soft",
+            DrumHit.SNARE_HARD to "snare_hard",
+            DrumHit.SNARE_SOFT to "snare_soft",
+            DrumHit.SNARE_CROSSSTICK to "snare_crossstick",
+            DrumHit.SNARE_RIMSHOT to "snare_rimshot",
+            DrumHit.HH_CLOSED to "hh_closed",
+            DrumHit.HH_OPEN to "hh_open",
+            DrumHit.HH_HALF to "hh_half",
+            DrumHit.HH_PEDAL to "hh_pedal",
+            DrumHit.RIDE_NORMAL to "ride_normal",
+            DrumHit.RIDE_BELL to "ride_bell",
+            DrumHit.CRASH to "crash"
+        )
+        for ((hit, base) in hitBaseMap) {
+            val variants = mutableListOf<ShortArray>()
+            for (rr in 1..4) {
+                try {
+                    val pcm = readWavPcm(context.assets.open("drums/${base}_${rr}.wav"))
+                    if (pcm != null && pcm.isNotEmpty()) variants.add(pcm)
+                } catch (_: Exception) { /* no more round-robins for $base */ }
+            }
+            if (variants.isNotEmpty()) {
+                sampleBanks[hit] = variants
+                rrIndex[hit] = 0
+            }
+        }
+    }
+
+    /** Get the next round-robin sample for a hit */
+    private fun nextSample(hit: DrumHit): ShortArray? {
+        val bank = sampleBanks[hit] ?: return null
+        val idx = rrIndex[hit] ?: 0
+        rrIndex[hit] = (idx + 1) % bank.size
+        return bank[idx]
+    }
+
+    /** Read WAV PCM data by properly locating the 'data' chunk (not assuming 44-byte header) */
     private fun readWavPcm(input: InputStream): ShortArray? {
         val bytes = input.use { it.readBytes() }
-        if (bytes.size < 44) return null
+        if (bytes.size < 12) return null
         val buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-        buf.position(44) // skip WAV header
-        val numShorts = (bytes.size - 44) / 2
+        // Verify RIFF header
+        if (bytes[0] != 'R'.code.toByte() || bytes[1] != 'I'.code.toByte()) return null
+        // Find "data" chunk
+        var pos = 12 // skip RIFF header (12 bytes)
+        var dataStart = -1
+        var dataSize = 0
+        while (pos + 8 <= bytes.size) {
+            val chunkId = String(bytes, pos, 4, Charsets.US_ASCII)
+            buf.position(pos + 4)
+            val chunkSize = buf.int
+            if (chunkId == "data") {
+                dataStart = pos + 8
+                dataSize = chunkSize
+                break
+            }
+            pos += 8 + chunkSize
+            if (chunkSize % 2 != 0) pos++ // WAV chunks are word-aligned
+        }
+        if (dataStart < 0 || dataStart >= bytes.size) return null
+        val actualSize = minOf(dataSize, bytes.size - dataStart)
+        val numShorts = actualSize / 2
+        if (numShorts <= 0) return null
+        buf.position(dataStart)
         val pcm = ShortArray(numShorts)
         for (i in 0 until numShorts) {
             pcm[i] = buf.short
@@ -132,6 +208,11 @@ object DrumEngine {
         }
     }
 
+    /**
+     * Play a drum loop. Reads [liveBpm] each beat so tempo changes take effect immediately.
+     * Writes audio in small chunks (~10ms) so [stop] responds within ~10ms.
+     * Uses a Mutex to guarantee only one loop writes to AudioTrack at any time.
+     */
     suspend fun playLoop(
         context: Context,
         style: DrumStyle,
@@ -139,40 +220,74 @@ object DrumEngine {
         beatsPerMeasure: Int = 4,
         onBeat: ((Int) -> Unit)? = null
     ) {
-        init(context)
-        isPlaying = true
-        withContext(Dispatchers.Default) {
-            val pattern = getPattern(style, beatsPerMeasure)
-            while (coroutineContext.isActive && isPlaying) {
-                for ((beatIdx, events) in pattern.withIndex()) {
-                    if (!coroutineContext.isActive || !isPlaying) break
-                    onBeat?.invoke(beatIdx)
-                    val beatDurationMs = 60_000.0 / bpm
-                    val beatSamples = (SAMPLE_RATE * beatDurationMs / 1000.0).toInt()
-                    val buffer = ShortArray(beatSamples)
-                    for (event in events) {
-                        val sample = samples[event.hit] ?: continue
-                        val offsetSamples = (event.positionInBeat * beatSamples).toInt()
-                        mixInto(buffer, sample, offsetSamples, event.velocity)
+        stop() // signal any existing loop to exit
+        playMutex.withLock {
+            // Guaranteed: no other loop is writing to AudioTrack now
+            init(context)
+            liveBpm = bpm
+            isPlaying = true
+            try { audioTrack?.flush() } catch (_: Exception) { }
+            withContext(Dispatchers.Default) {
+                try {
+                    val pattern = getPattern(style, beatsPerMeasure)
+                    while (coroutineContext.isActive && isPlaying) {
+                        for ((beatIdx, events) in pattern.withIndex()) {
+                            if (!coroutineContext.isActive || !isPlaying) break
+                            onBeat?.invoke(beatIdx)
+                            // Read BPM live each beat
+                            val currentBpm = liveBpm.coerceIn(30, 300)
+                            val beatDurationMs = 60_000.0 / currentBpm
+                            val beatSamples = (SAMPLE_RATE * beatDurationMs / 1000.0).toInt()
+                            val buffer = ShortArray(beatSamples)
+                            for (event in events) {
+                                val sample = nextSample(event.hit) ?: continue
+                                val offsetSamples = (event.positionInBeat * beatSamples).toInt()
+                                mixInto(buffer, sample, offsetSamples, event.velocity)
+                            }
+                            // Write in small chunks for responsive stop
+                            var written = 0
+                            val track = audioTrack ?: break
+                            while (written < buffer.size && isPlaying && coroutineContext.isActive) {
+                                val remaining = buffer.size - written
+                                val chunkSize = minOf(CHUNK_SAMPLES, remaining)
+                                try {
+                                    track.write(buffer, written, chunkSize)
+                                } catch (_: Exception) { break }
+                                written += chunkSize
+                            }
+                        }
                     }
-                    audioTrack?.write(buffer, 0, buffer.size)
-                }
+                } catch (_: Exception) { }
             }
+            // Clean up when loop exits
+            try { audioTrack?.flush() } catch (_: Exception) { }
         }
     }
 
     fun stop() {
         isPlaying = false
-        audioTrack?.flush()
+        // Do NOT flush here — the mutex-holding loop will flush on exit.
+        // Flushing here would race with write() on the audio thread.
     }
 
     fun release() {
+        // Legacy release — forces immediate cleanup regardless of refCount
+        synchronized(lock) { refCount = 0 }
         stop()
-        audioTrack?.stop()
-        audioTrack?.release()
-        audioTrack = null
-        samples.clear()
-        initialized = false
+        doRelease()
+    }
+
+    private fun doRelease() {
+        synchronized(lock) {
+            try {
+                audioTrack?.stop()
+                audioTrack?.release()
+            } catch (_: Exception) { }
+            audioTrack = null
+            sampleBanks.clear()
+            rrIndex.clear()
+            initialized = false
+        }
     }
 
     private fun mixInto(buffer: ShortArray, sample: ShortArray, offset: Int, velocity: Float) {

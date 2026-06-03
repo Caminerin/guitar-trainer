@@ -63,26 +63,109 @@ class PitchDetector(
     }
 
     /**
-     * Compute the Normalized Square Difference Function (NSDF).
+     * Compute the Normalized Square Difference Function (NSDF) using FFT.
      * NSDF(τ) = 2 * r(τ) / (m(τ))
      * where r(τ) is the autocorrelation and m(τ) is the normalizing term.
-     * Range: -1 to 1. Peaks near 1 = strong periodicity at lag τ.
+     *
+     * The autocorrelation r(τ) is computed via FFT: r = IFFT(|FFT(x)|²),
+     * giving O(n log n) complexity instead of O(n²).
+     * The normalizing term m(τ) is computed incrementally in O(n).
      */
     private fun normalizedSquareDifference(buffer: FloatArray, n: Int): DoubleArray {
+        // Compute autocorrelation via FFT (zero-padded to avoid circular artifacts)
+        val fftSize = nextPowerOf2(2 * n)
+        val re = DoubleArray(fftSize)
+        val im = DoubleArray(fftSize)
+        for (i in 0 until n) re[i] = buffer[i].toDouble()
+
+        fft(re, im, false)
+
+        // |FFT(x)|² (power spectrum)
+        for (i in 0 until fftSize) {
+            re[i] = re[i] * re[i] + im[i] * im[i]
+            im[i] = 0.0
+        }
+
+        fft(re, im, true)
+        // re[tau] now contains the unnormalized autocorrelation r(tau)
+
+        // Build normalizing term m(τ) incrementally:
+        // m(τ) = m(τ-1) - x[τ-1]² - x[n-τ]²
         val nsdf = DoubleArray(n)
+        var m = 0.0
+        for (i in 0 until n) m += buffer[i].toDouble() * buffer[i].toDouble()
+        m *= 2.0 // m(0) = 2 * Σ x[i]²
+
         for (tau in 0 until n) {
-            var acf = 0.0   // autocorrelation at lag tau
-            var m = 0.0     // normalizing energy term
-            val limit = n - tau
-            for (i in 0 until limit) {
-                val xi = buffer[i].toDouble()
-                val xj = buffer[i + tau].toDouble()
-                acf += xi * xj
-                m += xi * xi + xj * xj
+            nsdf[tau] = if (m > 0.0) 2.0 * re[tau] / m else 0.0
+            // Update m for next tau
+            if (tau < n - 1) {
+                val xt = buffer[tau].toDouble()
+                val xn = buffer[n - 1 - tau].toDouble()
+                m -= xt * xt + xn * xn
             }
-            nsdf[tau] = if (m > 0.0) 2.0 * acf / m else 0.0
         }
         return nsdf
+    }
+
+    /** Next power of 2 >= n */
+    private fun nextPowerOf2(n: Int): Int {
+        var v = 1
+        while (v < n) v = v shl 1
+        return v
+    }
+
+    /** In-place Cooley-Tukey FFT (or inverse FFT when inverse=true) */
+    private fun fft(re: DoubleArray, im: DoubleArray, inverse: Boolean) {
+        val n = re.size
+        // Bit-reversal permutation
+        var j = 0
+        for (i in 1 until n) {
+            var bit = n shr 1
+            while (j and bit != 0) {
+                j = j xor bit
+                bit = bit shr 1
+            }
+            j = j xor bit
+            if (i < j) {
+                var tmp = re[i]; re[i] = re[j]; re[j] = tmp
+                tmp = im[i]; im[i] = im[j]; im[j] = tmp
+            }
+        }
+        // FFT butterflies
+        var len = 2
+        while (len <= n) {
+            val angle = 2.0 * Math.PI / len * if (inverse) -1.0 else 1.0
+            val wRe = Math.cos(angle)
+            val wIm = Math.sin(angle)
+            var i = 0
+            while (i < n) {
+                var curRe = 1.0
+                var curIm = 0.0
+                for (k in 0 until len / 2) {
+                    val uRe = re[i + k]
+                    val uIm = im[i + k]
+                    val vRe = re[i + k + len / 2] * curRe - im[i + k + len / 2] * curIm
+                    val vIm = re[i + k + len / 2] * curIm + im[i + k + len / 2] * curRe
+                    re[i + k] = uRe + vRe
+                    im[i + k] = uIm + vIm
+                    re[i + k + len / 2] = uRe - vRe
+                    im[i + k + len / 2] = uIm - vIm
+                    val newCurRe = curRe * wRe - curIm * wIm
+                    curIm = curRe * wIm + curIm * wRe
+                    curRe = newCurRe
+                }
+                i += len
+            }
+            len = len shl 1
+        }
+        if (inverse) {
+            val invN = 1.0 / n
+            for (i in 0 until n) {
+                re[i] *= invN
+                im[i] *= invN
+            }
+        }
     }
 
     /**

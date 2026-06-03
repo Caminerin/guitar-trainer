@@ -74,12 +74,13 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 
-// ─── Theme ───
-private val BG = Color(0xFF121212)
-private val TOP_BAR = Color(0xFF1A1A2E)
-private val ACCENT = Color(0xFFFFC107)
-private val CARD_BG = Color(0xFF1E1E2E)
+// ─── Theme (Warm Dark) — references centralized AppColors ───
+private val BG = SHARED_BG
+private val TOP_BAR = SHARED_TOOLBAR
+private val ACCENT = SHARED_ACCENT
+private val CARD_BG = AppColors.cardBg
 
 // ─── Data model ───
 private data class ProgressionChord(val semitones: Int, val quality: String)
@@ -100,7 +101,7 @@ private fun min7(semitones: Int) = ProgressionChord(semitones, "m7")
 
 // ─── Category colors ───
 private val CAT_TRISTE = Color(0xFF7E57C2)
-private val CAT_AGRIDULCE = Color(0xFF5C6BC0)
+private val CAT_AGRIDULCE = Color(0xFFD4960A)
 private val CAT_BELLA = Color(0xFF26A69A)
 private val CAT_FELIZ = Color(0xFF66BB6A)
 private val CAT_EPICA = Color(0xFFFF7043)
@@ -113,209 +114,57 @@ private val CAT_ROMANTICA = Color(0xFFEC407A)
 private val CAT_DRAMATICA = Color(0xFFAB47BC)
 
 // ══════════════════════════════════════════════════════════════════
-// All chord progressions — offsets are semitones from key center
-// (user picks root = I/i, offsets derive actual chord names)
+// All chord progressions — loaded from assets/progressions.csv
 // ══════════════════════════════════════════════════════════════════
-private val ALL_PROGRESSIONS = listOf(
-
-    // ─── TRISTE (Sad) ───
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Clásica pop triste", "i – VI – III – VII",
-        listOf(min(0), maj(8), maj(3), maj(10))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Cinematográfica profunda", "i – VII – VI – V",
-        listOf(min(0), maj(10), maj(8), maj(7))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Melancólica suave", "I – vi – iii – IV",
-        listOf(maj(0), min(9), min(4), maj(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Tensión oscura", "i – VII – VI – V7",
-        listOf(min(0), maj(10), maj(8), dom7(7))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Narrativa emocional", "i – v – VI – III – VII",
-        listOf(min(0), min(7), maj(8), maj(3), maj(10))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Brillo emocional", "i – III – VII – IV",
-        listOf(min(0), maj(3), maj(10), maj(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Vacía y fría", "i – VII – VI – III",
-        listOf(min(0), maj(10), maj(8), maj(3))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Bajo fluido", "I – V – vi – iii – IV",
-        listOf(maj(0), maj(7), min(9), min(4), maj(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Triste simple", "i – III – i – VII",
-        listOf(min(0), maj(3), min(0), maj(10))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Nostálgica", "I – vi – V – II",
-        listOf(maj(0), min(9), maj(7), maj(2))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Triste emotiva", "i – VII – VI – iv",
-        listOf(min(0), maj(10), maj(8), min(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Tristeza pura", "I – iii",
-        listOf(maj(0), min(4))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Trágica", "i – iv",
-        listOf(min(0), min(5))),
-    ChordProgressionDef("Triste", CAT_TRISTE,
-        "Trágica (variante)", "i – v",
-        listOf(min(0), min(7))),
-
-    // ─── AGRIDULCE (Bittersweet) ───
-    ChordProgressionDef("Agridulce", CAT_AGRIDULCE,
-        "Menor con dominante", "i – V",
-        listOf(min(0), maj(7))),
-    ChordProgressionDef("Agridulce", CAT_AGRIDULCE,
-        "Menor con séptima natural", "i – VII",
-        listOf(min(0), maj(10))),
-    ChordProgressionDef("Agridulce", CAT_AGRIDULCE,
-        "Mayor con segundo menor", "I – ii",
-        listOf(maj(0), min(2))),
-
-    // ─── BELLA (Beautiful) ───
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Pop cálida universal", "I – V – vi – IV",
-        listOf(maj(0), maj(7), min(9), maj(5))),
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Luminosa y elevadora", "I – vi – IV – V",
-        listOf(maj(0), min(9), maj(5), maj(7))),
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Balada emocional", "vi – IV – I – V",
-        listOf(min(9), maj(5), maj(0), maj(7))),
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Reflexiva suave", "vi – IV – V – I",
-        listOf(min(9), maj(5), maj(7), maj(0))),
-    ChordProgressionDef("Bella", CAT_BELLA,
-        "Bucle cálido extendido", "I – vi – IV – V – IV – I",
-        listOf(maj(0), min(9), maj(5), maj(7), maj(5), maj(0))),
-
-    // ─── ROMÁNTICA (Romantic) ───
-    ChordProgressionDef("Romántica", CAT_ROMANTICA,
-        "Emotiva en movimiento", "i – v – VI – III",
-        listOf(min(0), min(7), maj(8), maj(3))),
-    ChordProgressionDef("Romántica", CAT_ROMANTICA,
-        "Celestial", "I – vi",
-        listOf(maj(0), min(9))),
-    ChordProgressionDef("Romántica", CAT_ROMANTICA,
-        "Exótica romántica", "I – IV",
-        listOf(maj(0), maj(5))),
-
-    // ─── FELIZ (Happy) ───
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Feliz y estable", "I – IV – V – I",
-        listOf(maj(0), maj(5), maj(7), maj(0))),
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Simple y alegre", "I – I – IV – V",
-        listOf(maj(0), maj(0), maj(5), maj(7))),
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Luminosa positiva", "I – iii – IV – V",
-        listOf(maj(0), min(4), maj(5), maj(7))),
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Rock clásico", "I – V – IV – I",
-        listOf(maj(0), maj(7), maj(5), maj(0))),
-    ChordProgressionDef("Feliz", CAT_FELIZ,
-        "Alegre ascendente", "i – bII – III – IV",
-        listOf(min(0), maj(1), maj(3), maj(5))),
-
-    // ─── ÉPICA (Epic) ───
-    ChordProgressionDef("Épica", CAT_EPICA,
-        "Épica poderosa", "I – bIII – bVII – IV",
-        listOf(maj(0), maj(3), maj(10), maj(5))),
-    ChordProgressionDef("Épica", CAT_EPICA,
-        "Heroica", "I – bVI – bVII",
-        listOf(maj(0), maj(8), maj(10))),
-    ChordProgressionDef("Épica", CAT_EPICA,
-        "Emocional e intensa", "I – ii – bVII – IV",
-        listOf(maj(0), min(2), maj(10), maj(5))),
-
-    // ─── OSCURA (Dark) ───
-    ChordProgressionDef("Oscura", CAT_OSCURA,
-        "Oscura profunda", "I – V – iii – vii",
-        listOf(maj(0), maj(7), min(4), min(11))),
-    ChordProgressionDef("Oscura", CAT_OSCURA,
-        "Misteriosa neutra", "i – bII – VI – vii",
-        listOf(min(0), maj(1), maj(8), min(10))),
-    ChordProgressionDef("Oscura", CAT_OSCURA,
-        "Espeluznante", "i – II – i – VII",
-        listOf(min(0), maj(2), min(0), maj(10))),
-
-    // ─── MISTERIOSA (Mysterious / Evil) ───
-    ChordProgressionDef("Misteriosa", CAT_MISTERIOSA,
-        "Tensa frigia", "i – bii",
-        listOf(min(0), min(1))),
-    ChordProgressionDef("Misteriosa", CAT_MISTERIOSA,
-        "Siniestra cercana", "i – iii",
-        listOf(min(0), min(3))),
-    ChordProgressionDef("Misteriosa", CAT_MISTERIOSA,
-        "Antagónica (tritono)", "i – #iv",
-        listOf(min(0), min(6))),
-    ChordProgressionDef("Misteriosa", CAT_MISTERIOSA,
-        "Ominosa y oscura", "i – vi",
-        listOf(min(0), min(8))),
-
-    // ─── DRAMÁTICA (Dramatic) ───
-    ChordProgressionDef("Dramática", CAT_DRAMATICA,
-        "Tensión y resolución", "I – iv – V – vi",
-        listOf(maj(0), min(5), maj(7), min(9))),
-    ChordProgressionDef("Dramática", CAT_DRAMATICA,
-        "Dramática menor", "i – #VII",
-        listOf(min(0), maj(11))),
-    ChordProgressionDef("Dramática", CAT_DRAMATICA,
-        "Comedia oscura", "I – bvii",
-        listOf(maj(0), min(10))),
-
-    // ─── NEUTRAL ───
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Exótica / Western", "I – bII",
-        listOf(maj(0), maj(1))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Cowboy", "I – VII",
-        listOf(maj(0), maj(11))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Espacio exterior", "I – #IV",
-        listOf(maj(0), maj(6))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Acción creciente", "i – III",
-        listOf(min(0), maj(3))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Poderosa y misteriosa", "i – #III",
-        listOf(min(0), maj(4))),
-    ChordProgressionDef("Neutral", CAT_NEUTRAL,
-        "Resolución natural", "i – VI",
-        listOf(min(0), maj(8))),
-
-    // ─── BUENA (Good sounding) ───
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Buena energía", "I – V",
-        listOf(maj(0), maj(7))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Protagonista", "I – bVII",
-        listOf(maj(0), maj(10))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Heroica", "I – bIII",
-        listOf(maj(0), maj(3))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Fantástica", "I – III",
-        listOf(maj(0), maj(4))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Fantástica (variante)", "I – bVI",
-        listOf(maj(0), maj(8))),
-    ChordProgressionDef("Buena", CAT_BUENA,
-        "Heroica luminosa", "I – VI",
-        listOf(maj(0), maj(9))),
-
-    // ─── JAZZ ───
-    ChordProgressionDef("Jazz", CAT_JAZZ,
-        "II-V-I clásico", "ii7 – V7 – I",
-        listOf(min7(2), dom7(7), maj(0))),
-    ChordProgressionDef("Jazz", CAT_JAZZ,
-        "Indie / Jazz suave", "I – vi – ii – V",
-        listOf(maj(0), min(9), min(2), maj(7))),
-    ChordProgressionDef("Jazz", CAT_JAZZ,
-        "Circular", "I – V – ii – IV",
-        listOf(maj(0), maj(7), min(2), maj(5)))
+private val CATEGORY_COLORS = mapOf(
+    "Triste" to CAT_TRISTE, "Agridulce" to CAT_AGRIDULCE,
+    "Bella" to CAT_BELLA, "Romántica" to CAT_ROMANTICA,
+    "Feliz" to CAT_FELIZ, "Épica" to CAT_EPICA,
+    "Oscura" to CAT_OSCURA, "Misteriosa" to CAT_MISTERIOSA,
+    "Dramática" to CAT_DRAMATICA, "Neutral" to CAT_NEUTRAL,
+    "Buena" to CAT_BUENA, "Jazz" to CAT_JAZZ
 )
+
+private fun parseStep(token: String): ProgressionChord {
+    // Format: "quality-semitones" or "qualitySemitones" e.g. "maj0", "min9", "dom7-7", "m7-2"
+    return when {
+        token.startsWith("dom7-") -> dom7(token.removePrefix("dom7-").toInt())
+        token.startsWith("m7-") -> min7(token.removePrefix("m7-").toInt())
+        token.startsWith("maj") -> maj(token.removePrefix("maj").toInt())
+        token.startsWith("min") -> min(token.removePrefix("min").toInt())
+        else -> maj(0)
+    }
+}
+
+private fun loadProgressionsFromCsv(context: android.content.Context): List<ChordProgressionDef> {
+    val result = mutableListOf<ChordProgressionDef>()
+    try {
+        val reader = context.assets.open("progressions.csv").bufferedReader()
+        reader.readLine() // skip header
+        reader.forEachLine { line ->
+            if (line.isBlank()) return@forEachLine
+            val parts = line.split(",", limit = 4)
+            if (parts.size < 4) return@forEachLine
+            val category = parts[0].trim()
+            val emotion = parts[1].trim()
+            val degreeLabel = parts[2].trim()
+            val stepsRaw = parts[3].trim()
+            val steps = stepsRaw.split(" ").map { parseStep(it) }
+            val color = CATEGORY_COLORS[category] ?: CAT_NEUTRAL
+            result.add(ChordProgressionDef(category, color, emotion, degreeLabel, steps))
+        }
+        reader.close()
+    } catch (e: Exception) {
+        android.util.Log.w("ChordPractice", "Failed to load progressions.csv", e)
+    }
+    return result
+}
+
+// Lazy-loaded cache — populated on first access per context
+private var cachedProgressions: List<ChordProgressionDef>? = null
+private fun getAllProgressions(context: android.content.Context): List<ChordProgressionDef> {
+    return cachedProgressions ?: loadProgressionsFromCsv(context).also { cachedProgressions = it }
+}
 
 // ═══════════════════════════════════════════════════════
 // Chord name generation from root index + step
@@ -386,7 +235,9 @@ private val ALL_DEGREES = listOf(
 
 @Composable
 private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, onOverlayChanged: (Boolean) -> Unit = {}) {
-    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val allProgressions = remember { getAllProgressions(context) }
+    var selectedCategories by remember { mutableStateOf(setOf<String>()) }
     var selectedDegrees by remember { mutableStateOf(setOf<String>()) }
     var showFilterOverlay by remember { mutableStateOf(false) }
     // 0 = main menu, 1 = sentimiento, 2 = intervalos
@@ -395,18 +246,18 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
     LaunchedEffect(showFilterOverlay) { onOverlayChanged(showFilterOverlay) }
 
     val allCategories = remember {
-        ALL_PROGRESSIONS.map { it.category }.distinct()
+        allProgressions.map { it.category }.distinct()
     }
 
     val availableDegrees = remember {
-        ALL_PROGRESSIONS.flatMap { extractDegrees(it.degreeLabel) }.distinct()
+        allProgressions.flatMap { extractDegrees(it.degreeLabel) }.distinct()
             .sortedWith(compareBy { ALL_DEGREES.indexOf(it).let { idx -> if (idx < 0) 999 else idx } })
     }
 
-    val filtered = remember(selectedCategory, selectedDegrees) {
-        ALL_PROGRESSIONS
+    val filtered = remember(selectedCategories, selectedDegrees) {
+        allProgressions
             .filter { prog ->
-                (selectedCategory == null || prog.category == selectedCategory) &&
+                (selectedCategories.isEmpty() || prog.category in selectedCategories) &&
                 (selectedDegrees.isEmpty() || selectedDegrees.all { deg -> deg in extractDegrees(prog.degreeLabel) })
             }
     }
@@ -415,7 +266,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
         filtered.groupBy { it.category }
             .toList()
             .sortedBy { (cat, _) ->
-                ALL_PROGRESSIONS.indexOfFirst { it.category == cat }
+                allProgressions.indexOfFirst { it.category == cat }
             }
     }
 
@@ -433,7 +284,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                 modifier = Modifier
                     .fillMaxWidth(0.85f)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2A2A2A))
+                    .background(Color(0xFF201C16))
                     .clickable(enabled = false) {}
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -466,7 +317,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF5C6BC0))
+                                .background(Color(0xFFD4960A))
                                 .clickable { filterPage = 1 }
                                 .padding(horizontal = 16.dp, vertical = 16.dp)
                         ) {
@@ -481,7 +332,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFE91E63))
+                                .background(Color(0xFFE67E00))
                                 .clickable { filterPage = 2 }
                                 .padding(horizontal = 16.dp, vertical = 16.dp)
                         ) {
@@ -491,14 +342,14 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                                 Text("Filtrar por intervalos", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                             }
                         }
-                        if (selectedCategory != null || selectedDegrees.isNotEmpty()) {
+                        if (selectedCategories.isNotEmpty() || selectedDegrees.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(10.dp))
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(Color.White.copy(alpha = 0.1f))
-                                    .clickable { selectedCategory = null; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
+                                    .clickable { selectedCategories = emptySet(); selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
                                     .padding(horizontal = 16.dp, vertical = 12.dp),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -507,97 +358,149 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                         }
                     }
                     1 -> {
-                        // Sentimiento list with scroll
-                        Column(
-                            modifier = Modifier.verticalScroll(rememberScrollState())
-                        ) {
-                            val allSelected = selectedCategory == null
+                        // Sentimiento grid — multi-select with scroll
+                        val catIcons = mapOf(
+                            "Triste" to "\uD83D\uDE22", "Agridulce" to "\uD83E\uDE79",
+                            "Bella" to "✨", "Romántica" to "\uD83D\uDC96",
+                            "Feliz" to "\uD83D\uDE04", "Épica" to "⚔\uFE0F",
+                            "Oscura" to "\uD83C\uDF11", "Misteriosa" to "\uD83D\uDD2E",
+                            "Dramática" to "\uD83C\uDFAD", "Neutral" to "⚖\uFE0F",
+                            "Buena" to "\uD83D\uDC4D", "Jazz" to "\uD83C\uDFB7"
+                        )
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            // 4-column grid — toggle select/deselect
+                            val rows = allCategories.chunked(4)
+                            for (row in rows) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    for (cat in row) {
+                                        val catColor = allProgressions.first { it.category == cat }.categoryColor
+                                        val isSelected = cat in selectedCategories
+                                        val icon = catIcons[cat] ?: "\uD83C\uDFB5"
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
+                                                .clickable {
+                                                    selectedCategories = if (isSelected) selectedCategories - cat else selectedCategories + cat
+                                                }
+                                                .padding(horizontal = 4.dp, vertical = 10.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(icon, fontSize = 22.sp)
+                                                Text(
+                                                    cat,
+                                                    color = if (isSelected) Color.White else catColor,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                                )
+                                            }
+                                        }
+                                    }
+                                    // Fill empty cells if row has less than 4
+                                    repeat(4 - row.size) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                            // "Filtrar" confirm button
+                            val matchCount = if (selectedCategories.isEmpty()) allProgressions.size
+                                else allProgressions.count { it.category in selectedCategories }
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (allSelected) ACCENT else Color.White.copy(alpha = 0.08f))
-                                    .clickable { selectedCategory = null; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    .background(ACCENT)
+                                    .clickable { showFilterOverlay = false; filterPage = 0 }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "Todos",
-                                    color = if (allSelected) Color.Black else Color.White.copy(alpha = 0.6f),
-                                    fontSize = 14.sp,
-                                    fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal
+                                    if (selectedCategories.isEmpty()) "Filtrar (todos)" else "Filtrar ($matchCount resultados)",
+                                    color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold
                                 )
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            for (cat in allCategories) {
-                                val catColor = ALL_PROGRESSIONS.first { it.category == cat }.categoryColor
-                                val isSelected = selectedCategory == cat
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(if (isSelected) catColor else catColor.copy(alpha = 0.15f))
-                                        .clickable { selectedCategory = cat; selectedDegrees = emptySet(); showFilterOverlay = false; filterPage = 0 }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                                ) {
-                                    Text(
-                                        cat,
-                                        color = if (isSelected) Color.White else catColor,
-                                        fontSize = 14.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(6.dp))
                             }
                         }
                     }
                     2 -> {
-                        // Interval selector (multi-select, AND logic)
-                        Text("Selecciona intervalos (filtro Y):", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Column(
-                            modifier = Modifier.verticalScroll(rememberScrollState())
-                        ) {
+                        // Interval selector split: Mayores / Menores — multi-select with scroll
+                        val majorDegrees = availableDegrees.filter { d ->
+                            val clean = d.replace("b", "").replace("#", "").replace("7", "")
+                            clean.firstOrNull()?.isUpperCase() == true
+                        }
+                        val minorDegrees = availableDegrees.filter { d ->
+                            val clean = d.replace("b", "").replace("#", "").replace("7", "")
+                            clean.firstOrNull()?.isLowerCase() == true
+                        }
+
+                        @Composable
+                        fun DegreeChip(deg: String) {
+                            val isSelected = deg in selectedDegrees
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) ACCENT else Color.White.copy(alpha = 0.1f))
+                                    .clickable {
+                                        selectedDegrees = if (isSelected) selectedDegrees - deg else selectedDegrees + deg
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Text(
+                                    deg,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                            Text("Mayores", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(6.dp))
                             @OptIn(ExperimentalLayoutApi::class)
                             FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.Start),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                for (deg in availableDegrees) {
-                                    val isSelected = deg in selectedDegrees
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) ACCENT else Color.White.copy(alpha = 0.1f))
-                                            .clickable {
-                                                selectedDegrees = if (isSelected) selectedDegrees - deg else selectedDegrees + deg
-                                            }
-                                            .padding(horizontal = 14.dp, vertical = 10.dp)
-                                    ) {
-                                        Text(
-                                            deg,
-                                            color = if (isSelected) Color.Black else Color.White,
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
+                                for (deg in majorDegrees) { DegreeChip(deg) }
                             }
                             Spacer(modifier = Modifier.height(14.dp))
-                            if (selectedDegrees.isNotEmpty()) {
-                                val matchCount = ALL_PROGRESSIONS.count { prog ->
+                            Text("Menores", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            @OptIn(ExperimentalLayoutApi::class)
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.Start),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                for (deg in minorDegrees) { DegreeChip(deg) }
+                            }
+                            Spacer(modifier = Modifier.height(14.dp))
+                            // "Filtrar" confirm button — always visible
+                            val matchCount = if (selectedDegrees.isEmpty()) allProgressions.size
+                                else allProgressions.count { prog ->
                                     selectedDegrees.all { deg -> deg in extractDegrees(prog.degreeLabel) }
                                 }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(ACCENT)
-                                        .clickable { selectedCategory = null; showFilterOverlay = false; filterPage = 0 }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Aplicar ($matchCount resultados)", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(ACCENT)
+                                    .clickable { showFilterOverlay = false; filterPage = 0 }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    if (selectedDegrees.isEmpty()) "Filtrar (todos)" else "Filtrar ($matchCount resultados)",
+                                    color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }
@@ -623,19 +526,22 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.weight(1f))
-            if (selectedCategory != null) {
-                val catColor = ALL_PROGRESSIONS.first { it.category == selectedCategory }.categoryColor
+            if (selectedCategories.isNotEmpty()) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(14.dp))
-                        .background(catColor.copy(alpha = 0.3f))
-                        .clickable { selectedCategory = null }
+                        .background(ACCENT.copy(alpha = 0.3f))
+                        .clickable { selectedCategories = emptySet() }
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(selectedCategory!!, color = catColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (selectedCategories.size == 1) selectedCategories.first()
+                            else "${selectedCategories.size} sentimientos",
+                            color = ACCENT, fontSize = 12.sp, fontWeight = FontWeight.Bold
+                        )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("\u2715", color = catColor.copy(alpha = 0.6f), fontSize = 10.sp)
+                        Text("\u2715", color = ACCENT.copy(alpha = 0.6f), fontSize = 10.sp)
                     }
                 }
                 Spacer(modifier = Modifier.width(8.dp))
@@ -658,7 +564,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
             }
             Icon(
                 Icons.Default.FilterList, "Filtros",
-                tint = if (selectedCategory != null || selectedDegrees.isNotEmpty()) ACCENT else Color.White.copy(alpha = 0.6f),
+                tint = if (selectedCategories.isNotEmpty() || selectedDegrees.isNotEmpty()) ACCENT else Color.White.copy(alpha = 0.6f),
                 modifier = Modifier
                     .size(28.dp)
                     .clickable { showFilterOverlay = true }
@@ -669,7 +575,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF2A2A3A))
+                .background(Color(0xFF201C16))
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Text(
@@ -770,14 +676,15 @@ private fun ProgressionPlayerScreen(
     progression: ChordProgressionDef,
     onBack: () -> Unit
 ) {
-    var rootIndex by remember { mutableIntStateOf(0) } // C = 0
-    var isPlaying by remember { mutableStateOf(false) }
-    var bpm by remember { mutableIntStateOf(100) }
-    var loopEnabled by remember { mutableStateOf(true) }
-    var metronomeEnabled by remember { mutableStateOf(true) }
-    var currentBeatGlobal by remember { mutableIntStateOf(-1) }
-    var beatsPerMeasure by remember { mutableIntStateOf(4) } // 3=3/4, 4=4/4, 6=6/8
-    var selectedDrumStyle by remember { mutableStateOf<DrumStyle?>(null) }
+    // rememberSaveable so config survives rotation
+    var rootIndex by rememberSaveable { mutableIntStateOf(0) } // C = 0
+    var isPlaying by remember { mutableStateOf(false) } // transient — reset on rotation
+    var bpm by rememberSaveable { mutableIntStateOf(100) }
+    var loopEnabled by rememberSaveable { mutableStateOf(true) }
+    var metronomeEnabled by rememberSaveable { mutableStateOf(true) }
+    var currentBeatGlobal by remember { mutableIntStateOf(-1) } // transient
+    var beatsPerMeasure by rememberSaveable { mutableIntStateOf(4) } // 3=3/4, 4=4/4, 6=6/8
+    var selectedDrumStyle by remember { mutableStateOf<DrumStyle?>(null) } // transient — needs reinit
     var drumJob by remember { mutableStateOf<Job?>(null) }
     val drumScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -810,12 +717,18 @@ private fun ProgressionPlayerScreen(
     else
         chordNames.firstOrNull() ?: "—"
 
+    // Pre-init drum engine so first play has no delay (ref-counted)
+    LaunchedEffect(Unit) { DrumEngine.addRef(context) }
+
     // Single TickPlayer instance, reused across play/stop cycles
     val tickPlayer = remember { TickPlayer() }
-    DisposableEffect(Unit) { onDispose { tickPlayer.release(); drumJob?.cancel(); DrumEngine.release() } }
+    DisposableEffect(Unit) { onDispose { tickPlayer.release(); drumJob?.cancel(); DrumEngine.stop(); DrumEngine.releaseRef() } }
 
-    // Drum engine sync
-    LaunchedEffect(isPlaying, selectedDrumStyle) {
+    // Keep DrumEngine.liveBpm in sync with UI bpm at all times
+    LaunchedEffect(bpm) { DrumEngine.liveBpm = bpm }
+
+    // Drum engine — launch/cancel when play state or style changes
+    LaunchedEffect(isPlaying, selectedDrumStyle, beatsPerMeasure) {
         drumJob?.cancel()
         DrumEngine.stop()
         if (isPlaying && selectedDrumStyle != null) {
@@ -830,7 +743,7 @@ private fun ProgressionPlayerScreen(
         }
     }
 
-    // Metronome playback loop
+    // Metronome + beat counter loop (timing source of truth)
     LaunchedEffect(isPlaying) {
         if (!isPlaying) {
             currentBeatGlobal = -1
@@ -840,13 +753,13 @@ private fun ProgressionPlayerScreen(
         try {
             while (isActive) {
                 currentBeatGlobal = beat
+                val currentBpm = bpmState.value
                 if (metronomeState.value) {
-                    val currentBpm = bpmState.value
                     withContext(Dispatchers.IO) {
                         tickPlayer.playBeat(currentBpm)
                     }
                 } else {
-                    delay(60_000L / bpmState.value.toLong())
+                    delay(60_000L / currentBpm.toLong())
                 }
                 beat++
                 if (beat >= totalBeats) {
@@ -880,6 +793,7 @@ private fun ProgressionPlayerScreen(
         ) {
             IconButton(
                 onClick = {
+                    DrumEngine.stop()
                     isPlaying = false
                     onBack()
                 },
@@ -935,7 +849,7 @@ private fun ProgressionPlayerScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF1A1A2A))
+                .background(Color(0xFF1A1714))
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -973,7 +887,7 @@ private fun ProgressionPlayerScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF1A1A2A))
+                .background(Color(0xFF1A1714))
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 8.dp, vertical = 3.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -1165,14 +1079,14 @@ private fun ProgressionPlayerScreen(
                         .size(42.dp)
                         .clip(CircleShape)
                         .background(
-                            if (metronomeEnabled) Color(0xFF43A047).copy(alpha = 0.3f)
-                            else Color.White.copy(alpha = 0.08f)
+                            if (metronomeEnabled) Color(0xFF8BC34A).copy(alpha = 0.3f)
+                            else Color(0xFFC8B090).copy(alpha = 0.08f)
                         )
                 ) {
                     Icon(
                         if (metronomeEnabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
                         contentDescription = "Metrónomo",
-                        tint = if (metronomeEnabled) Color(0xFF43A047) else Color.White.copy(alpha = 0.5f),
+                        tint = if (metronomeEnabled) Color(0xFF8BC34A) else Color(0xFFF0E8D8).copy(alpha = 0.5f),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -1217,11 +1131,14 @@ private fun ProgressionPlayerScreen(
 
                 // Play/Stop
                 IconButton(
-                    onClick = { isPlaying = !isPlaying },
+                    onClick = {
+                        if (isPlaying) DrumEngine.stop()
+                        isPlaying = !isPlaying
+                    },
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .background(if (isPlaying) Color(0xFFE53935) else Color(0xFF43A047))
+                        .background(if (isPlaying) Color(0xFFD84315) else Color(0xFF8BC34A))
                 ) {
                     Icon(
                         if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
@@ -1262,27 +1179,27 @@ private fun DrawScope.drawCompactChord(chord: ChordShape) {
     val fretWidth = (fbRight - fbLeft) / fretsToShow
 
     drawRoundRect(
-        color = Color(0xFF3E2415),
+        color = FRETBOARD_WOOD,
         topLeft = Offset(fbLeft, fbTop - 4f),
         size = Size(fbRight - fbLeft, fbHeight + 8f),
         cornerRadius = CornerRadius(4f)
     )
 
     if (startFret == 0) {
-        drawRect(color = Color(0xFFF0EAD6), topLeft = Offset(fbLeft, fbTop - 6f), size = Size(8f, fbHeight + 12f))
+        drawRect(color = FRETBOARD_NUT, topLeft = Offset(fbLeft, fbTop - 6f), size = Size(8f, fbHeight + 12f))
     }
 
     for (fret in 1..fretsToShow) {
         val xPos = fbLeft + fret * fretWidth
-        drawLine(Color(0xFFBBBBBB), Offset(xPos, fbTop - 2f), Offset(xPos, fbBottom + 2f), strokeWidth = 1.5f)
+        drawLine(FRETBOARD_FRET_WIRE, Offset(xPos, fbTop - 2f), Offset(xPos, fbBottom + 2f), strokeWidth = 1.5f)
     }
 
     for (stringNum in 0 until 6) {
         val yPos = fbTop + stringSpacing * (6 - stringNum)
-        drawLine(Color(0xFFD0C4B0), Offset(fbLeft, yPos), Offset(fbRight, yPos), strokeWidth = 1.5f)
+        drawLine(FRETBOARD_STRING_COLORS[stringNum.coerceIn(0, 5)], Offset(fbLeft, yPos), Offset(fbRight, yPos), strokeWidth = 1.5f)
     }
 
-    val chordColor = Color(0xFF7B1FA2)
+    val chordColor = SHARED_ACCENT
     val noteRadius = (stringSpacing * 0.35f).coerceIn(8f, 20f)
     val labelPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.WHITE
@@ -1303,7 +1220,7 @@ private fun DrawScope.drawCompactChord(chord: ChordShape) {
             }
             fretVal == 0 -> {
                 val centerX = fbLeft * 0.5f
-                drawCircle(Color(0xFF43A047), noteRadius, Offset(centerX, yPos))
+                drawCircle(AppColors.success, noteRadius, Offset(centerX, yPos))
                 drawCircle(Color(0x44000000), noteRadius, Offset(centerX, yPos), style = Stroke(1.5f))
             }
             else -> {

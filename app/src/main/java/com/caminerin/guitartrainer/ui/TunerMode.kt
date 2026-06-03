@@ -285,7 +285,7 @@ private fun TuningSelector(
                     modifier = Modifier
                         .fillMaxWidth(0.8f)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF2A2A2A))
+                        .background(Color(0xFF201C16))
                         .clickable(enabled = false) {}
                         .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
@@ -311,7 +311,7 @@ private fun TuningSelector(
                                     .fillMaxWidth()
                                     .padding(vertical = 3.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.08f))
+                                    .background(if (isSelected) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.08f))
                                     .clickable { onSelected(index) }
                                     .padding(horizontal = 16.dp, vertical = 12.dp)
                             ) {
@@ -421,13 +421,13 @@ private fun TunerInfo(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF2196F3).copy(alpha = 0.15f))
+                    .background(Color(0xFFD4960A).copy(alpha = 0.15f))
                     .clickable { playReferenceTone(activeString.frequency) }
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Text(
                     text = "\uD83D\uDD0A Referencia",
-                    color = Color(0xFF2196F3),
+                    color = Color(0xFFD4960A),
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )

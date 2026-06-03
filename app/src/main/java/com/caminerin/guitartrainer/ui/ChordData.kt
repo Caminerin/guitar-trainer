@@ -243,7 +243,8 @@ object ChordRepository {
                 intervals = parts[17],
                 fingering = fingeringList
             )
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w("ChordData", "Failed to load chord data", e)
             return null
         }
     }
