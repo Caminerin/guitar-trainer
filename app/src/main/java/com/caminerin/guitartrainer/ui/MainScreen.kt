@@ -76,34 +76,34 @@ private enum class NavDestination(val label: String, val icon: ImageVector) {
     TOOLS("Herramientas", Icons.Default.Build)
 }
 
-// ===== GRADIENT COLORS FOR CARDS =====
+// ===== GRADIENT COLORS FOR CARDS (Warm Dark style) =====
 object GradientColors {
-    val scalesStart = Color(0xFF1b5e20)
-    val scalesEnd = Color(0xFF4caf50)
-    val chordsStart = Color(0xFF0d47a1)
-    val chordsEnd = Color(0xFF42a5f5)
-    val tabsStart = Color(0xFF4a148c)
-    val tabsEnd = Color(0xFFab47bc)
-    val quizStart = Color(0xFFe65100)
-    val quizEnd = Color(0xFFffa726)
-    val retoStart = Color(0xFFb71c1c)
-    val retoEnd = Color(0xFFef5350)
-    val tunerStart = Color(0xFF004d40)
-    val tunerEnd = Color(0xFF26a69a)
-    val metroStart = Color(0xFF1a237e)
-    val metroEnd = Color(0xFF5c6bc0)
-    val grooveStart = Color(0xFF4a1480)
-    val grooveEnd = Color(0xFFce93d8)
-    val settingsStart = Color(0xFF37474f)
-    val settingsEnd = Color(0xFF78909c)
+    val scalesStart = Color(0xFF1A2E10)
+    val scalesEnd = Color(0xFF3E7B1E)
+    val chordsStart = Color(0xFF1A1430)
+    val chordsEnd = Color(0xFF4527A0)
+    val tabsStart = Color(0xFF2E1020)
+    val tabsEnd = Color(0xFF880E4F)
+    val quizStart = Color(0xFF2E2000)
+    val quizEnd = Color(0xFFE6A000)
+    val retoStart = Color(0xFF2E0A00)
+    val retoEnd = Color(0xFFBF360C)
+    val tunerStart = Color(0xFF0A201A)
+    val tunerEnd = Color(0xFF00695C)
+    val metroStart = Color(0xFF180A00)
+    val metroEnd = Color(0xFFBF360C)
+    val grooveStart = Color(0xFF1A0A2E)
+    val grooveEnd = Color(0xFF6A1B9A)
+    val settingsStart = Color(0xFF1A1714)
+    val settingsEnd = Color(0xFF4E4238)
 
     val backgroundGradient = Brush.linearGradient(
-        colors = listOf(Color(0xFF1a1033), Color(0xFF0d1b2a))
+        colors = listOf(Color(0xFF0F0D0A), Color(0xFF12100C))
     )
     val titleGradient = Brush.horizontalGradient(
-        colors = listOf(Color(0xFFff6b9d), Color(0xFFffa726))
+        colors = listOf(Color(0xFFD4960A), Color(0xFFE6A000))
     )
-    val accent = Color(0xFFff6b9d)
+    val accent = Color(0xFFD4960A)
 }
 
 @Composable
@@ -214,13 +214,13 @@ fun MainScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
-                    .background(Color.Black.copy(alpha = 0.6f)),
+                    .background(Color(0xFF0A0908).copy(alpha = 0.95f)),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 destinations.forEachIndexed { index, dest ->
                     val isSelected = selectedNav == index
-                    val itemColor = if (isSelected) GradientColors.accent else Color(0xFF667788)
+                    val itemColor = if (isSelected) GradientColors.accent else Color(0xFF5A5040)
                     Column(
                         modifier = Modifier
                             .weight(1f)
@@ -329,7 +329,7 @@ private fun TunerSplashScreen(
             Text(
                 "Afina tu guitarra",
                 fontSize = 11.sp,
-                color = Color(0xFF8899aa)
+                color = Color(0xFF8B7D6B)
             )
         }
 
@@ -381,7 +381,7 @@ private fun LibraryHub(onItemClick: (Int) -> Unit) {
         Text(
             "Consulta y aprende",
             fontSize = 11.sp,
-            color = Color(0xFF8899aa)
+            color = Color(0xFF8B7D6B)
         )
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -471,7 +471,7 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
         Text(
             "Elige tu actividad",
             fontSize = 11.sp,
-            color = Color(0xFF8899aa)
+            color = Color(0xFF8B7D6B)
         )
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -610,7 +610,7 @@ private fun ChordsSelectionScreen(
             SubOptionCard(
                 emoji = "⚡",
                 title = "Reto de velocidad",
-                subtitle = "¿Cuántos cambios aguantas?",
+                subtitle = "Elige entre 2 y 4 acordes y descubre cuántos cambios aguantas",
                 gradientStart = GradientColors.retoStart,
                 gradientEnd = GradientColors.retoEnd,
                 onClick = { onSelect(1) }
@@ -684,7 +684,7 @@ private fun ToolsHub(onItemClick: (Int) -> Unit) {
         Text(
             "Utilidades",
             fontSize = 11.sp,
-            color = Color(0xFF8899aa)
+            color = Color(0xFF8B7D6B)
         )
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -771,7 +771,7 @@ private fun SettingsScreen(onBack: () -> Unit) {
         }
 
         // Nomenclature
-        Text("Nomenclatura", color = Color(0xFF8899aa), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Nomenclatura", color = Color(0xFF8B7D6B), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             NoteFormat.entries.forEach { fmt ->
                 Box(
@@ -794,7 +794,7 @@ private fun SettingsScreen(onBack: () -> Unit) {
         )
 
         // Degree colors - Scale
-        Text("Colores de grado (escalas)", color = Color(0xFF8899aa), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Colores de grado (escalas)", color = Color(0xFF8B7D6B), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         val scaleDegs = listOf(
             "Tónica (I)" to ("tonic" to DegreeColorPrefs.tonicColor),
             "Tercera (III)" to ("third" to DegreeColorPrefs.thirdColor),
@@ -835,7 +835,7 @@ private fun SettingsScreen(onBack: () -> Unit) {
         }
 
         // Degree colors - Chords
-        Text("Colores de intervalo (acordes)", color = Color(0xFF8899aa), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("Colores de intervalo (acordes)", color = Color(0xFF8B7D6B), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         val chordDegs = listOf(
             "Raíz (1)" to ("root" to DegreeColorPrefs.chordRootColor),
             "Tercera (3)" to ("third" to DegreeColorPrefs.chordThirdColor),

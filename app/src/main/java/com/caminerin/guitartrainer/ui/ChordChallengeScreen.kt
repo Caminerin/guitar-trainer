@@ -38,12 +38,12 @@ import com.caminerin.guitartrainer.audio.DrumStyle
 import com.caminerin.guitartrainer.audio.TickPlayer
 import kotlinx.coroutines.*
 
-private val CH_BG = Color(0xFF121212)
-private val CH_BAR = Color(0xFF1A1A2E)
-private val CH_ACCENT = Color(0xFFFFC107)
-private val CH_CARD = Color(0xFF1E1E2E)
-private val CH_GREEN = Color(0xFF4CAF50)
-private val CH_RED = Color(0xFFE53935)
+private val CH_BG = SHARED_BG
+private val CH_BAR = SHARED_TOOLBAR
+private val CH_ACCENT = SHARED_ACCENT
+private val CH_CARD = AppColors.cardBg
+private val CH_GREEN = AppColors.success
+private val CH_RED = AppColors.error
 
 // Quality filter chips
 private enum class QualityFilter(val label: String, val qualities: Set<String>) {
@@ -572,13 +572,15 @@ private fun ExercisePhase(
     var lastOnsetTime by remember { mutableLongStateOf(0L) }
     var onsetDetected by remember { mutableStateOf(false) }
 
+    // Ref-counted DrumEngine init
+    LaunchedEffect(Unit) { DrumEngine.addRef(context) }
     DisposableEffect(Unit) {
         onDispose {
             exerciseJob?.cancel()
             drumJob?.cancel()
             tickPlayer.release()
             DrumEngine.stop()
-            DrumEngine.release()
+            DrumEngine.releaseRef()
         }
     }
 
@@ -611,7 +613,8 @@ private fun ExercisePhase(
                     bufSize.coerceAtLeast(4096)
                 )
                 audioRecord.startRecording()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.w("ChordChallenge", "AudioRecord init failed", e)
                 audioRecord = null
             }
         }
@@ -669,8 +672,7 @@ private fun ExercisePhase(
                         flashColor = CH_RED
                         delay(500)
                         isRunning = false
-                        audioRecord?.stop()
-                        audioRecord?.release()
+                        // audioRecord released in finally block below
                         onFinish(maxBpmReached)
                         return@LaunchedEffect
                     }
@@ -700,8 +702,9 @@ private fun ExercisePhase(
                 }
             }
         } finally {
-            audioRecord?.stop()
-            audioRecord?.release()
+            // Always release mic, even if coroutine is cancelled
+            try { audioRecord?.stop() } catch (_: Exception) { }
+            try { audioRecord?.release() } catch (_: Exception) { }
         }
     }
 

@@ -60,17 +60,9 @@ import com.caminerin.guitartrainer.audio.ChordSynth
 
 private val CHORD_BG = SHARED_BG
 private val CHORD_TOOLBAR = SHARED_TOOLBAR
-private val CHORD_WOOD = Color(0xFFFAFAF5)       // cream paper background
-private val CHORD_NUT = Color(0xFF333333)         // dark nut (tab style)
-private val CHORD_FRET_WIRE = Color(0xFFCCCCCC)    // subtle fret lines
-private val CHORD_STRING_COLORS = listOf(
-    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999),
-    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999)
-)
-private val CHORD_STRING_WIDTHS = listOf(1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 1.5f)
 
 private val QUALITY_COLORS = mapOf(
-    "major" to Color(0xFF5C6BC0),
+    "major" to Color(0xFFD4960A),
     "minor" to Color(0xFFE53935),
     "dominant7" to Color(0xFFFF9800),
     "maj7" to Color(0xFF43A047),
@@ -101,7 +93,7 @@ private val QUALITY_COLORS = mapOf(
 )
 
 private val LEVEL_COLORS = mapOf(
-    "all" to Color(0xFF5C6BC0),
+    "all" to Color(0xFFD4960A),
     "beginner_core" to Color(0xFF4CAF50),
     "intermediate_core" to Color(0xFFFF9800),
     "advanced_reference" to Color(0xFFE53935)
@@ -116,7 +108,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
         ChordRepository.loadChords(context)
         ScaleChordRepository.load(context)
         AppPreferences.loadChordState(context)
-        ChordSynth.init(context)
+        ChordSynth.initAsync(context)
     }
 
     var selectedRoot by rememberSaveable { mutableIntStateOf(AppPreferences.chordRoot) }
@@ -254,7 +246,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF252525))
+                    .background(Color(0xFF1A1714))
                     .padding(horizontal = 12.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -376,7 +368,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             Column(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2A2A2A))
+                    .background(Color(0xFF201C16))
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.Start
@@ -439,7 +431,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             Column(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2A2A2A))
+                    .background(Color(0xFF201C16))
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -539,7 +531,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     .fillMaxWidth(0.85f)
                     .fillMaxHeight(0.8f)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2A2A2A))
+                    .background(Color(0xFF201C16))
                     .clickable(enabled = false) {}
                     .padding(20.dp)
             ) {
@@ -644,7 +636,7 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
 
     // Paper/cream background
     drawRoundRect(
-        color = CHORD_WOOD,
+        color = FRETBOARD_WOOD,
         topLeft = Offset(fbLeft, fbTop - 4f),
         size = Size(fbRight - fbLeft, fbHeight + 8f),
         cornerRadius = CornerRadius(6f)
@@ -653,13 +645,13 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
     // Nut (dark, tab style — only if showing from fret 0)
     if (startFret == 0) {
         val nutWidth = 14f
-        drawRect(color = CHORD_NUT, topLeft = Offset(fbLeft, fbTop - 6f), size = Size(nutWidth, fbHeight + 12f))
+        drawRect(color = FRETBOARD_NUT, topLeft = Offset(fbLeft, fbTop - 6f), size = Size(nutWidth, fbHeight + 12f))
     }
 
     // Fret lines — subtle
     for (fret in 1..fretsToShow) {
         val x = fbLeft + fret * fretWidth
-        drawLine(CHORD_FRET_WIRE, Offset(x, fbTop), Offset(x, fbBottom), strokeWidth = 1f)
+        drawLine(FRETBOARD_FRET_WIRE, Offset(x, fbTop), Offset(x, fbBottom), strokeWidth = 1f)
     }
 
     // Fret numbers
@@ -678,7 +670,7 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
     // Staff lines (strings) — thin uniform like tab notation
     for (s in 0 until 6) {
         val y = fbTop + stringSpacing * (6 - s)
-        drawLine(CHORD_STRING_COLORS[s], Offset(fbLeft, y), Offset(fbRight, y), strokeWidth = CHORD_STRING_WIDTHS[s])
+        drawLine(FRETBOARD_STRING_COLORS[s], Offset(fbLeft, y), Offset(fbRight, y), strokeWidth = FRETBOARD_STRING_WIDTHS[s])
     }
 
     val labelPaint = android.graphics.Paint().apply {
@@ -728,7 +720,7 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
 
                 val cx = fbLeft * 0.5f
                 val r = if (isFiltered) noteRadius else noteRadius * 0.7f
-                drawCircle(CHORD_WOOD, r + 2f, Offset(cx, y))
+                drawCircle(FRETBOARD_WOOD, r + 2f, Offset(cx, y))
                 drawCircle(noteColor, r, Offset(cx, y))
                 drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(1.5f))
 
@@ -756,7 +748,7 @@ private fun DrawScope.drawChordDiagram(chord: ChordShape, noteDisplay: NoteDispl
                     }
                     val r = if (interval == "1" && isFiltered2) noteRadius * 1.1f else if (!isFiltered2) noteRadius * 0.7f else noteRadius
 
-                    drawCircle(CHORD_WOOD, r + 2f, Offset(cx, y))
+                    drawCircle(FRETBOARD_WOOD, r + 2f, Offset(cx, y))
                     drawCircle(noteColor, r, Offset(cx, y))
                     drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(1.5f))
 

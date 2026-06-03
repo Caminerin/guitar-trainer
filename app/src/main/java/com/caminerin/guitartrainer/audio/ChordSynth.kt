@@ -44,9 +44,24 @@ object ChordSynth {
 
     /**
      * Initialize sample engine. Call once from Activity/Application with context.
-     * Loads 156 WAV samples into SoundPool for low-latency playback.
+     * Loads WAV samples into SoundPool for low-latency playback.
+     * Blocking version — prefer [initAsync] from coroutines.
      */
     fun init(context: Context) {
+        initInternal(context)
+    }
+
+    /**
+     * Async initialization — loads all samples on [kotlinx.coroutines.Dispatchers.IO]
+     * so asset I/O doesn't block the main thread.
+     */
+    suspend fun initAsync(context: Context) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            initInternal(context)
+        }
+    }
+
+    private fun initInternal(context: Context) {
         if (soundPool != null) return
 
         val attrs = AudioAttributes.Builder()
@@ -84,12 +99,12 @@ object ChordSynth {
                     val id = pool.load(afd, 1)
                     sampleIds[key] = id
                     afd.close()
-                } catch (_: Exception) {
-                    // Skip missing sample
+                } catch (e: Exception) {
+                    android.util.Log.w("ChordSynth", "Failed to load sample: $file", e)
                 }
             }
-        } catch (_: Exception) {
-            // No samples directory — fallback to synthesis
+        } catch (e: Exception) {
+            android.util.Log.w("ChordSynth", "Failed to list samples directory", e)
         }
 
         // Load full chord samples from assets/chords/
@@ -104,12 +119,12 @@ object ChordSynth {
                     val id = pool.load(afd, 1)
                     chordSampleIds[key] = id
                     afd.close()
-                } catch (_: Exception) {
-                    // Skip missing chord sample
+                } catch (e: Exception) {
+                    android.util.Log.w("ChordSynth", "Failed to load chord sample: $file", e)
                 }
             }
-        } catch (_: Exception) {
-            // No chords directory
+        } catch (e: Exception) {
+            android.util.Log.w("ChordSynth", "Failed to list chords directory", e)
         }
 
         totalToLoad = filesToLoad
@@ -208,8 +223,9 @@ object ChordSynth {
             else -> 1.0f
         }
 
-        // Play each string with staggered delay
+        // Play each string with staggered delay on a dedicated audio thread
         val strumThread = Thread {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
             for ((strumIdx, pair) in ordered.withIndex()) {
                 val (stringIdx, fret) = pair
                 val key = "s${stringIdx + 1}_f${String.format("%02d", fret)}_$velLayer"
@@ -241,7 +257,6 @@ object ChordSynth {
                 pool.autoResume()
             }
         }
-        strumThread.priority = Thread.MAX_PRIORITY
         strumThread.start()
     }
 
@@ -337,6 +352,7 @@ object ChordSynth {
         track.play()
 
         writerThread = Thread {
+            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
             val chunkSize = 1024
             val chunk = FloatArray(chunkSize)
 
@@ -366,12 +382,11 @@ object ChordSynth {
 
                 try {
                     track.write(chunk, 0, chunkSize, AudioTrack.WRITE_BLOCKING)
-                } catch (_: Exception) { break }
+                } catch (e: Exception) { android.util.Log.w("ChordSynth", "AudioTrack write error", e); break }
             }
 
             try { track.stop(); track.release() } catch (_: Exception) {}
         }.apply {
-            priority = Thread.MAX_PRIORITY
             start()
         }
     }

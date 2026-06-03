@@ -230,7 +230,13 @@ class MetronomeEngine {
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
 
-        track.play()
+        try {
+            track.play()
+        } catch (e: Exception) {
+            android.util.Log.w("MetronomeEngine", "AudioTrack.play() failed", e)
+            try { track.release() } catch (_: Exception) { }
+            return@withContext
+        }
         _isPlaying.value = true
         _currentBeat.value = 0
         _currentMeasure.value = 0
@@ -246,6 +252,7 @@ class MetronomeEngine {
         liveAccentPattern = config.accentPattern
         liveSwingPercent = config.swingPercent
 
+        try { // Wrap entire playback loop in try/finally to guarantee AudioTrack release
         // Count-in phase (stick click sound, distinct from normal beats)
         if (config.countInBars > 0) {
             _isCountingIn.value = true
@@ -359,11 +366,14 @@ class MetronomeEngine {
             }
         }
 
-        track.stop()
-        track.release()
-        _isPlaying.value = false
-        _isCountingIn.value = false
-        _isMutedBar.value = false
+        } finally {
+            // Always release AudioTrack, even if coroutine is cancelled
+            try { track.stop() } catch (_: Exception) { }
+            try { track.release() } catch (_: Exception) { }
+            _isPlaying.value = false
+            _isCountingIn.value = false
+            _isMutedBar.value = false
+        }
     }
 
     fun stop() {

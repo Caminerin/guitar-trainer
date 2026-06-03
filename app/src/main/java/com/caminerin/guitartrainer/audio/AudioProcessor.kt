@@ -72,7 +72,8 @@ class AudioProcessor(private val context: Context) {
                     runRecordingLoop(record16)
                 }
             }
-        } catch (_: SecurityException) {
+        } catch (e: SecurityException) {
+            android.util.Log.w("AudioProcessor", "Mic permission denied", e)
             // Permission revoked during recording
         } finally {
             releaseAudioRecord()

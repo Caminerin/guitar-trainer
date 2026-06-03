@@ -56,23 +56,20 @@ import com.caminerin.guitartrainer.audio.PitchDetector
 import kotlinx.coroutines.delay
 import kotlin.math.sqrt
 
-private const val TOTAL_FRETS = 22
+private const val TOTAL_FRETS = FRETBOARD_TOTAL_FRETS
 
 private val COLOR_BG = SHARED_BG
 private val COLOR_TOOLBAR = SHARED_TOOLBAR
-private val COLOR_WOOD = Color(0xFF3E2415)
-private val COLOR_NUT = Color(0xFFF0EAD6)
-private val COLOR_FRET_WIRE = Color(0xFFBBBBBB)
-private val COLOR_INLAY = Color(0xFFCCC4B0)
-private val COLOR_CORRECT = Color(0xFF4CAF50)
-private val COLOR_ERROR = Color(0xFFF44336)
+private val COLOR_WOOD = FRETBOARD_WOOD
+private val COLOR_NUT = FRETBOARD_NUT
+private val COLOR_FRET_WIRE = FRETBOARD_FRET_WIRE
+private val COLOR_INLAY = FRETBOARD_INLAY
+private val COLOR_CORRECT = AppColors.success
+private val COLOR_ERROR = AppColors.error
 private val COLOR_TONIC_Q = Color(0xFFE53935)
 
-private val STRING_COLORS_Q = listOf(
-    Color(0xFFB0A080), Color(0xFFB8A888), Color(0xFFC0B090),
-    Color(0xFFD0C4B0), Color(0xFFD8D0C0), Color(0xFFE0D8C8)
-)
-private val STRING_WIDTHS_Q = listOf(5.0f, 4.2f, 3.5f, 2.4f, 1.8f, 1.3f)
+private val STRING_COLORS_Q = FRETBOARD_STRING_COLORS
+private val STRING_WIDTHS_Q = FRETBOARD_STRING_WIDTHS
 
 data class QuizHitTarget(
     val string: Int,
@@ -177,22 +174,22 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
+                        .background(Color(0xFFD4960A).copy(alpha = 0.25f))
                         .clickable { showScaleSelector = true }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(scale.name, color = Color(0xFF8B7D6B), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Max fret selector
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF00BCD4).copy(alpha = 0.25f))
+                        .background(Color(0xFFE67E00).copy(alpha = 0.25f))
                         .clickable { showFretSelector = true }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text("Traste $maxFret", color = Color(0xFF80DEEA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Traste $maxFret", color = Color(0xFFC4A878), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Reset button
@@ -205,7 +202,7 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
 
                 // Info button
                 IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Info, "Info", tint = Color(0xFFC4A878), modifier = Modifier.size(20.dp))
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -235,7 +232,7 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .height(4.dp)
-                        .background(if (progress >= 1f) Color(0xFF4CAF50) else Color(0xFF2196F3))
+                        .background(if (progress >= 1f) Color(0xFF8BC34A) else Color(0xFFD4960A))
                 )
             }
 

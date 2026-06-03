@@ -17,31 +17,38 @@ class TickPlayer {
 
     private var track: AudioTrack? = null
 
-    private val mainClick: ShortArray = generateClick(1000f, CLICK_SAMPLES, 0.8f)
-    private val subClick: ShortArray = generateClick(1400f, SUB_CLICK_SAMPLES, 0.4f)
+    // Match MetronomeEngine click sound parameters for consistency
+    private val mainClick: ShortArray = generateClick(1000f, CLICK_SAMPLES, 1.0f)
+    private val subClick: ShortArray = generateClick(800f, SUB_CLICK_SAMPLES, 0.7f)
 
     init {
-        val minBuf = AudioTrack.getMinBufferSize(
-            SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
-        )
-        track = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
+        track = try {
+            val minBuf = AudioTrack.getMinBufferSize(
+                SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
             )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(SAMPLE_RATE)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .build()
-            )
-            .setBufferSizeInBytes(minBuf.coerceAtLeast(CLICK_SAMPLES * 4))
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
-        track?.play()
+            val t = AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setSampleRate(SAMPLE_RATE)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .build()
+                )
+                .setBufferSizeInBytes(minBuf.coerceAtLeast(CLICK_SAMPLES * 4))
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
+            t.play()
+            t
+        } catch (e: Exception) {
+            android.util.Log.w("TickPlayer", "AudioTrack init failed", e)
+            null
+        }
     }
 
     /**
@@ -83,7 +90,8 @@ class TickPlayer {
         val buf = ShortArray(samples)
         for (i in 0 until samples) {
             val time = i.toFloat() / SAMPLE_RATE
-            val envelope = exp(-time * 60.0).toFloat() * volume
+            // Match MetronomeEngine envelope (decay 80 for consistency)
+            val envelope = exp(-time * 80.0).toFloat() * volume
             val sample = (sin(2.0 * PI * freq * time) * envelope * Short.MAX_VALUE).toInt()
             buf[i] = sample.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
         }

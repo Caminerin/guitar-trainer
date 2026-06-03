@@ -1,0 +1,59 @@
+category,emotion,degreeLabel,steps
+Triste,Clásica pop triste,i – VI – III – VII,min0 maj8 maj3 maj10
+Triste,Cinematográfica profunda,i – VII – VI – V,min0 maj10 maj8 maj7
+Triste,Melancólica suave,I – vi – iii – IV,maj0 min9 min4 maj5
+Triste,Tensión oscura,i – VII – VI – V7,min0 maj10 maj8 dom7-7
+Triste,Narrativa emocional,i – v – VI – III – VII,min0 min7 maj8 maj3 maj10
+Triste,Brillo emocional,i – III – VII – IV,min0 maj3 maj10 maj5
+Triste,Vacía y fría,i – VII – VI – III,min0 maj10 maj8 maj3
+Triste,Bajo fluido,I – V – vi – iii – IV,maj0 maj7 min9 min4 maj5
+Triste,Triste simple,i – III – i – VII,min0 maj3 min0 maj10
+Triste,Nostálgica,I – vi – V – II,maj0 min9 maj7 maj2
+Triste,Triste emotiva,i – VII – VI – iv,min0 maj10 maj8 min5
+Triste,Tristeza pura,I – iii,maj0 min4
+Triste,Trágica,i – iv,min0 min5
+Triste,Trágica (variante),i – v,min0 min7
+Agridulce,Menor con dominante,i – V,min0 maj7
+Agridulce,Menor con séptima natural,i – VII,min0 maj10
+Agridulce,Mayor con segundo menor,I – ii,maj0 min2
+Bella,Pop cálida universal,I – V – vi – IV,maj0 maj7 min9 maj5
+Bella,Luminosa y elevadora,I – vi – IV – V,maj0 min9 maj5 maj7
+Bella,Balada emocional,vi – IV – I – V,min9 maj5 maj0 maj7
+Bella,Reflexiva suave,vi – IV – V – I,min9 maj5 maj7 maj0
+Bella,Bucle cálido extendido,I – vi – IV – V – IV – I,maj0 min9 maj5 maj7 maj5 maj0
+Romántica,Emotiva en movimiento,i – v – VI – III,min0 min7 maj8 maj3
+Romántica,Celestial,I – vi,maj0 min9
+Romántica,Exótica romántica,I – IV,maj0 maj5
+Feliz,Feliz y estable,I – IV – V – I,maj0 maj5 maj7 maj0
+Feliz,Simple y alegre,I – I – IV – V,maj0 maj0 maj5 maj7
+Feliz,Luminosa positiva,I – iii – IV – V,maj0 min4 maj5 maj7
+Feliz,Rock clásico,I – V – IV – I,maj0 maj7 maj5 maj0
+Feliz,Alegre ascendente,i – bII – III – IV,min0 maj1 maj3 maj5
+Épica,Épica poderosa,I – bIII – bVII – IV,maj0 maj3 maj10 maj5
+Épica,Heroica,I – bVI – bVII,maj0 maj8 maj10
+Épica,Emocional e intensa,I – ii – bVII – IV,maj0 min2 maj10 maj5
+Oscura,Oscura profunda,I – V – iii – vii,maj0 maj7 min4 min11
+Oscura,Misteriosa neutra,i – bII – VI – vii,min0 maj1 maj8 min10
+Oscura,Espeluznante,i – II – i – VII,min0 maj2 min0 maj10
+Misteriosa,Tensa frigia,i – bii,min0 min1
+Misteriosa,Siniestra cercana,i – iii,min0 min3
+Misteriosa,Antagónica (tritono),i – #iv,min0 min6
+Misteriosa,Ominosa y oscura,i – vi,min0 min8
+Dramática,Tensión y resolución,I – iv – V – vi,maj0 min5 maj7 min9
+Dramática,Dramática menor,i – #VII,min0 maj11
+Dramática,Comedia oscura,I – bvii,maj0 min10
+Neutral,Exótica / Western,I – bII,maj0 maj1
+Neutral,Cowboy,I – VII,maj0 maj11
+Neutral,Espacio exterior,I – #IV,maj0 maj6
+Neutral,Acción creciente,i – III,min0 maj3
+Neutral,Poderosa y misteriosa,i – #III,min0 maj4
+Neutral,Resolución natural,i – VI,min0 maj8
+Buena,Buena energía,I – V,maj0 maj7
+Buena,Protagonista,I – bVII,maj0 maj10
+Buena,Heroica,I – bIII,maj0 maj3
+Buena,Fantástica,I – III,maj0 maj4
+Buena,Fantástica (variante),I – bVI,maj0 maj8
+Buena,Heroica luminosa,I – VI,maj0 maj9
+Jazz,II-V-I clásico,ii7 – V7 – I,m7-2 dom7-7 maj0
+Jazz,Indie / Jazz suave,I – vi – ii – V,maj0 min9 min2 maj7
+Jazz,Circular,I – V – ii – IV,maj0 maj7 min2 maj5
