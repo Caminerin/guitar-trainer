@@ -92,6 +92,8 @@ object GradientColors {
     val tunerEnd = Color(0xFF00695C)
     val metroStart = Color(0xFF180A00)
     val metroEnd = Color(0xFFBF360C)
+    val grooveStart = Color(0xFF1A0A2E)
+    val grooveEnd = Color(0xFF6A1B9A)
     val settingsStart = Color(0xFF1A1714)
     val settingsEnd = Color(0xFF4E4238)
 
@@ -447,6 +449,9 @@ private fun PracticeSection(
             pitchResult = pitchResult,
             showBackButton = true
         )
+        4 -> GrooveTrainerScreen(
+            onBack = { onSubScreenChange(-1) }
+        )
     }
 }
 
@@ -519,6 +524,21 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(3) }
                 )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f)
+            ) {
+                GridCard(
+                    emoji = "🥁",
+                    label = "Caja de Ritmos",
+                    subtitle = "Groove Trainer",
+                    gradientStart = GradientColors.grooveStart,
+                    gradientEnd = GradientColors.grooveEnd,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    onClick = { onItemClick(4) }
+                )
+                Spacer(modifier = Modifier.weight(1f))
             }
         }
     }

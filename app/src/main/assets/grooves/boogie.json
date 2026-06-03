@@ -1,0 +1,508 @@
+{
+  "id": "boogie",
+  "displayName": "Boogie",
+  "patterns": [
+    {
+      "name": "Boogie 1",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 15.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Boogie 2",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 15.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Boogie 3",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 15.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 15.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "fills": [
+    {
+      "name": "Boogie Break 1",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 1.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 10.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Boogie Break 2",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "SNARE_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 1.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 10.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Boogie Break 3",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "SNARE_HARD",
+          "step": 1.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 5.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 6.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 10.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 13.33,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 14.67,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "patternCount": 3,
+  "fillCount": 3
+}
