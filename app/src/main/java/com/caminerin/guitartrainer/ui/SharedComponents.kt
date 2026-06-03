@@ -28,6 +28,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Speed
@@ -81,6 +87,252 @@ val SHARED_BG = Color(0xFF1A1A1A)
 val SHARED_TOOLBAR = Color(0xFF1E1E1E)
 val SHARED_ACCENT = Color(0xFFff6b9d)
 val TOOLBAR_CHIP_BG = Color(0xFF3A3A3A) // Standard toolbar button background
+
+// ===== SHARED FRETBOARD CONSTANTS (tablatura style) =====
+val FRETBOARD_WOOD = Color(0xFFFAFAF5)       // cream paper background
+val FRETBOARD_NUT = Color(0xFF333333)         // dark nut
+val FRETBOARD_FRET_WIRE = Color(0xFFCCCCCC)   // subtle fret lines
+val FRETBOARD_INLAY = Color(0xFF999999)        // subtle dot markers
+val FRETBOARD_DIM = Color(0xFF78909C)          // muted for out-of-position
+val FRETBOARD_HIGHLIGHT = Color(0xFFFFD600)    // current note highlight (practice mode)
+
+val FRETBOARD_STRING_COLORS = listOf(
+    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999),
+    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999)
+)
+val FRETBOARD_STRING_WIDTHS = listOf(1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 1.5f)
+
+const val FRETBOARD_TOTAL_FRETS = 22
+
+// ===== SHARED FRETBOARD DRAWING (single source of truth) =====
+
+/**
+ * Draws a tablatura-style guitar fretboard used by both Biblioteca/Escalas
+ * and Practicar/Escalas screens. Having a single function prevents
+ * recurring bugs caused by code duplication.
+ *
+ * @param rootNote        index (0-11) of the scale root
+ * @param scale           the Scale object with intervals, etc.
+ * @param noteDisplay     how to show notes (NOTE, DEGREE, BOTH, etc.)
+ * @param positionsEnabled  whether position filtering is active
+ * @param posStart        start fret of the active position (0 if all frets)
+ * @param posEnd          end fret of the active position (TOTAL_FRETS if all frets)
+ * @param fretWidthPx     pixel width of each fret cell
+ * @param openStringWidthPx  pixel width reserved for open string labels
+ * @param currentNote     optional highlight for practice mode (null in library mode)
+ */
+fun DrawScope.drawSharedFretboard(
+    rootNote: Int,
+    scale: Scale,
+    noteDisplay: NoteDisplay,
+    positionsEnabled: Boolean,
+    posStart: Int,
+    posEnd: Int,
+    fretWidthPx: Float,
+    openStringWidthPx: Float,
+    currentNote: FretboardNote? = null
+) {
+    val h = size.height
+    val topPad = h * 0.08f
+    val bottomPad = h * 0.08f
+    val fbTop = topPad
+    val fbBottom = h - bottomPad
+    val fbHeight = fbBottom - fbTop
+    val stringSpacing = fbHeight / 7f
+    val nutX = openStringWidthPx
+    val nutWidth = 12f
+
+    // Paper/cream background
+    drawRoundRect(
+        color = FRETBOARD_WOOD,
+        topLeft = Offset(nutX, fbTop - 4f),
+        size = Size(size.width - nutX, fbHeight + 8f),
+        cornerRadius = CornerRadius(6f)
+    )
+
+    // Position bracket with golden border
+    if (positionsEnabled) {
+        val startX = if (posStart == 0) nutX else nutX + nutWidth + (posStart - 1) * fretWidthPx
+        val endX = nutX + nutWidth + posEnd * fretWidthPx
+        drawRect(
+            color = Color(0x1AFFD54F),
+            topLeft = Offset(startX, fbTop - 4f),
+            size = Size(endX - startX, fbHeight + 8f)
+        )
+        drawRect(
+            color = Color(0xFFC8A84E),
+            topLeft = Offset(startX, fbTop - 4f),
+            size = Size(endX - startX, fbHeight + 8f),
+            style = Stroke(2f)
+        )
+    }
+
+    // Nut (dark, tab style)
+    drawRect(color = FRETBOARD_NUT, topLeft = Offset(nutX, fbTop - 6f), size = Size(nutWidth, fbHeight + 12f))
+
+    // Fret lines — subtle
+    for (fret in 1..FRETBOARD_TOTAL_FRETS) {
+        val x = nutX + nutWidth + fret * fretWidthPx
+        drawLine(FRETBOARD_FRET_WIRE, Offset(x, fbTop), Offset(x, fbBottom), strokeWidth = 1f)
+    }
+
+    // Fret numbers below the fretboard
+    val fretNumPaint = android.graphics.Paint().apply {
+        color = android.graphics.Color.argb(150, 100, 100, 100)
+        textSize = 36f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isAntiAlias = true
+    }
+    for (fret in 1..FRETBOARD_TOTAL_FRETS) {
+        val x = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
+        drawContext.canvas.nativeCanvas.drawText("$fret", x, fbBottom + bottomPad * 0.7f, fretNumPaint)
+    }
+
+    // Dot markers (subtle, below fretboard)
+    val singleDots = listOf(3, 5, 7, 9, 15, 17, 19, 21)
+    val doubleDots = listOf(12)
+    val dotRadius = (fretWidthPx * 0.05f).coerceIn(3f, 8f)
+    for (fret in singleDots) {
+        if (fret > FRETBOARD_TOTAL_FRETS) continue
+        val cx = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
+        drawCircle(FRETBOARD_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.35f))
+    }
+    for (fret in doubleDots) {
+        if (fret > FRETBOARD_TOTAL_FRETS) continue
+        val cx = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
+        drawCircle(FRETBOARD_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.2f))
+        drawCircle(FRETBOARD_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.5f))
+    }
+
+    // Staff lines (strings) — thin uniform like tab notation
+    for (s in 0 until 6) {
+        val y = fbTop + stringSpacing * (6 - s)
+        drawLine(FRETBOARD_STRING_COLORS[s], Offset(nutX, y), Offset(size.width, y), strokeWidth = FRETBOARD_STRING_WIDTHS[s])
+    }
+
+    // Open string labels
+    val openPaint = android.graphics.Paint().apply {
+        color = android.graphics.Color.argb(180, 80, 80, 80)
+        textSize = 48f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isAntiAlias = true
+    }
+    val fret0InPos = 0 in posStart..posEnd
+    for (s in 0 until 6) {
+        val y = fbTop + stringSpacing * (6 - s)
+        val openNote = STANDARD_TUNING_MIDI[s]
+        val noteIdx = openNote % 12
+        val hasScaleNote = isNoteInScale(noteIdx, rootNote, scale.intervals)
+        val willDrawCircle = hasScaleNote && (!positionsEnabled || fret0InPos)
+        if (!willDrawCircle) {
+            drawContext.canvas.nativeCanvas.drawText(getOpenStringNames()[s], nutX * 0.5f, y + 24f, openPaint)
+        }
+    }
+
+    // Note text paints
+    val notePaintBig = android.graphics.Paint().apply {
+        color = android.graphics.Color.WHITE
+        textSize = 48f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isFakeBoldText = true
+        isAntiAlias = true
+    }
+    val notePaintSmall = android.graphics.Paint().apply {
+        color = android.graphics.Color.WHITE
+        textSize = 36f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isFakeBoldText = true
+        isAntiAlias = true
+    }
+    val notePaintDim = android.graphics.Paint().apply {
+        color = android.graphics.Color.argb(100, 100, 100, 100)
+        textSize = 28f
+        textAlign = android.graphics.Paint.Align.CENTER
+        isFakeBoldText = true
+        isAntiAlias = true
+    }
+
+    val noteRadius = (stringSpacing * 0.44f).coerceIn(36f, 80f)
+
+    for (s in 0 until 6) {
+        val openNote = STANDARD_TUNING_MIDI[s]
+        val y = fbTop + stringSpacing * (6 - s)
+
+        for (fret in 0..FRETBOARD_TOTAL_FRETS) {
+            val noteIdx = (openNote + fret) % 12
+            if (!isNoteInScale(noteIdx, rootNote, scale.intervals)) continue
+
+            val degree = getDegreeInScale(noteIdx, rootNote, scale.intervals) ?: continue
+            val isInPos = fret in posStart..posEnd
+
+            val cx = if (fret == 0) {
+                nutX * 0.5f
+            } else {
+                nutX + nutWidth + (fret - 0.5f) * fretWidthPx
+            }
+
+            // Out-of-position: dimmed
+            if (positionsEnabled && !isInPos) {
+                // Skip dimmed notes at fret 0 — open string labels are already drawn there
+                if (fret == 0) continue
+                val dimR = noteRadius * 0.65f
+                drawCircle(FRETBOARD_WOOD, dimR + 1f, Offset(cx, y))
+                drawCircle(FRETBOARD_DIM.copy(alpha = 0.25f), dimR, Offset(cx, y))
+                if (noteDisplay != NoteDisplay.NONE) {
+                    val lbl = buildSharedNoteLabel(noteIdx, degree, noteDisplay, rootNote, scale.relativeMajorOffset)
+                    notePaintDim.color = android.graphics.Color.argb(100, 100, 100, 100)
+                    drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + 10f, notePaintDim)
+                }
+                continue
+            }
+
+            // In-position: full color
+            val isFiltered = DegreeColorPrefs.isScaleEnabled(degree)
+            val noteColor = DegreeColorPrefs.getScaleColor(degree)
+            val isCurrentNote = currentNote != null && currentNote.string == s && currentNote.fret == fret
+
+            val baseR = if (degree == 1 && isFiltered) noteRadius * 1.1f else if (!isFiltered) noteRadius * 0.7f else noteRadius
+            val r = if (isCurrentNote) baseR * 1.3f else baseR
+
+            // White background to break the staff line
+            drawCircle(FRETBOARD_WOOD, r + 2f, Offset(cx, y))
+            drawCircle(noteColor, r, Offset(cx, y))
+            drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(1.5f))
+
+            // Yellow highlight ring for current note (practice mode)
+            if (isCurrentNote) {
+                drawCircle(FRETBOARD_HIGHLIGHT, r + 8f, Offset(cx, y), style = Stroke(5f))
+                drawCircle(FRETBOARD_HIGHLIGHT.copy(alpha = 0.3f), r + 16f, Offset(cx, y), style = Stroke(3f))
+            }
+
+            // Note label
+            if (noteDisplay != NoteDisplay.NONE && isFiltered) {
+                val label = buildSharedNoteLabel(noteIdx, degree, noteDisplay, rootNote, scale.relativeMajorOffset)
+                val paint = if (label.length > 4) notePaintSmall else notePaintBig
+                if (isCurrentNote) {
+                    paint.color = android.graphics.Color.WHITE
+                } else {
+                    paint.color = android.graphics.Color.argb(220, 255, 255, 255)
+                }
+                drawContext.canvas.nativeCanvas.drawText(label, cx, y + paint.textSize * 0.35f, paint)
+                // Reset to white for next iteration
+                paint.color = android.graphics.Color.WHITE
+            }
+        }
+    }
+}
+
+private fun buildSharedNoteLabel(noteIdx: Int, degree: Int, display: NoteDisplay, rootNote: Int = -1, relativeMajorOffset: Int = 0): String {
+    val noteName = getSpanishNoteName(noteIdx, rootNote, relativeMajorOffset)
+    val degreeStr = getDegreeLabel(degree)
+    return when (display) {
+        NoteDisplay.NOTE -> noteName
+        NoteDisplay.DEGREE -> degreeStr
+        NoteDisplay.BOTH -> "$degreeStr $noteName"
+        NoteDisplay.FINGERING -> noteName
+        NoteDisplay.NONE -> ""
+    }
+}
 
 // ===== SCROLLABLE TOOLBAR WITH EDGE INDICATORS =====
 @Composable

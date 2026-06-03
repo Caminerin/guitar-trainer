@@ -50,13 +50,7 @@ import com.caminerin.guitartrainer.audio.TickPlayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,26 +59,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
-private const val TOTAL_FRETS = 22
-
 private val COLOR_BG = SHARED_BG
 private val COLOR_TOOLBAR = SHARED_TOOLBAR
-private val COLOR_WOOD = Color(0xFFFAFAF5)       // cream paper background
-private val COLOR_NUT = Color(0xFF333333)         // dark nut (tab style)
-private val COLOR_FRET_WIRE = Color(0xFFCCCCCC)    // subtle fret lines
-private val COLOR_INLAY = Color(0xFF999999)        // subtle dot markers
-private val COLOR_TONIC = Color(0xFFE53935)
-private val COLOR_THIRD = Color(0xFF1E88E5)
-private val COLOR_FIFTH = Color(0xFF43A047)
-private val COLOR_OTHER = Color(0xFF26A69A)
-private val COLOR_HIGHLIGHT = Color(0xFFFFD600)
-private val COLOR_DIM = Color(0xFF78909C)
-
-private val STRING_COLORS = listOf(
-    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999),
-    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999)
-)
-private val STRING_WIDTHS = listOf(1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 1.5f)
 
 
 
@@ -101,6 +77,7 @@ fun CagedPracticeScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex.coerceIn(0, ALL_SCALES.size - 1)) }
+    var noteDisplay by rememberSaveable { mutableStateOf(NoteDisplay.BOTH) }
     var bpm by rememberSaveable { mutableIntStateOf(60) }
     var subdivision by rememberSaveable { mutableIntStateOf(1) }
     var positionsEnabled by rememberSaveable { mutableStateOf(true) }
@@ -120,8 +97,9 @@ fun CagedPracticeScreen(
     var showInfo by remember { mutableStateOf(false) }
     var showSubdivisionMenu by remember { mutableStateOf(false) }
     var showColorSelector by remember { mutableStateOf(false) }
+    var showDisplaySelector by remember { mutableStateOf(false) }
 
-    val anyOverlayOpen = showKeyCircle || showScaleSelector || showInfo || showSubdivisionMenu || showColorSelector
+    val anyOverlayOpen = showKeyCircle || showScaleSelector || showInfo || showSubdivisionMenu || showColorSelector || showDisplaySelector
     LaunchedEffect(anyOverlayOpen) { onOverlayChanged(anyOverlayOpen) }
 
     val scale = ALL_SCALES[selectedScaleIndex]
@@ -135,7 +113,7 @@ fun CagedPracticeScreen(
     val density = LocalDensity.current
     val fretWidthDp = (60f * zoom).dp
     val openStringWidth = 48.dp
-    val totalWidthDp = openStringWidth + (TOTAL_FRETS * 60 * zoom + 30).dp
+    val totalWidthDp = openStringWidth + (FRETBOARD_TOTAL_FRETS * 60 * zoom + 30).dp
 
     // Metronome tick player
     val tickPlayer = remember { TickPlayer() }
@@ -324,6 +302,9 @@ fun CagedPracticeScreen(
                 // Scale selector (same as Biblioteca)
                 ToolbarChip(text = scale.name, onClick = { showScaleSelector = true })
 
+                // Display mode (same as Biblioteca)
+                NoteDisplayToolbarButton(noteDisplay) { showDisplaySelector = true }
+
                 // BPM control
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     ToolbarChip(text = "-", onClick = { bpm = (bpm - 5).coerceAtLeast(20) })
@@ -468,14 +449,16 @@ fun CagedPracticeScreen(
                         .width(totalWidthDp)
                         .fillMaxHeight()
                 ) {
-                    drawCagedFretboard(
+                    drawSharedFretboard(
                         rootNote = selectedKey,
                         scale = scale,
-                        position = currentPosition,
-                        currentNote = currentNote,
+                        noteDisplay = noteDisplay,
+                        positionsEnabled = positionsEnabled,
+                        posStart = currentPosition.startFret,
+                        posEnd = currentPosition.endFret,
                         fretWidthPx = with(density) { fretWidthDp.toPx() },
                         openStringWidthPx = with(density) { openStringWidth.toPx() },
-                        positionsEnabled = positionsEnabled
+                        currentNote = currentNote
                     )
                 }
               }
@@ -533,191 +516,15 @@ fun CagedPracticeScreen(
                 onDismiss = { showColorSelector = false }
             )
         }
-    }
-}
 
-private fun DrawScope.drawCagedFretboard(
-    rootNote: Int,
-    scale: Scale,
-    position: ScalePosition,
-    currentNote: FretboardNote?,
-    fretWidthPx: Float,
-    openStringWidthPx: Float,
-    positionsEnabled: Boolean = true
-) {
-    val h = size.height
-    val topPad = h * 0.08f
-    val bottomPad = h * 0.08f
-    val fbTop = topPad
-    val fbBottom = h - bottomPad
-    val fbHeight = fbBottom - fbTop
-    val stringSpacing = fbHeight / 7f
-    val nutX = openStringWidthPx
-    val nutWidth = 12f
-
-    // Paper/cream background
-    drawRoundRect(
-        color = COLOR_WOOD,
-        topLeft = Offset(nutX, fbTop - 4f),
-        size = Size(size.width - nutX, fbHeight + 8f),
-        cornerRadius = CornerRadius(6f)
-    )
-
-    // Position bracket with golden border
-    if (positionsEnabled) {
-        val startX = if (position.startFret == 0) nutX else nutX + nutWidth + (position.startFret - 1) * fretWidthPx
-        val endX = nutX + nutWidth + position.endFret * fretWidthPx
-        drawRect(
-            color = Color(0x1AFFD54F),
-            topLeft = Offset(startX, fbTop - 4f),
-            size = Size(endX - startX, fbHeight + 8f)
-        )
-        drawRect(
-            color = Color(0xFFC8A84E),
-            topLeft = Offset(startX, fbTop - 4f),
-            size = Size(endX - startX, fbHeight + 8f),
-            style = Stroke(2f)
-        )
-    }
-
-    // Nut (dark, tab style)
-    drawRect(color = COLOR_NUT, topLeft = Offset(nutX, fbTop - 6f), size = Size(nutWidth, fbHeight + 12f))
-
-    // Fret lines — subtle with tick marks
-    for (fret in 1..TOTAL_FRETS) {
-        val x = nutX + nutWidth + fret * fretWidthPx
-        drawLine(COLOR_FRET_WIRE, Offset(x, fbTop), Offset(x, fbBottom), strokeWidth = 1f)
-    }
-
-    // Fret numbers below the fretboard
-    val fretNumPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(150, 100, 100, 100)
-        textSize = 36f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isAntiAlias = true
-    }
-    for (fret in 1..TOTAL_FRETS) {
-        val x = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
-        drawContext.canvas.nativeCanvas.drawText("$fret", x, fbBottom + bottomPad * 0.7f, fretNumPaint)
-    }
-
-    // Dot markers (subtle, below fretboard)
-    val singleDots = listOf(3, 5, 7, 9, 15, 17, 19, 21)
-    val doubleDots = listOf(12)
-    val dotRadius = (fretWidthPx * 0.05f).coerceIn(3f, 8f)
-    for (fret in singleDots) {
-        if (fret > TOTAL_FRETS) continue
-        val cx = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
-        drawCircle(COLOR_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.35f))
-    }
-    for (fret in doubleDots) {
-        if (fret > TOTAL_FRETS) continue
-        val cx = nutX + nutWidth + (fret - 0.5f) * fretWidthPx
-        drawCircle(COLOR_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.2f))
-        drawCircle(COLOR_INLAY, dotRadius, Offset(cx, fbBottom + bottomPad * 0.5f))
-    }
-
-    // Staff lines (strings) — thin uniform like tab notation
-    for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (6 - s)
-        drawLine(STRING_COLORS[s], Offset(nutX, y), Offset(size.width, y), strokeWidth = STRING_WIDTHS[s])
-    }
-
-    val openPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(180, 80, 80, 80)
-        textSize = 48f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isAntiAlias = true
-    }
-    val posStart = position.startFret
-    val posEnd = position.endFret
-    val fret0InPos = 0 in posStart..posEnd
-    for (s in 0 until 6) {
-        val y = fbTop + stringSpacing * (6 - s)
-        val openNote = STANDARD_TUNING_MIDI[s]
-        val noteIdx = openNote % 12
-        val hasScaleNote = isNoteInScale(noteIdx, rootNote, scale.intervals)
-        val willDrawCircle = hasScaleNote && (!positionsEnabled || fret0InPos)
-        if (!willDrawCircle) {
-            drawContext.canvas.nativeCanvas.drawText(OPEN_STRING_NAMES[s], nutX * 0.5f, y + 24f, openPaint)
-        }
-    }
-
-    val noteRadius = (stringSpacing * 0.44f).coerceIn(36f, 80f)
-    val notePaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE
-        textSize = 48f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
-        isAntiAlias = true
-    }
-
-    val notePaintBig = android.graphics.Paint().apply {
-        color = android.graphics.Color.WHITE
-        textSize = 48f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
-        isAntiAlias = true
-    }
-
-    val notePaintDim = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(100, 255, 255, 255)
-        textSize = 28f
-        textAlign = android.graphics.Paint.Align.CENTER
-        isFakeBoldText = true
-        isAntiAlias = true
-    }
-
-    for (s in 0 until 6) {
-        val openNote = STANDARD_TUNING_MIDI[s]
-        val y = fbTop + stringSpacing * (6 - s)
-
-        for (fret in 0..TOTAL_FRETS) {
-            val noteIdx = (openNote + fret) % 12
-            if (!isNoteInScale(noteIdx, rootNote, scale.intervals)) continue
-
-            val degree = getDegreeInScale(noteIdx, rootNote, scale.intervals) ?: continue
-            val cx = if (fret == 0) nutX * 0.5f else nutX + nutWidth + (fret - 0.5f) * fretWidthPx
-
-            val isInPos = fret in posStart..posEnd
-            val isCurrentNote = currentNote != null && currentNote.string == s && currentNote.fret == fret
-
-            if (positionsEnabled && !isInPos) {
-                if (fret == 0) continue
-                val dimR = noteRadius * 0.65f
-                drawCircle(COLOR_WOOD, dimR + 1f, Offset(cx, y))
-                drawCircle(COLOR_DIM.copy(alpha = 0.25f), dimR, Offset(cx, y))
-                val lbl = getSpanishNoteName(noteIdx, rootNote, scale.relativeMajorOffset)
-                notePaintDim.color = android.graphics.Color.argb(100, 100, 100, 100)
-                drawContext.canvas.nativeCanvas.drawText(lbl, cx, y + 10f, notePaintDim)
-                continue
-            }
-
-            val isFiltered = DegreeColorPrefs.isScaleEnabled(degree)
-            val noteColor = DegreeColorPrefs.getScaleColor(degree)
-
-            val baseR = if (degree == 1 && isFiltered) noteRadius * 1.1f else if (!isFiltered) noteRadius * 0.7f else noteRadius
-            val r = if (isCurrentNote) baseR * 1.3f else baseR
-
-            // White background to break the staff line
-            drawCircle(COLOR_WOOD, r + 2f, Offset(cx, y))
-            drawCircle(noteColor, r, Offset(cx, y))
-            drawCircle(Color(0x44000000), r, Offset(cx, y), style = Stroke(1.5f))
-
-            if (isCurrentNote) {
-                drawCircle(COLOR_HIGHLIGHT, r + 8f, Offset(cx, y), style = Stroke(5f))
-                drawCircle(COLOR_HIGHLIGHT.copy(alpha = 0.3f), r + 16f, Offset(cx, y), style = Stroke(3f))
-            }
-
-            if (isFiltered) {
-                val degreeStr = getDegreeLabel(degree)
-                val noteName = getSpanishNoteName(noteIdx, rootNote, scale.relativeMajorOffset)
-                val label = "$degreeStr $noteName"
-                val paint = if (label.length > 3) notePaint else notePaintBig
-                paint.color = if (isCurrentNote) android.graphics.Color.WHITE
-                else android.graphics.Color.argb(220, 255, 255, 255)
-                drawContext.canvas.nativeCanvas.drawText(label, cx, y + paint.textSize * 0.35f, paint)
-            }
+        if (showDisplaySelector) {
+            NoteDisplaySelectorOverlay(
+                current = noteDisplay,
+                onSelect = { noteDisplay = it },
+                onDismiss = { showDisplaySelector = false }
+            )
         }
     }
 }
+
+
