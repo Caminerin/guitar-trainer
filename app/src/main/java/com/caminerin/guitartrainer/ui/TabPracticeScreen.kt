@@ -626,6 +626,10 @@ fun TabPlayerScreen(
                             RiffSynth.playSequence(notes, "crunch")
                         }
 
+                        // Time-based cursor: track absolute time to avoid drift
+                        val chunkStartTimeNanos = System.nanoTime()
+                        var elapsedTargetMs = 0.0
+
                         for (mi in chunkStart until chunkEnd) {
                             if (!isActive || !isPlaying) break
                             currentMeasure = mi
@@ -635,8 +639,12 @@ fun TabPlayerScreen(
                                 if (!isActive || !isPlaying) break
                                 currentBeatInMeasure = bi
                                 val dur = beatDurationMs * (4.0 / beat.duration)
-                                val waitMs = if (beat.isDotted) (dur * 1.5).toLong() else dur.toLong()
-                                delay(waitMs.coerceAtLeast(20))
+                                val beatMs = if (beat.isDotted) dur * 1.5 else dur
+                                elapsedTargetMs += beatMs
+                                val targetNanos = chunkStartTimeNanos + (elapsedTargetMs * 1_000_000).toLong()
+                                val nowNanos = System.nanoTime()
+                                val waitMs = ((targetNanos - nowNanos) / 1_000_000L).coerceAtLeast(1)
+                                delay(waitMs)
                             }
                         }
 
