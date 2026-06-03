@@ -56,6 +56,9 @@ object DrumEngine {
     /** Set this to change BPM in real-time while playing */
     @Volatile var liveBpm = 120
 
+    /** Generation counter — prevents stale coroutines from writing to AudioTrack */
+    @Volatile private var generation = 0
+
     fun init(context: Context) {
         synchronized(lock) {
             if (initialized) return
@@ -166,6 +169,7 @@ object DrumEngine {
     /**
      * Play a drum loop. Reads [liveBpm] each beat so tempo changes take effect immediately.
      * Writes audio in small chunks (~10ms) so [stop] responds within ~10ms.
+     * Uses a generation counter to prevent stale coroutines from writing after a new loop starts.
      */
     suspend fun playLoop(
         context: Context,
@@ -176,13 +180,14 @@ object DrumEngine {
     ) {
         init(context)
         liveBpm = bpm
+        val myGeneration = ++generation
         isPlaying = true
         withContext(Dispatchers.Default) {
             try {
                 val pattern = getPattern(style, beatsPerMeasure)
-                while (coroutineContext.isActive && isPlaying) {
+                while (coroutineContext.isActive && isPlaying && generation == myGeneration) {
                     for ((beatIdx, events) in pattern.withIndex()) {
-                        if (!coroutineContext.isActive || !isPlaying) break
+                        if (!coroutineContext.isActive || !isPlaying || generation != myGeneration) break
                         onBeat?.invoke(beatIdx)
                         // Read BPM live each beat
                         val currentBpm = liveBpm.coerceIn(30, 300)
@@ -197,7 +202,7 @@ object DrumEngine {
                         // Write in small chunks for responsive stop
                         var written = 0
                         val track = audioTrack ?: break
-                        while (written < buffer.size && isPlaying && coroutineContext.isActive) {
+                        while (written < buffer.size && isPlaying && coroutineContext.isActive && generation == myGeneration) {
                             val remaining = buffer.size - written
                             val chunkSize = minOf(CHUNK_SAMPLES, remaining)
                             try {
@@ -213,6 +218,7 @@ object DrumEngine {
 
     fun stop() {
         isPlaying = false
+        generation++ // invalidate any running loop immediately
         try { audioTrack?.flush() } catch (_: Exception) { }
     }
 

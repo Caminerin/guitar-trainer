@@ -957,7 +957,8 @@ fun SubdivisionSelectorOverlay(
                 .clip(RoundedCornerShape(20.dp))
                 .background(Color(0xFF2A2A2A))
                 .clickable(enabled = false) {}
-                .padding(24.dp),
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(

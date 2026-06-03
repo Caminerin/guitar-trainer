@@ -411,39 +411,43 @@ fun CagedPracticeScreen(
                 }
             }
 
-            // Fretboard
+            // Fretboard — disable ALL touch (pinch + scroll) when an overlay is open
+            val fretboardScrollState = rememberScrollState()
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .pointerInput(anyOverlayOpen) {
-                        if (anyOverlayOpen) return@pointerInput
-                        awaitEachGesture {
-                            awaitFirstDown(requireUnconsumed = false)
-                            var prevSpan = 0f
-                            do {
-                                val event = awaitPointerEvent()
-                                val pressed = event.changes.filter { it.pressed }
-                                if (pressed.size >= 2) {
-                                    val dx = pressed[0].position.x - pressed[1].position.x
-                                    val dy = pressed[0].position.y - pressed[1].position.y
-                                    val span = kotlin.math.sqrt(dx * dx + dy * dy)
-                                    if (prevSpan > 10f && span > 10f) {
-                                        zoom = (zoom * (span / prevSpan)).coerceIn(0.5f, 3f)
-                                    }
-                                    prevSpan = span
-                                    pressed.forEach { it.consume() }
-                                } else {
-                                    prevSpan = 0f
+                    .then(
+                        if (!anyOverlayOpen) {
+                            Modifier.pointerInput(Unit) {
+                                awaitEachGesture {
+                                    awaitFirstDown(requireUnconsumed = false)
+                                    var prevSpan = 0f
+                                    do {
+                                        val event = awaitPointerEvent()
+                                        val pressed = event.changes.filter { it.pressed }
+                                        if (pressed.size >= 2) {
+                                            val dx = pressed[0].position.x - pressed[1].position.x
+                                            val dy = pressed[0].position.y - pressed[1].position.y
+                                            val span = kotlin.math.sqrt(dx * dx + dy * dy)
+                                            if (prevSpan > 10f && span > 10f) {
+                                                zoom = (zoom * (span / prevSpan)).coerceIn(0.5f, 3f)
+                                            }
+                                            prevSpan = span
+                                            pressed.forEach { it.consume() }
+                                        } else {
+                                            prevSpan = 0f
+                                        }
+                                    } while (event.changes.any { it.pressed })
                                 }
-                            } while (event.changes.any { it.pressed })
-                        }
-                    }
+                            }
+                        } else Modifier
+                    )
             ) {
               Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .horizontalScroll(rememberScrollState())
+                    .horizontalScroll(fretboardScrollState, enabled = !anyOverlayOpen)
               ) {
                 Canvas(
                     modifier = Modifier

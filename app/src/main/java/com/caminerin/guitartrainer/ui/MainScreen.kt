@@ -590,7 +590,7 @@ private fun ChordsSelectionScreen(
             SubOptionCard(
                 emoji = "⚡",
                 title = "Reto de velocidad",
-                subtitle = "¿Cuántos cambios aguantas?",
+                subtitle = "¿Cuántos cambios aguantas?\nElige entre 2 y 4 acordes",
                 gradientStart = GradientColors.retoStart,
                 gradientEnd = GradientColors.retoEnd,
                 onClick = { onSelect(1) }
