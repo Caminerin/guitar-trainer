@@ -335,8 +335,8 @@ class MetronomeEngine {
                                 }
                             } else {
                                 activeBpm -= config.trainingBpmChange
-                                if (activeBpm <= config.trainingMinBpm) {
-                                    activeBpm = config.trainingMinBpm
+                                if (activeBpm <= config.bpm) {
+                                    activeBpm = config.bpm
                                     trainingGoingUp = true
                                 }
                             }
