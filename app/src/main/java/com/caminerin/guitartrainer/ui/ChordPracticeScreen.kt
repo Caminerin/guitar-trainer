@@ -852,12 +852,18 @@ private fun ProgressionPlayerScreen(
     else
         chordNames.firstOrNull() ?: "—"
 
+    // Pre-init drum engine so first play has no delay
+    LaunchedEffect(Unit) { DrumEngine.init(context) }
+
     // Single TickPlayer instance, reused across play/stop cycles
     val tickPlayer = remember { TickPlayer() }
     DisposableEffect(Unit) { onDispose { tickPlayer.release(); drumJob?.cancel(); DrumEngine.release() } }
 
-    // Drum engine sync
-    LaunchedEffect(isPlaying, selectedDrumStyle) {
+    // Keep DrumEngine.liveBpm in sync with UI bpm at all times
+    LaunchedEffect(bpm) { DrumEngine.liveBpm = bpm }
+
+    // Drum engine — launch/cancel when play state or style changes
+    LaunchedEffect(isPlaying, selectedDrumStyle, beatsPerMeasure) {
         drumJob?.cancel()
         DrumEngine.stop()
         if (isPlaying && selectedDrumStyle != null) {
@@ -872,7 +878,7 @@ private fun ProgressionPlayerScreen(
         }
     }
 
-    // Metronome playback loop
+    // Metronome + beat counter loop (timing source of truth)
     LaunchedEffect(isPlaying) {
         if (!isPlaying) {
             currentBeatGlobal = -1
@@ -882,13 +888,13 @@ private fun ProgressionPlayerScreen(
         try {
             while (isActive) {
                 currentBeatGlobal = beat
+                val currentBpm = bpmState.value
                 if (metronomeState.value) {
-                    val currentBpm = bpmState.value
                     withContext(Dispatchers.IO) {
                         tickPlayer.playBeat(currentBpm)
                     }
                 } else {
-                    delay(60_000L / bpmState.value.toLong())
+                    delay(60_000L / currentBpm.toLong())
                 }
                 beat++
                 if (beat >= totalBeats) {
@@ -922,6 +928,7 @@ private fun ProgressionPlayerScreen(
         ) {
             IconButton(
                 onClick = {
+                    DrumEngine.stop()
                     isPlaying = false
                     onBack()
                 },
@@ -1259,7 +1266,10 @@ private fun ProgressionPlayerScreen(
 
                 // Play/Stop
                 IconButton(
-                    onClick = { isPlaying = !isPlaying },
+                    onClick = {
+                        if (isPlaying) DrumEngine.stop()
+                        isPlaying = !isPlaying
+                    },
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
