@@ -160,9 +160,10 @@ class PitchDetector(
             len = len shl 1
         }
         if (inverse) {
+            val invN = 1.0 / n
             for (i in 0 until n) {
-                re[i] /= n
-                im[i] /= n
+                re[i] *= invN
+                im[i] *= invN
             }
         }
     }
