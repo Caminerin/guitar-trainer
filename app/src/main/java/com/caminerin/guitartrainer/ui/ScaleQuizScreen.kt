@@ -60,10 +60,10 @@ private const val TOTAL_FRETS = 22
 
 private val COLOR_BG = SHARED_BG
 private val COLOR_TOOLBAR = SHARED_TOOLBAR
-private val COLOR_WOOD = Color(0xFF3E2415)
-private val COLOR_NUT = Color(0xFFF0EAD6)
-private val COLOR_FRET_WIRE = Color(0xFFBBBBBB)
-private val COLOR_INLAY = Color(0xFFCCC4B0)
+private val COLOR_WOOD = Color(0xFF2C1E10)
+private val COLOR_NUT = Color(0xFFF5E6C8)
+private val COLOR_FRET_WIRE = Color(0xFF8B7355)
+private val COLOR_INLAY = Color(0xFFD4C4A0)
 private val COLOR_CORRECT = Color(0xFF4CAF50)
 private val COLOR_ERROR = Color(0xFFF44336)
 private val COLOR_TONIC_Q = Color(0xFFE53935)
@@ -177,22 +177,22 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF5C6BC0).copy(alpha = 0.25f))
+                        .background(Color(0xFFD4960A).copy(alpha = 0.25f))
                         .clickable { showScaleSelector = true }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text(scale.name, color = Color(0xFFB0BEC5), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(scale.name, color = Color(0xFF8B7D6B), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Max fret selector
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFF00BCD4).copy(alpha = 0.25f))
+                        .background(Color(0xFFE67E00).copy(alpha = 0.25f))
                         .clickable { showFretSelector = true }
                         .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text("Traste $maxFret", color = Color(0xFF80DEEA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("Traste $maxFret", color = Color(0xFFC4A878), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Reset button
@@ -205,7 +205,7 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
 
                 // Info button
                 IconButton(onClick = { showInfo = true }, modifier = Modifier.size(36.dp)) {
-                    Icon(Icons.Default.Info, "Info", tint = Color(0xFF90CAF9), modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Info, "Info", tint = Color(0xFFC4A878), modifier = Modifier.size(20.dp))
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -235,7 +235,7 @@ fun ScaleQuizScreen(onBack: () -> Unit, pitchResult: PitchDetector.PitchResult? 
                     modifier = Modifier
                         .fillMaxWidth(progress)
                         .height(4.dp)
-                        .background(if (progress >= 1f) Color(0xFF4CAF50) else Color(0xFF2196F3))
+                        .background(if (progress >= 1f) Color(0xFF8BC34A) else Color(0xFFD4960A))
                 )
             }
 

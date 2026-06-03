@@ -75,11 +75,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
 
-// ─── Theme ───
-private val BG = Color(0xFF121212)
-private val TOP_BAR = Color(0xFF1A1A2E)
-private val ACCENT = Color(0xFFFFC107)
-private val CARD_BG = Color(0xFF1E1E2E)
+// ─── Theme (Warm Dark) ───
+private val BG = Color(0xFF0F0D0A)
+private val TOP_BAR = Color(0xFF12100C)
+private val ACCENT = Color(0xFFD4960A)
+private val CARD_BG = Color(0xFF1A1714)
 
 // ─── Data model ───
 private data class ProgressionChord(val semitones: Int, val quality: String)
@@ -100,7 +100,7 @@ private fun min7(semitones: Int) = ProgressionChord(semitones, "m7")
 
 // ─── Category colors ───
 private val CAT_TRISTE = Color(0xFF7E57C2)
-private val CAT_AGRIDULCE = Color(0xFF5C6BC0)
+private val CAT_AGRIDULCE = Color(0xFFD4960A)
 private val CAT_BELLA = Color(0xFF26A69A)
 private val CAT_FELIZ = Color(0xFF66BB6A)
 private val CAT_EPICA = Color(0xFFFF7043)
@@ -433,7 +433,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                 modifier = Modifier
                     .fillMaxWidth(0.85f)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2A2A2A))
+                    .background(Color(0xFF201C16))
                     .clickable(enabled = false) {}
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -466,7 +466,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF5C6BC0))
+                                .background(Color(0xFFD4960A))
                                 .clickable { filterPage = 1 }
                                 .padding(horizontal = 16.dp, vertical = 16.dp)
                         ) {
@@ -481,7 +481,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFFE91E63))
+                                .background(Color(0xFFE67E00))
                                 .clickable { filterPage = 2 }
                                 .padding(horizontal = 16.dp, vertical = 16.dp)
                         ) {
@@ -711,7 +711,7 @@ private fun ProgressionSelectorScreen(onSelect: (ChordProgressionDef) -> Unit, o
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF2A2A3A))
+                .background(Color(0xFF201C16))
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             Text(
@@ -984,7 +984,7 @@ private fun ProgressionPlayerScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF1A1A2A))
+                .background(Color(0xFF1A1714))
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -1022,7 +1022,7 @@ private fun ProgressionPlayerScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color(0xFF1A1A2A))
+                .background(Color(0xFF1A1714))
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = 8.dp, vertical = 3.dp),
             horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -1214,14 +1214,14 @@ private fun ProgressionPlayerScreen(
                         .size(42.dp)
                         .clip(CircleShape)
                         .background(
-                            if (metronomeEnabled) Color(0xFF43A047).copy(alpha = 0.3f)
-                            else Color.White.copy(alpha = 0.08f)
+                            if (metronomeEnabled) Color(0xFF8BC34A).copy(alpha = 0.3f)
+                            else Color(0xFFC8B090).copy(alpha = 0.08f)
                         )
                 ) {
                     Icon(
                         if (metronomeEnabled) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
                         contentDescription = "Metrónomo",
-                        tint = if (metronomeEnabled) Color(0xFF43A047) else Color.White.copy(alpha = 0.5f),
+                        tint = if (metronomeEnabled) Color(0xFF8BC34A) else Color(0xFFF0E8D8).copy(alpha = 0.5f),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -1273,7 +1273,7 @@ private fun ProgressionPlayerScreen(
                     modifier = Modifier
                         .size(52.dp)
                         .clip(CircleShape)
-                        .background(if (isPlaying) Color(0xFFE53935) else Color(0xFF43A047))
+                        .background(if (isPlaying) Color(0xFFD84315) else Color(0xFF8BC34A))
                 ) {
                     Icon(
                         if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
@@ -1314,27 +1314,27 @@ private fun DrawScope.drawCompactChord(chord: ChordShape) {
     val fretWidth = (fbRight - fbLeft) / fretsToShow
 
     drawRoundRect(
-        color = Color(0xFF3E2415),
+        color = Color(0xFF2C1E10),
         topLeft = Offset(fbLeft, fbTop - 4f),
         size = Size(fbRight - fbLeft, fbHeight + 8f),
         cornerRadius = CornerRadius(4f)
     )
 
     if (startFret == 0) {
-        drawRect(color = Color(0xFFF0EAD6), topLeft = Offset(fbLeft, fbTop - 6f), size = Size(8f, fbHeight + 12f))
+        drawRect(color = Color(0xFFF5E6C8), topLeft = Offset(fbLeft, fbTop - 6f), size = Size(8f, fbHeight + 12f))
     }
 
     for (fret in 1..fretsToShow) {
         val xPos = fbLeft + fret * fretWidth
-        drawLine(Color(0xFFBBBBBB), Offset(xPos, fbTop - 2f), Offset(xPos, fbBottom + 2f), strokeWidth = 1.5f)
+        drawLine(Color(0xFF8B7355), Offset(xPos, fbTop - 2f), Offset(xPos, fbBottom + 2f), strokeWidth = 1.5f)
     }
 
     for (stringNum in 0 until 6) {
         val yPos = fbTop + stringSpacing * (6 - stringNum)
-        drawLine(Color(0xFFD0C4B0), Offset(fbLeft, yPos), Offset(fbRight, yPos), strokeWidth = 1.5f)
+        drawLine(Color(0xFFC8B090), Offset(fbLeft, yPos), Offset(fbRight, yPos), strokeWidth = 1.5f)
     }
 
-    val chordColor = Color(0xFF7B1FA2)
+    val chordColor = Color(0xFFD4960A)
     val noteRadius = (stringSpacing * 0.35f).coerceIn(8f, 20f)
     val labelPaint = android.graphics.Paint().apply {
         color = android.graphics.Color.WHITE
@@ -1355,7 +1355,7 @@ private fun DrawScope.drawCompactChord(chord: ChordShape) {
             }
             fretVal == 0 -> {
                 val centerX = fbLeft * 0.5f
-                drawCircle(Color(0xFF43A047), noteRadius, Offset(centerX, yPos))
+                drawCircle(Color(0xFF8BC34A), noteRadius, Offset(centerX, yPos))
                 drawCircle(Color(0x44000000), noteRadius, Offset(centerX, yPos), style = Stroke(1.5f))
             }
             else -> {

@@ -36,10 +36,10 @@ import androidx.compose.ui.unit.sp
 
 private fun getDegreeColor(degree: Int): Color {
     return when (degree) {
-        1 -> if (DegreeColorPrefs.tonicEnabled) DegreeColorPrefs.tonicColor else Color(0xFF78909C)
-        3 -> if (DegreeColorPrefs.thirdEnabled) DegreeColorPrefs.thirdColor else Color(0xFF78909C)
-        5 -> if (DegreeColorPrefs.fifthEnabled) DegreeColorPrefs.fifthColor else Color(0xFF78909C)
-        else -> if (DegreeColorPrefs.otherEnabled) DegreeColorPrefs.otherColor else Color(0xFF78909C)
+        1 -> if (DegreeColorPrefs.tonicEnabled) DegreeColorPrefs.tonicColor else Color(0xFF5A4A3A)
+        3 -> if (DegreeColorPrefs.thirdEnabled) DegreeColorPrefs.thirdColor else Color(0xFF5A4A3A)
+        5 -> if (DegreeColorPrefs.fifthEnabled) DegreeColorPrefs.fifthColor else Color(0xFF5A4A3A)
+        else -> if (DegreeColorPrefs.otherEnabled) DegreeColorPrefs.otherColor else Color(0xFF5A4A3A)
     }
 }
 
@@ -79,7 +79,7 @@ fun ScaleInfoSheet(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF1E1E1E))
+                .background(Color(0xFF1A1714))
                 .clickable(enabled = false) {} // block clicks through
                 .padding(20.dp)
                 .verticalScroll(rememberScrollState()),

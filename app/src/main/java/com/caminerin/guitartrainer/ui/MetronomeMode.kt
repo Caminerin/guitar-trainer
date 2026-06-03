@@ -329,7 +329,7 @@ fun MetronomeMode(
                         onClick = { if (isPlaying) engine.stop() else playTrigger++ },
                         modifier = Modifier.size(44.dp),
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (isPlaying) Color(0xFFF44336) else Color(0xFF4CAF50)
+                            containerColor = if (isPlaying) Color(0xFFD84315) else Color(0xFF8BC34A)
                         )
                     ) {
                         Icon(
@@ -344,7 +344,7 @@ fun MetronomeMode(
                         Text(text = "$bpm", fontSize = 32.sp, fontWeight = FontWeight.Black, color = Color.White)
                         val tempoName = getTempoName(bpm)
                         if (tempoName.isNotEmpty()) {
-                            Text(tempoName, fontSize = 9.sp, color = Color(0xFFFFC107))
+                            Text(tempoName, fontSize = 9.sp, color = Color(0xFFD4960A))
                         }
                         Text("BPM", fontSize = 10.sp, color = Color.White.copy(alpha = 0.5f))
                     }
@@ -488,7 +488,7 @@ fun MetronomeMode(
                     onClick = { if (isPlaying) engine.stop() else playTrigger++ },
                     modifier = Modifier.size(68.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = if (isPlaying) Color(0xFFF44336) else Color(0xFF4CAF50)
+                        containerColor = if (isPlaying) Color(0xFFD84315) else Color(0xFF8BC34A)
                     )
                 ) {
                     Icon(
@@ -510,7 +510,7 @@ fun MetronomeMode(
                     )
                     val tempoName = getTempoName(bpm)
                     if (tempoName.isNotEmpty()) {
-                        Text(tempoName, fontSize = 12.sp, color = Color(0xFFFFC107), fontWeight = FontWeight.Bold)
+                        Text(tempoName, fontSize = 12.sp, color = Color(0xFFD4960A), fontWeight = FontWeight.Bold)
                     }
                     Text("BPM", fontSize = 11.sp, color = Color.White.copy(alpha = 0.5f))
                 }
@@ -541,7 +541,7 @@ fun MetronomeMode(
                     if (tempoName.isNotEmpty()) "$tempoName \u25BC" else "Tempo \u25BC",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFFC107)
+                    color = Color(0xFFD4960A)
                 )
             }
 
@@ -605,7 +605,7 @@ fun MetronomeMode(
             }
 
             // Drum style selector (horizontal chips)
-            Text("Batería", fontSize = 12.sp, color = Color(0xFFFFC107), fontWeight = FontWeight.Bold,
+            Text("Batería", fontSize = 12.sp, color = Color(0xFFD4960A), fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 12.dp, top = 4.dp))
             Row(
                 modifier = Modifier
@@ -618,7 +618,7 @@ fun MetronomeMode(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (selectedDrumStyle == null) Color(0xFFFFC107) else Color(0xFF2A2A3E))
+                        .background(if (selectedDrumStyle == null) Color(0xFFD4960A) else Color(0xFF201C16))
                         .clickable {
                             selectedDrumStyle = null
                             drumJob?.cancel()
@@ -632,7 +632,7 @@ fun MetronomeMode(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (selectedDrumStyle == style) Color(0xFFFFC107) else Color(0xFF2A2A3E))
+                            .background(if (selectedDrumStyle == style) Color(0xFFD4960A) else Color(0xFF201C16))
                             .clickable { selectedDrumStyle = style }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
@@ -655,7 +655,7 @@ fun MetronomeMode(
                         modifier = Modifier
                             .size(56.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (countInEnabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (countInEnabled) Color(0xFF8BC34A) else MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { countInEnabled = !countInEnabled },
                         contentAlignment = Alignment.Center
                     ) {
@@ -671,7 +671,7 @@ fun MetronomeMode(
                         "Count-in",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (countInEnabled) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.5f)
+                        color = if (countInEnabled) Color(0xFF8BC34A) else Color.White.copy(alpha = 0.5f)
                     )
                 }
 
@@ -686,7 +686,7 @@ fun MetronomeMode(
                             "$swingPercent%",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (swingPercent > 50) Color(0xFFFFC107) else Color.White
+                            color = if (swingPercent > 50) Color(0xFFD4960A) else Color.White
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         PillButton("+") { swingPercent = (swingPercent + 5).coerceAtMost(75) }
@@ -699,7 +699,7 @@ fun MetronomeMode(
                         modifier = Modifier
                             .size(56.dp)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (hapticEnabled) Color(0xFF9C27B0).copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
+                            .background(if (hapticEnabled) Color(0xFFE67E00).copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { hapticEnabled = !hapticEnabled },
                         contentAlignment = Alignment.Center
                     ) {
@@ -707,7 +707,7 @@ fun MetronomeMode(
                             Icons.Default.Vibration,
                             contentDescription = null,
                             modifier = Modifier.size(28.dp),
-                            tint = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.5f)
+                            tint = if (hapticEnabled) Color(0xFFE67E00) else Color.White.copy(alpha = 0.5f)
                         )
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -715,7 +715,7 @@ fun MetronomeMode(
                         if (hapticEnabled) "Vibración ON" else "Vibración",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.5f)
+                        color = if (hapticEnabled) Color(0xFFE67E00) else Color.White.copy(alpha = 0.5f)
                     )
                 }
             }
@@ -728,7 +728,7 @@ fun MetronomeMode(
                 title = "Barras mudas",
                 enabled = muteEnabled,
                 onToggle = { muteEnabled = !muteEnabled },
-                activeColor = Color(0xFF9C27B0)
+                activeColor = Color(0xFFE67E00)
             ) {
                 Text(
                     "Alterna compases con sonido y sin sonido para desarrollar tu oido interno",
@@ -765,21 +765,21 @@ fun MetronomeMode(
                 title = "Entrenamiento",
                 enabled = trainingEnabled,
                 onToggle = { trainingEnabled = !trainingEnabled },
-                activeColor = Color(0xFF2196F3)
+                activeColor = Color(0xFFD4960A)
             ) {
                 if (isPlaying && trainingEnabled) {
                     val progress = ((currentBpm - bpm).toFloat() / (trainingMaxBpm - bpm).toFloat()).coerceIn(0f, 1f)
                     LinearProgressIndicator(
                         progress = progress,
                         modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                        color = Color(0xFF2196F3),
+                        color = Color(0xFFD4960A),
                         trackColor = MaterialTheme.colorScheme.surfaceVariant
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = "$currentBpm \u2192 $trainingMaxBpm BPM",
                         fontSize = 12.sp,
-                        color = Color(0xFF2196F3),
+                        color = Color(0xFFD4960A),
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -906,7 +906,7 @@ private fun TapTempoButton(size: Int, onTap: () -> Unit) {
         onClick = onTap,
         modifier = Modifier.size(size.dp),
         colors = IconButtonDefaults.filledIconButtonColors(
-            containerColor = Color(0xFFFFC107)
+            containerColor = Color(0xFFD4960A)
         )
     ) {
         Icon(
@@ -926,11 +926,11 @@ private fun TapTempoButton(size: Int, onTap: () -> Unit) {
 private fun StatusBadges(isCountingIn: Boolean, isMutedBar: Boolean, swingPercent: Int) {
     Row(horizontalArrangement = Arrangement.Center) {
         if (isCountingIn) {
-            Badge("COUNT-IN", Color(0xFFFFC107))
+            Badge("COUNT-IN", Color(0xFFD4960A))
             Spacer(modifier = Modifier.width(6.dp))
         }
         if (isMutedBar) {
-            Badge("SILENCIO", Color(0xFF9C27B0))
+            Badge("SILENCIO", Color(0xFFE67E00))
             Spacer(modifier = Modifier.width(6.dp))
         }
         if (swingPercent > 50) {
@@ -975,10 +975,10 @@ private fun BeatVisualizerEnhanced(
             val isAccented = accentPattern.getOrElse(beat) { beat == 0 }
 
             val baseColor = when {
-                isMutedBar && isActive -> Color(0xFF9C27B0).copy(alpha = 0.4f)
-                isCountingIn && isActive -> Color(0xFFFFC107)
+                isMutedBar && isActive -> Color(0xFFE67E00).copy(alpha = 0.4f)
+                isCountingIn && isActive -> Color(0xFFD4960A)
                 isActive && isAccented -> Color(0xFFF44336)
-                isActive -> Color(0xFF4CAF50)
+                isActive -> Color(0xFF8BC34A)
                 isAccented -> Color(0xFFF44336).copy(alpha = 0.25f)
                 else -> MaterialTheme.colorScheme.surfaceVariant
             }
@@ -1106,7 +1106,7 @@ private fun QuickSettingsRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (countInEnabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant)
+                    .background(if (countInEnabled) Color(0xFF8BC34A) else MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { onCountInToggle() },
                 contentAlignment = Alignment.Center
             ) {
@@ -1120,7 +1120,7 @@ private fun QuickSettingsRow(
             Text(
                 "Count-in",
                 fontSize = 9.sp,
-                color = if (countInEnabled) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.5f)
+                color = if (countInEnabled) Color(0xFF8BC34A) else Color.White.copy(alpha = 0.5f)
             )
         }
         // Swing
@@ -1133,7 +1133,7 @@ private fun QuickSettingsRow(
                 "$swingPercent%",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (swingPercent > 50) Color(0xFFFFC107) else Color.White.copy(alpha = 0.6f)
+                color = if (swingPercent > 50) Color(0xFFD4960A) else Color.White.copy(alpha = 0.6f)
             )
             Spacer(modifier = Modifier.width(6.dp))
             MiniButton("+") { onSwingChange((swingPercent + 5).coerceAtMost(75)) }
@@ -1144,7 +1144,7 @@ private fun QuickSettingsRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (hapticEnabled) Color(0xFF9C27B0).copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
+                    .background(if (hapticEnabled) Color(0xFFE67E00).copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { onHapticToggle() },
                 contentAlignment = Alignment.Center
             ) {
@@ -1152,14 +1152,14 @@ private fun QuickSettingsRow(
                     Icons.Default.Vibration,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
-                    tint = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.4f)
+                    tint = if (hapticEnabled) Color(0xFFE67E00) else Color.White.copy(alpha = 0.4f)
                 )
             }
             Text(
                 if (hapticEnabled) "ON" else "OFF",
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (hapticEnabled) Color(0xFF9C27B0) else Color.White.copy(alpha = 0.4f)
+                color = if (hapticEnabled) Color(0xFFE67E00) else Color.White.copy(alpha = 0.4f)
             )
         }
         // Tempo presets
@@ -1223,7 +1223,7 @@ private fun AllCards(
         title = "Barras mudas",
         enabled = muteEnabled,
         onToggle = onMuteToggle,
-        activeColor = Color(0xFF9C27B0)
+        activeColor = Color(0xFFE67E00)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             ValueSelector("Suena", "$muteBarsPlay", "comp.",
@@ -1242,18 +1242,18 @@ private fun AllCards(
         title = "Entrenamiento",
         enabled = trainingEnabled,
         onToggle = onTrainingToggle,
-        activeColor = Color(0xFF2196F3)
+        activeColor = Color(0xFFD4960A)
     ) {
         if (isPlaying && trainingEnabled) {
             val progress = ((currentBpm - bpm).toFloat() / (trainingMaxBpm - bpm).toFloat()).coerceIn(0f, 1f)
             LinearProgressIndicator(
                 progress = progress,
                 modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
-                color = Color(0xFF2196F3),
+                color = Color(0xFFD4960A),
                 trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
             Spacer(modifier = Modifier.height(6.dp))
-            Text("$currentBpm \u2192 $trainingMaxBpm BPM", fontSize = 12.sp, color = Color(0xFF2196F3), fontWeight = FontWeight.Bold)
+            Text("$currentBpm \u2192 $trainingMaxBpm BPM", fontSize = 12.sp, color = Color(0xFFD4960A), fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
@@ -1542,7 +1542,7 @@ private fun MetronomeOverlaySelector(
                     .fillMaxWidth(0.85f)
                     .heightIn(max = 480.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2A2A2A))
+                    .background(Color(0xFF201C16))
                     .clickable(enabled = false) {}
                     .padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -1583,7 +1583,7 @@ private fun MetronomeOverlayItem(
             .fillMaxWidth()
             .padding(vertical = 3.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) Color(0xFF4CAF50) else Color.White.copy(alpha = 0.08f))
+            .background(if (isSelected) Color(0xFF8BC34A) else Color.White.copy(alpha = 0.08f))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {

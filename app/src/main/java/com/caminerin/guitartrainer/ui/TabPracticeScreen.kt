@@ -1457,7 +1457,7 @@ fun TabViewer(
                                 "slide" in note.effects -> Color(0xFFFFC107)
                                 "palm_mute" in note.effects -> Color(0xFFFF5722)
                                 "vibrato" in note.effects -> Color(0xFF9C27B0)
-                                "harmonic" in note.effects -> Color(0xFFE91E63)
+                                "harmonic" in note.effects -> Color(0xFFE67E00)
                                 "let_ring" in note.effects -> Color(0xFF3F51B5)
                                 else -> Color.White
                             }

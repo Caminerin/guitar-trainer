@@ -62,7 +62,7 @@ private val CHORD_BG = SHARED_BG
 private val CHORD_TOOLBAR = SHARED_TOOLBAR
 
 private val QUALITY_COLORS = mapOf(
-    "major" to Color(0xFF5C6BC0),
+    "major" to Color(0xFFD4960A),
     "minor" to Color(0xFFE53935),
     "dominant7" to Color(0xFFFF9800),
     "maj7" to Color(0xFF43A047),
@@ -93,7 +93,7 @@ private val QUALITY_COLORS = mapOf(
 )
 
 private val LEVEL_COLORS = mapOf(
-    "all" to Color(0xFF5C6BC0),
+    "all" to Color(0xFFD4960A),
     "beginner_core" to Color(0xFF4CAF50),
     "intermediate_core" to Color(0xFFFF9800),
     "advanced_reference" to Color(0xFFE53935)
@@ -246,7 +246,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF252525))
+                    .background(Color(0xFF1A1714))
                     .padding(horizontal = 12.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -368,7 +368,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             Column(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2A2A2A))
+                    .background(Color(0xFF201C16))
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.Start
@@ -431,7 +431,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
             Column(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2A2A2A))
+                    .background(Color(0xFF201C16))
                     .padding(24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -531,7 +531,7 @@ fun ChordVisualizerScreen(onBack: () -> Unit, onGoToPractice: (() -> Unit)? = nu
                     .fillMaxWidth(0.85f)
                     .fillMaxHeight(0.8f)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(Color(0xFF2A2A2A))
+                    .background(Color(0xFF201C16))
                     .clickable(enabled = false) {}
                     .padding(20.dp)
             ) {

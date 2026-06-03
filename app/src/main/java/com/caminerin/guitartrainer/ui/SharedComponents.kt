@@ -82,25 +82,25 @@ fun smartSplit(line: String): List<String> {
     return parts
 }
 
-// ===== SHARED COLORS =====
-val SHARED_BG = Color(0xFF1A1A1A)
-val SHARED_TOOLBAR = Color(0xFF1E1E1E)
-val SHARED_ACCENT = Color(0xFFff6b9d)
-val TOOLBAR_CHIP_BG = Color(0xFF3A3A3A) // Standard toolbar button background
+// ===== SHARED COLORS (Warm Dark style) =====
+val SHARED_BG = Color(0xFF0F0D0A)
+val SHARED_TOOLBAR = Color(0xFF12100C)
+val SHARED_ACCENT = Color(0xFFD4960A)
+val TOOLBAR_CHIP_BG = Color(0xFF251E15) // Warm dark toolbar button background
 
-// ===== SHARED FRETBOARD CONSTANTS (tablatura style) =====
-val FRETBOARD_WOOD = Color(0xFFFAFAF5)       // cream paper background
-val FRETBOARD_NUT = Color(0xFF333333)         // dark nut
-val FRETBOARD_FRET_WIRE = Color(0xFFCCCCCC)   // subtle fret lines
-val FRETBOARD_INLAY = Color(0xFF999999)        // subtle dot markers
-val FRETBOARD_DIM = Color(0xFF78909C)          // muted for out-of-position
-val FRETBOARD_HIGHLIGHT = Color(0xFFFFD600)    // current note highlight (practice mode)
+// ===== SHARED FRETBOARD CONSTANTS (Warm Dark — rosewood style) =====
+val FRETBOARD_WOOD = Color(0xFF2C1E10)       // dark rosewood background
+val FRETBOARD_NUT = Color(0xFFF5E6C8)         // bone/ivory nut
+val FRETBOARD_FRET_WIRE = Color(0xFF8B7355)   // warm bronze fret lines
+val FRETBOARD_INLAY = Color(0xFFD4C4A0)        // warm ivory dot markers
+val FRETBOARD_DIM = Color(0xFF5A4A3A)          // muted warm for out-of-position
+val FRETBOARD_HIGHLIGHT = Color(0xFFD4960A)    // amber highlight (practice mode)
 
 val FRETBOARD_STRING_COLORS = listOf(
-    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999),
-    Color(0xFF999999), Color(0xFF999999), Color(0xFF999999)
+    Color(0xFFC8B090), Color(0xFFC8B090), Color(0xFFC8B090),
+    Color(0xFFB0A080), Color(0xFFB0A080), Color(0xFFB0A080)
 )
-val FRETBOARD_STRING_WIDTHS = listOf(1.5f, 1.5f, 1.5f, 1.5f, 1.5f, 1.5f)
+val FRETBOARD_STRING_WIDTHS = listOf(1.2f, 1.4f, 1.6f, 1.8f, 2.0f, 2.2f)
 
 const val FRETBOARD_TOTAL_FRETS = 22
 
@@ -155,12 +155,12 @@ fun DrawScope.drawSharedFretboard(
         val startX = if (posStart == 0) nutX else nutX + nutWidth + (posStart - 1) * fretWidthPx
         val endX = nutX + nutWidth + posEnd * fretWidthPx
         drawRect(
-            color = Color(0x1AFFD54F),
+            color = Color(0x1AD4960A),
             topLeft = Offset(startX, fbTop - 4f),
             size = Size(endX - startX, fbHeight + 8f)
         )
         drawRect(
-            color = Color(0xFFC8A84E),
+            color = Color(0xFFD4960A),
             topLeft = Offset(startX, fbTop - 4f),
             size = Size(endX - startX, fbHeight + 8f),
             style = Stroke(2f)
@@ -178,7 +178,7 @@ fun DrawScope.drawSharedFretboard(
 
     // Fret numbers below the fretboard
     val fretNumPaint = android.graphics.Paint().apply {
-        color = android.graphics.Color.argb(150, 100, 100, 100)
+        color = android.graphics.Color.argb(180, 196, 176, 144)
         textSize = 36f
         textAlign = android.graphics.Paint.Align.CENTER
         isAntiAlias = true
@@ -427,28 +427,28 @@ fun ToolbarChip(
     }
 }
 
-// ===== CENTRALIZED APP COLOR SYSTEM =====
+// ===== CENTRALIZED APP COLOR SYSTEM (Warm Dark style) =====
 object AppColors {
-    val background = Color(0xFF121212)
-    val surface = Color(0xFF1E1E1E)
-    val surfaceVariant = Color(0xFF2A2A2A)
-    val surfaceBright = Color(0xFF3A3A3A)
-    val primary = Color(0xFFFFC107)         // Golden yellow accent
-    val onPrimary = Color(0xFF121212)
-    val secondary = Color(0xFF7B1FA2)       // Purple accent
-    val tertiary = Color(0xFF7C4DFF)        // Violet for interactive elements
-    val text = Color(0xFFFFFFFF)
-    val textSecondary = Color(0xFFB0BEC5)
-    val textMuted = Color(0xFF78909C)
-    val success = Color(0xFF4CAF50)
-    val warning = Color(0xFFFF9800)
-    val error = Color(0xFFF44336)
-    val divider = Color(0xFF333333)
-    val navBar = Color(0xFF0D0D0D)
+    val background = Color(0xFF0F0D0A)
+    val surface = Color(0xFF1A1714)
+    val surfaceVariant = Color(0xFF201C16)
+    val surfaceBright = Color(0xFF2A2420)
+    val primary = Color(0xFFD4960A)         // Amber/gold accent
+    val onPrimary = Color(0xFF0F0D0A)
+    val secondary = Color(0xFFE67E00)       // Orange-amber accent
+    val tertiary = Color(0xFF8BC34A)        // Warm green for interactive elements
+    val text = Color(0xFFF0E8D8)
+    val textSecondary = Color(0xFF8B7D6B)
+    val textMuted = Color(0xFF5A5040)
+    val success = Color(0xFF8BC34A)
+    val warning = Color(0xFFE6A000)
+    val error = Color(0xFFD84315)
+    val divider = Color(0xFF2A2420)
+    val navBar = Color(0xFF0A0908)
     val navSelected = primary
-    val navUnselected = Color(0xFF78909C)
-    val overlay = Color.Black.copy(alpha = 0.8f)
-    val cardBg = Color(0xFF1A1A1A)
+    val navUnselected = Color(0xFF5A5040)
+    val overlay = Color(0xFF0A0908).copy(alpha = 0.85f)
+    val cardBg = Color(0xFF1A1714)
 }
 
 // ===== COLOR PALETTE for degree/interval color picker =====
@@ -605,7 +605,7 @@ fun BpmSelectorOverlay(
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -640,8 +640,8 @@ fun BpmSelectorOverlay(
                 valueRange = 20f..240f,
                 modifier = Modifier.fillMaxWidth(),
                 colors = SliderDefaults.colors(
-                    thumbColor = Color(0xFF7C4DFF),
-                    activeTrackColor = Color(0xFF7C4DFF)
+                    thumbColor = Color(0xFFD4960A),
+                    activeTrackColor = Color(0xFFD4960A)
                 )
             )
 
@@ -670,7 +670,7 @@ fun BpmSelectorOverlay(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (selected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.08f))
+                            .background(if (selected) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.08f))
                             .clickable { onBpmChange(v) }
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
@@ -713,7 +713,7 @@ fun MeasuresSelectorOverlay(
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -740,7 +740,7 @@ fun MeasuresSelectorOverlay(
                         modifier = Modifier
                             .size(52.dp)
                             .clip(CircleShape)
-                            .background(if (selected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.08f))
+                            .background(if (selected) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.08f))
                             .clickable { onCountChange(v); onDismiss() },
                         contentAlignment = Alignment.Center
                     ) {
@@ -770,7 +770,7 @@ fun FretSelectorOverlay(
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -794,7 +794,7 @@ fun FretSelectorOverlay(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (selected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.08f))
+                            .background(if (selected) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.08f))
                             .clickable { onFretChange(f); onDismiss() }
                             .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
@@ -839,7 +839,7 @@ fun UnifiedScaleSelectorOverlay(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(20.dp)
                 .verticalScroll(rememberScrollState())
@@ -955,7 +955,7 @@ fun SubdivisionSelectorOverlay(
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
@@ -978,7 +978,7 @@ fun SubdivisionSelectorOverlay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (selected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.06f))
+                        .background(if (selected) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.06f))
                         .clickable { onSelect(sub); onDismiss() }
                         .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
@@ -1009,7 +1009,7 @@ fun ChordModeSelectorOverlay(
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -1030,7 +1030,7 @@ fun ChordModeSelectorOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (isTonalityMode) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
+                    .background(if (isTonalityMode) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.06f))
                     .clickable { onSelectTonality(); onDismiss() }
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
@@ -1044,7 +1044,7 @@ fun ChordModeSelectorOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (!isTonalityMode) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
+                    .background(if (!isTonalityMode) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.06f))
                     .clickable { onSelectFree(); onDismiss() }
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
@@ -1085,7 +1085,7 @@ fun MeasureSubdivisionOverlay(
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -1107,7 +1107,7 @@ fun MeasureSubdivisionOverlay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (selected) Color(0xFF7B1FA2) else Color.White.copy(alpha = 0.06f))
+                        .background(if (selected) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.06f))
                         .clickable { onSelect(count) }
                         .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
@@ -1125,7 +1125,7 @@ fun BpmToolbarButton(bpm: Int, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(Color(0xFF7C4DFF).copy(alpha = 0.25f))
+            .background(Color(0xFFD4960A).copy(alpha = 0.25f))
             .clickable { onClick() }
             .padding(horizontal = 10.dp, vertical = 6.dp)
     ) {
@@ -1159,7 +1159,7 @@ fun NoteDisplaySelectorOverlay(
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
@@ -1182,7 +1182,7 @@ fun NoteDisplaySelectorOverlay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (selected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.06f))
+                        .background(if (selected) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.06f))
                         .clickable { onSelect(display); onDismiss() }
                         .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
@@ -1250,7 +1250,7 @@ private fun ColorSelectorOverlayBody(
             modifier = Modifier
                 .fillMaxWidth(0.92f)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(20.dp)
                 .verticalScroll(rememberScrollState())
@@ -1293,7 +1293,7 @@ private fun ColorSelectorOverlayBody(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (!isEnabled) Color.White.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.06f))
+                            .background(if (!isEnabled) Color.White.copy(alpha = 0.2f) else Color(0xFFC8B090).copy(alpha = 0.06f))
                             .then(
                                 if (!isEnabled) Modifier.border(2.dp, Color.White, RoundedCornerShape(8.dp))
                                 else Modifier
@@ -1343,7 +1343,7 @@ fun ScaleNameSelectorOverlay(
         Column(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0xFF2A2A2A))
+                .background(Color(0xFF201C16))
                 .clickable(enabled = false) {}
                 .padding(24.dp)
                 .verticalScroll(rememberScrollState()),
@@ -1382,7 +1382,7 @@ fun ScaleNameSelectorOverlay(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSelected) Color(0xFF7C4DFF) else Color.White.copy(alpha = 0.06f))
+                        .background(if (isSelected) Color(0xFFD4960A) else Color(0xFFC8B090).copy(alpha = 0.06f))
                         .clickable { onSelected(name) }
                         .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {

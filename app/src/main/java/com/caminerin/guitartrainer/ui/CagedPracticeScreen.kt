@@ -387,7 +387,7 @@ fun CagedPracticeScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(32.dp)
-                        .background(Color(0xFF263238))
+                        .background(Color(0xFF1A1714))
                         .padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
