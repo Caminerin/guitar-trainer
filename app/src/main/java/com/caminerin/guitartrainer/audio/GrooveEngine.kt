@@ -20,7 +20,7 @@ import kotlin.random.Random
  * Supports: complexity levels, fills, humanization, swing, silence bars, tempo progression.
  */
 object GrooveEngine {
-    private const val SAMPLE_RATE = 44100
+    private const val SAMPLE_RATE = 22050
     private var audioTrack: AudioTrack? = null
     private val samples = mutableMapOf<DrumHit, ShortArray>()
     private var initialized = false
@@ -63,19 +63,19 @@ object GrooveEngine {
 
     private fun loadSamples(context: Context) {
         val fileMap = mapOf(
-            DrumHit.KICK_HARD to "drums/kick_hard.wav",
-            DrumHit.KICK_SOFT to "drums/kick_soft.wav",
-            DrumHit.SNARE_HARD to "drums/snare_hard.wav",
-            DrumHit.SNARE_SOFT to "drums/snare_soft.wav",
-            DrumHit.SNARE_CROSSSTICK to "drums/snare_crossstick.wav",
-            DrumHit.SNARE_RIMSHOT to "drums/snare_rimshot.wav",
-            DrumHit.HH_CLOSED to "drums/hh_closed.wav",
-            DrumHit.HH_OPEN to "drums/hh_open.wav",
-            DrumHit.HH_HALF to "drums/hh_half.wav",
-            DrumHit.HH_PEDAL to "drums/hh_pedal.wav",
-            DrumHit.RIDE_NORMAL to "drums/ride_normal.wav",
-            DrumHit.RIDE_BELL to "drums/ride_bell.wav",
-            DrumHit.CRASH to "drums/crash.wav"
+            DrumHit.KICK_HARD to "drums/kick_hard_1.wav",
+            DrumHit.KICK_SOFT to "drums/kick_soft_1.wav",
+            DrumHit.SNARE_HARD to "drums/snare_hard_1.wav",
+            DrumHit.SNARE_SOFT to "drums/snare_soft_1.wav",
+            DrumHit.SNARE_CROSSSTICK to "drums/snare_crossstick_1.wav",
+            DrumHit.SNARE_RIMSHOT to "drums/snare_rimshot_1.wav",
+            DrumHit.HH_CLOSED to "drums/hh_closed_1.wav",
+            DrumHit.HH_OPEN to "drums/hh_open_1.wav",
+            DrumHit.HH_HALF to "drums/hh_half_1.wav",
+            DrumHit.HH_PEDAL to "drums/hh_pedal_1.wav",
+            DrumHit.RIDE_NORMAL to "drums/ride_normal_1.wav",
+            DrumHit.RIDE_BELL to "drums/ride_bell_1.wav",
+            DrumHit.CRASH to "drums/crash_1.wav"
         )
         for ((hit, file) in fileMap) {
             try {
@@ -87,11 +87,30 @@ object GrooveEngine {
 
     private fun readWavPcm(input: InputStream): ShortArray? {
         val bytes = input.use { it.readBytes() }
-        if (bytes.size < 44) return null
+        if (bytes.size < 12) return null
         val buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-        buf.position(44)
-        val numShorts = (bytes.size - 44) / 2
+        if (bytes[0] != 'R'.code.toByte() || bytes[1] != 'I'.code.toByte()) return null
+
+        var pos = 12
+        var dataStart = -1
+        var dataSize = 0
+        while (pos + 8 <= bytes.size) {
+            val chunkId = String(bytes, pos, 4, Charsets.US_ASCII)
+            buf.position(pos + 4)
+            val chunkSize = buf.int
+            if (chunkId == "data") {
+                dataStart = pos + 8
+                dataSize = chunkSize
+                break
+            }
+            pos += 8 + chunkSize
+            if (chunkSize % 2 != 0) pos++
+        }
+        if (dataStart < 0 || dataStart >= bytes.size) return null
+        val actualSize = minOf(dataSize, bytes.size - dataStart)
+        val numShorts = actualSize / 2
         val pcm = ShortArray(numShorts)
+        buf.position(dataStart)
         for (i in 0 until numShorts) {
             pcm[i] = buf.short
         }
@@ -247,6 +266,7 @@ object GrooveEngine {
     ) {
         init(context)
         isPlaying = true
+        lastHiHatOpenEnd = 0
         withContext(Dispatchers.Default) {
             var currentBpm = config.bpm
             var barCount = 0
