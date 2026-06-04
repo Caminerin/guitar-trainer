@@ -131,10 +131,12 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
         }
     }
 
-    fun stopPlaying() {
+    suspend fun stopPlayingAndWait() {
         GrooveEngine.stop()
-        playJob?.cancel()
+        val job = playJob
         playJob = null
+        job?.cancel()
+        job?.join()
         isPlaying = false
         currentBeat = 0; currentBar = 0
     }
@@ -152,24 +154,26 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             volumes = mapOf("kick" to kickVol, "snare" to snareVol, "hihat" to hihatVol, "ride" to rideVol, "crash" to crashVol),
             tempoProgression = if (tempoTarget > bpm) GrooveEngine.TempoProgression(tempoTarget, tempoIncrement, 8) else null
         )
-        // Stop any existing playback first
-        GrooveEngine.stop()
-        playJob?.cancel()
-        playJob = null
-        isPlaying = true
-        playJob = scope.launch {
-            // Brief yield to let cancelled coroutine finish AudioTrack write
-            kotlinx.coroutines.delay(50)
-            try {
-                GrooveEngine.playGroove(context, config,
-                    onBeat = { bar, beat ->
-                        scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { currentBar = bar; currentBeat = beat }
-                    },
-                    onBpmChange = { newBpm ->
-                        scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { bpm = newBpm }
-                    })
-            } catch (_: Exception) { }
-            isPlaying = false; currentBeat = 0; currentBar = 0
+        scope.launch {
+            stopPlayingAndWait()
+            isPlaying = true
+            playJob = launch {
+                try {
+                    GrooveEngine.playGroove(context, config,
+                        onBeat = { bar, beat ->
+                            scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { currentBar = bar; currentBeat = beat }
+                        },
+                        onBpmChange = { newBpm ->
+                            scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { bpm = newBpm }
+                        })
+                } catch (e: Exception) {
+                    android.util.Log.e("GrooveTrainer", "playGroove error", e)
+                } finally {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                        isPlaying = false; currentBeat = 0; currentBar = 0
+                    }
+                }
+            }
         }
     }
 
@@ -270,14 +274,13 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                                 selectedIdx = selectedCategoryIdx,
                                 onSelect = { idx ->
                                     val wasPlaying = isPlaying
-                                    if (wasPlaying) stopPlaying()
-                                    selectedCategoryIdx = idx; selectedPatternIdx = 0
                                     expandedPanel = null
-                                    if (wasPlaying) {
-                                        scope.launch {
-                                            kotlinx.coroutines.delay(300)
-                                            startPlaying()
-                                        }
+                                    scope.launch {
+                                        if (wasPlaying) stopPlayingAndWait()
+                                        selectedCategoryIdx = idx; selectedPatternIdx = 0
+                                        val catId = categories[idx].id
+                                        categoryData = GrooveEngine.loadCategoryPatterns(context, catId)
+                                        if (wasPlaying) startPlaying()
                                     }
                                 }
                             )
@@ -295,14 +298,11 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                                 selectedIdx = selectedPatternIdx,
                                 onSelect = { idx ->
                                     val wasPlaying = isPlaying
-                                    if (wasPlaying) stopPlaying()
-                                    selectedPatternIdx = idx
                                     expandedPanel = null
-                                    if (wasPlaying) {
-                                        scope.launch {
-                                            kotlinx.coroutines.delay(100)
-                                            startPlaying()
-                                        }
+                                    scope.launch {
+                                        if (wasPlaying) stopPlayingAndWait()
+                                        selectedPatternIdx = idx
+                                        if (wasPlaying) startPlaying()
                                     }
                                 }
                             )
@@ -393,7 +393,7 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             selectedTab = selectedTab, onTabChange = { selectedTab = it },
             bpm = bpm, onBpmChange = { bpm = it },
             isPlaying = isPlaying,
-            onPlayStop = { if (isPlaying) stopPlaying() else startPlaying() },
+            onPlayStop = { if (isPlaying) scope.launch { stopPlayingAndWait() } else startPlaying() },
             onTapTempo = { handleTapTempo() },
             tapFlash = tapFlash,
             onFillRequest = { if (isPlaying) GrooveEngine.requestFillNextBar() }

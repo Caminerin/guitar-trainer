@@ -7,6 +7,8 @@ import android.media.AudioTrack
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.InputStream
@@ -21,6 +23,7 @@ import kotlin.random.Random
  * Supports: complexity levels, fills, humanization, swing, silence bars, tempo progression.
  */
 object GrooveEngine {
+    private const val TAG = "GrooveEngine"
     private const val SAMPLE_RATE = 22050
     private var audioTrack: AudioTrack? = null
     private val sampleBanks = mutableMapOf<DrumHit, List<ShortArray>>()
@@ -29,6 +32,8 @@ object GrooveEngine {
 
     @Volatile var isPlaying = false
         private set
+
+    private val playbackMutex = Mutex()
 
     // Pattern library
     private val categories = mutableListOf<GrooveCategory>()
@@ -377,7 +382,7 @@ object GrooveEngine {
         config: PlayConfig,
         onBeat: ((bar: Int, beat: Int) -> Unit)? = null,
         onBpmChange: ((Int) -> Unit)? = null
-    ) {
+    ) = playbackMutex.withLock {
         init(context)
         isPlaying = true
         lastHiHatOpenEnd = 0
@@ -501,12 +506,12 @@ object GrooveEngine {
                 // Beat callbacks + write stereo audio
                 for (beat in 0 until beatsPerBar) {
                     if (!coroutineContext.isActive || !isPlaying) break
-                    try { onBeat?.invoke(barCount, beat) } catch (_: Exception) { }
+                    try { onBeat?.invoke(barCount, beat) } catch (e: Exception) { Log.w(TAG, "onBeat callback failed", e) }
                     val beatSamples = barSamples / beatsPerBar
                     val startIdx = beat * beatSamples * 2 // stereo: 2 shorts per sample
                     val endIdx = (((beat + 1) * beatSamples) * 2).coerceAtMost(stereoBuffer.size)
                     val beatBuffer = stereoBuffer.copyOfRange(startIdx, endIdx)
-                    try { audioTrack?.write(beatBuffer, 0, beatBuffer.size) } catch (_: Exception) { break }
+                    try { audioTrack?.write(beatBuffer, 0, beatBuffer.size) } catch (e: Exception) { Log.e(TAG, "AudioTrack write failed", e); break }
                 }
 
                 barCount++
@@ -523,6 +528,10 @@ object GrooveEngine {
                 }
             }
         }
+    }
+
+    suspend fun awaitStop() {
+        playbackMutex.withLock { /* waits for any active playGroove to finish */ }
     }
 
     private fun playCountIn(bpm: Int) {
@@ -627,7 +636,7 @@ object GrooveEngine {
         try {
             audioTrack?.stop()
             audioTrack?.release()
-        } catch (_: Exception) { }
+        } catch (e: Exception) { Log.w(TAG, "AudioTrack release failed", e) }
         audioTrack = null
         sampleBanks.clear()
         rrIndex.clear()
