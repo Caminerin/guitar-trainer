@@ -137,6 +137,24 @@ fun MainScreen(
 
     val destinations = NavDestination.entries
 
+    // Mic control: only listen when on screens that need audio input
+    val needsMic = showTunerSplash ||
+        (selectedNav == NavDestination.TOOLS.ordinal && toolsSubScreen == 0) ||  // Tuner
+        (selectedNav == NavDestination.PRACTICE.ordinal && practiceSubScreen == 0) ||  // Scales practice
+        (selectedNav == NavDestination.PRACTICE.ordinal && practiceSubScreen == 3)     // Quiz
+
+    LaunchedEffect(needsMic) {
+        if (needsMic) {
+            audioProcessor?.startListening()
+        } else {
+            audioProcessor?.stopListening()
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { audioProcessor?.stopListening() }
+    }
+
     BackHandler {
         when {
             showTunerSplash -> (context as? Activity)?.finish()

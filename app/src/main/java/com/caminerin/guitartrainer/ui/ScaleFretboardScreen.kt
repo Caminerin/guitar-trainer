@@ -54,6 +54,7 @@ private val COLOR_TOOLBAR = SHARED_TOOLBAR
 
 @Composable
 fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onOverlayChanged: (Boolean) -> Unit = {}) {
+    ForceLandscape()
     val context = LocalContext.current
     var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex.coerceIn(0, ALL_SCALES.size - 1)) }

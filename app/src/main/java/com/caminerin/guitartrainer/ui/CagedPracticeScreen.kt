@@ -74,6 +74,7 @@ fun CagedPracticeScreen(
     scaleEvaluation: ScaleEvaluation? = null,
     onOverlayChanged: (Boolean) -> Unit = {}
 ) {
+    ForceLandscape()
     val context = androidx.compose.ui.platform.LocalContext.current
     var selectedKey by rememberSaveable { mutableIntStateOf(AppPreferences.lastKey) }
     var selectedScaleIndex by rememberSaveable { mutableIntStateOf(AppPreferences.lastScaleIndex.coerceIn(0, ALL_SCALES.size - 1)) }

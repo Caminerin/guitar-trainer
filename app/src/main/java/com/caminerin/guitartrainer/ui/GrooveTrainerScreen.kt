@@ -69,6 +69,7 @@ private enum class GrooveTab { QUICK_PLAY, TRAINER }
 
 @Composable
 fun GrooveTrainerScreen(onBack: () -> Unit) {
+    ForceLandscape()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
