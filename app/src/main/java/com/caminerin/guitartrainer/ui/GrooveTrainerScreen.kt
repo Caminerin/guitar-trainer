@@ -522,73 +522,61 @@ private fun GrooveUnifiedBar(
     isPlaying: Boolean, onPlayStop: () -> Unit,
     onTapTempo: () -> Unit, tapFlash: Boolean
 ) {
-    Column(
+    Row(
         modifier = Modifier.fillMaxWidth()
             .background(Brush.verticalGradient(listOf(GradientColors.grooveStart, AppColors.navBar)))
-            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
+        // Tab: Tocar
+        TabButton("Tocar", selectedTab == GrooveTab.QUICK_PLAY) { onTabChange(GrooveTab.QUICK_PLAY) }
+        // Tab: Trainer
+        TabButton("Trainer", selectedTab == GrooveTab.TRAINER) { onTabChange(GrooveTab.TRAINER) }
+
+        // BPM slider (~1/3 width) with value label
+        Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Tab: Tocar
-            TabButton("Tocar", selectedTab == GrooveTab.QUICK_PLAY) { onTabChange(GrooveTab.QUICK_PLAY) }
-            // Tab: Trainer
-            TabButton("Trainer", selectedTab == GrooveTab.TRAINER) { onTabChange(GrooveTab.TRAINER) }
-
-            // BPM
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                Box(
-                    Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { onBpmChange((bpm - 1).coerceAtLeast(40)) },
-                    contentAlignment = Alignment.Center
-                ) { Text("−", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 4.dp)) {
-                    Text("$bpm", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                    Text("BPM", fontSize = 7.sp, color = Color.White.copy(alpha = 0.5f))
-                }
-                Box(
-                    Modifier.size(28.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { onBpmChange((bpm + 1).coerceAtMost(240)) },
-                    contentAlignment = Alignment.Center
-                ) { Text("+", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
-            }
-
-            // Play
-            Box(
-                Modifier.size(40.dp).clip(CircleShape)
-                    .background(if (isPlaying) AppColors.error else AppColors.success)
-                    .clickable { onPlayStop() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                    contentDescription = if (isPlaying) "Parar" else "Tocar",
-                    tint = Color.White, modifier = Modifier.size(20.dp)
-                )
-            }
-
-            // Tap
-            val tapBg by animateColorAsState(
-                if (tapFlash) GradientColors.accent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                tween(100), label = "tap"
+            Text("$bpm BPM", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Slider(
+                value = bpm.toFloat(), onValueChange = { onBpmChange(it.toInt()) }, valueRange = 40f..240f,
+                colors = SliderDefaults.colors(
+                    thumbColor = GradientColors.accent,
+                    activeTrackColor = GradientColors.accent.copy(alpha = 0.7f),
+                    inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                ),
+                modifier = Modifier.fillMaxWidth().height(20.dp)
             )
-            Box(
-                Modifier.clip(RoundedCornerShape(8.dp)).background(tapBg)
-                    .clickable { onTapTempo() }.padding(horizontal = 8.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("TAP", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (tapFlash) Color.Black else Color.White)
-            }
         }
 
-        // BPM slider
-        Slider(
-            value = bpm.toFloat(), onValueChange = { onBpmChange(it.toInt()) }, valueRange = 40f..240f,
-            colors = SliderDefaults.colors(thumbColor = GradientColors.accent, activeTrackColor = GradientColors.accent.copy(alpha = 0.7f), inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant),
-            modifier = Modifier.fillMaxWidth().height(20.dp)
+        // Play
+        Box(
+            Modifier.size(40.dp).clip(CircleShape)
+                .background(if (isPlaying) AppColors.error else AppColors.success)
+                .clickable { onPlayStop() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "Parar" else "Tocar",
+                tint = Color.White, modifier = Modifier.size(20.dp)
+            )
+        }
+
+        // Tap
+        val tapBg by animateColorAsState(
+            if (tapFlash) GradientColors.accent else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+            tween(100), label = "tap"
         )
+        Box(
+            Modifier.clip(RoundedCornerShape(8.dp)).background(tapBg)
+                .clickable { onTapTempo() }.padding(horizontal = 8.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("TAP", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (tapFlash) Color.Black else Color.White)
+        }
     }
 }
 
