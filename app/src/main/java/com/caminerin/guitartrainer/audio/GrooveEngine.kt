@@ -15,6 +15,7 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.coroutines.coroutineContext
+import kotlin.math.tanh
 import kotlin.random.Random
 
 /**
@@ -392,7 +393,7 @@ object GrooveEngine {
     }
 
     private fun softLimit(x: Float): Float {
-        return kotlin.math.tanh(x * 1.4f) / kotlin.math.tanh(1.4f)
+        return (tanh((x * 1.4f).toDouble()) / tanh(1.4)).toFloat()
     }
 
     // ==================== PLAYBACK ====================
@@ -552,7 +553,7 @@ object GrooveEngine {
                     addRoomReflectionFloat(floatStereo, barSamples)
 
                     // Convert float to PCM16 with soft limiter
-                    for (i in stereoBuffer.indices.takeWhile { it < barSamples * 2 }) {
+                    for (i in 0 until (barSamples * 2).coerceAtMost(stereoBuffer.size)) {
                         stereoBuffer[i] = (softLimit(floatStereo[i]) * 32767f).toInt()
                             .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
                     }
