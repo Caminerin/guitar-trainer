@@ -476,6 +476,8 @@ fun TabPlayerScreen(
     var playJob by remember { mutableStateOf<Job?>(null) }
     var selectedDrumStyle by remember { mutableStateOf<DrumStyle?>(null) }
     var drumJob by remember { mutableStateOf<Job?>(null) }
+    var subdivision by remember { mutableIntStateOf(1) }
+    var showSubdivisionMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         try {
@@ -603,7 +605,6 @@ fun TabPlayerScreen(
                 RiffSynth.init(context)
 
                 do {
-                    val baseTempo = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300)
                     val playStart = if (fromMeasure != null && !loopEnabled) fromMeasure
                         else if (loopEnabled && loopStart >= 0) loopStart
                         else currentMeasure
@@ -612,43 +613,40 @@ fun TabPlayerScreen(
 
                     if (playStart >= playEnd) break
 
-                    val chunkSize = 8
-                    val beatDurationMs = 60_000.0 / baseTempo
-                    var chunkStart = playStart
+                    // Play measure by measure so BPM changes apply in real-time
+                    var measureIdx = playStart
 
-                    while (chunkStart < playEnd && isActive && isPlaying) {
-                        val chunkEnd = (chunkStart + chunkSize).coerceAtMost(playEnd)
+                    while (measureIdx < playEnd && isActive && isPlaying) {
+                        // Re-read bpmFactor each measure for real-time BPM changes
+                        val liveTempo = (entry.tempo * bpmFactor).toInt().coerceIn(30, 300)
+                        val beatDurationMs = 60_000.0 / liveTempo
+
                         val (notes, _, _) = buildContinuousSequence(
-                            track, chunkStart, chunkEnd, baseTempo
+                            track, measureIdx, measureIdx + 1, liveTempo
                         )
 
                         if (notes.isNotEmpty()) {
-                            RiffSynth.playSequence(notes, "crunch")
+                            RiffSynth.playSequence(notes, "clean")
                         }
 
-                        // Time-based cursor: track absolute time to avoid drift
-                        val chunkStartTimeNanos = System.nanoTime()
+                        currentMeasure = measureIdx
+                        val measureBeats = track.measures[measureIdx]
+                        val measureStartNanos = System.nanoTime()
                         var elapsedTargetMs = 0.0
 
-                        for (mi in chunkStart until chunkEnd) {
+                        for ((bi, beat) in measureBeats.withIndex()) {
                             if (!isActive || !isPlaying) break
-                            currentMeasure = mi
-
-                            val measureBeats = track.measures[mi]
-                            for ((bi, beat) in measureBeats.withIndex()) {
-                                if (!isActive || !isPlaying) break
-                                currentBeatInMeasure = bi
-                                val dur = beatDurationMs * (4.0 / beat.duration)
-                                val beatMs = if (beat.isDotted) dur * 1.5 else dur
-                                elapsedTargetMs += beatMs
-                                val targetNanos = chunkStartTimeNanos + (elapsedTargetMs * 1_000_000).toLong()
-                                val nowNanos = System.nanoTime()
-                                val waitMs = ((targetNanos - nowNanos) / 1_000_000L).coerceAtLeast(1)
-                                delay(waitMs)
-                            }
+                            currentBeatInMeasure = bi
+                            val dur = beatDurationMs * (4.0 / beat.duration)
+                            val beatMs = if (beat.isDotted) dur * 1.5 else dur
+                            elapsedTargetMs += beatMs
+                            val targetNanos = measureStartNanos + (elapsedTargetMs * 1_000_000).toLong()
+                            val nowNanos = System.nanoTime()
+                            val waitMs = ((targetNanos - nowNanos) / 1_000_000L).coerceAtLeast(1)
+                            delay(waitMs)
                         }
 
-                        chunkStart = chunkEnd
+                        measureIdx++
                     }
 
                     if (!isActive || !isPlaying) break
@@ -878,16 +876,33 @@ fun TabPlayerScreen(
             ) {
                 // BPM: -5 button + value + slider + +5 button
                 Row(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1.3f),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.Default.Remove, "-5",
-                        tint = AppColors.textSecondary,
+                    // -5 button
+                    Box(
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(22.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(AppColors.surface)
                             .clickable {
                                 val newBpm = ((entry.tempo * bpmFactor).toInt() - 5)
+                                    .coerceIn(30, 300)
+                                bpmFactor = newBpm.toFloat() / entry.tempo
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("-5", color = AppColors.textSecondary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(2.dp))
+                    // -1 button
+                    Icon(
+                        Icons.Default.Remove, "-1",
+                        tint = AppColors.textSecondary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable {
+                                val newBpm = ((entry.tempo * bpmFactor).toInt() - 1)
                                     .coerceIn(30, 300)
                                 bpmFactor = newBpm.toFloat() / entry.tempo
                             }
@@ -902,29 +917,46 @@ fun TabPlayerScreen(
                     Slider(
                         value = bpmFactor,
                         onValueChange = { bpmFactor = it },
-                        valueRange = 0.25f..1.5f,
+                        valueRange = (30f / entry.tempo)..(300f / entry.tempo),
                         colors = SliderDefaults.colors(
                             thumbColor = AppColors.tertiary,
                             activeTrackColor = AppColors.tertiary
                         ),
                         modifier = Modifier.weight(1f).height(24.dp)
                     )
+                    // +1 button
                     Icon(
-                        Icons.Default.Add, "+5",
+                        Icons.Default.Add, "+1",
                         tint = AppColors.textSecondary,
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(18.dp)
                             .clickable {
-                                val newBpm = ((entry.tempo * bpmFactor).toInt() + 5)
+                                val newBpm = ((entry.tempo * bpmFactor).toInt() + 1)
                                     .coerceIn(30, 300)
                                 bpmFactor = newBpm.toFloat() / entry.tempo
                             }
                     )
+                    Spacer(Modifier.width(2.dp))
+                    // +5 button
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(AppColors.surface)
+                            .clickable {
+                                val newBpm = ((entry.tempo * bpmFactor).toInt() + 5)
+                                    .coerceIn(30, 300)
+                                bpmFactor = newBpm.toFloat() / entry.tempo
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("+5", color = AppColors.textSecondary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
 
-                // Control buttons — 2/3 of width, equidistant
+                // Control buttons
                 Row(
-                    modifier = Modifier.weight(2f),
+                    modifier = Modifier.weight(1.7f),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1008,7 +1040,35 @@ fun TabPlayerScreen(
                                 currentBeatInMeasure = 0
                             }
                     )
+
+                    // Subdivision selector
+                    val subLabel = when (subdivision) {
+                        1 -> "\u2669"; 2 -> "\u266a\u266a"; 3 -> "\u266a\u266a\u266a"; 4 -> "\u266c"; else -> "$subdivision"
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (subdivision > 1) AppColors.tertiary else Color.Transparent)
+                            .clickable { showSubdivisionMenu = true },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            subLabel,
+                            fontSize = 12.sp,
+                            color = if (subdivision > 1) Color.White else AppColors.textSecondary
+                        )
+                    }
                 }
+            }
+
+            // Subdivision overlay
+            if (showSubdivisionMenu) {
+                SubdivisionSelectorOverlay(
+                    current = subdivision,
+                    onSelect = { subdivision = it },
+                    onDismiss = { showSubdivisionMenu = false }
+                )
             }
 
 

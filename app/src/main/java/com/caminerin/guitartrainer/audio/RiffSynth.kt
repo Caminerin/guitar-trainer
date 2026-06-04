@@ -337,17 +337,23 @@ object RiffSynth {
         val stringIdx = (string - 1).coerceIn(0, 5)
         val wound = IS_WOUND[stringIdx]
 
-        val numHarmonics = if (wound) 12 else 16
-        val harmonicDecay = if (wound) 0.7 else 0.85
+        // Guitar-like harmonic spectrum: stronger fundamental, faster harmonic roll-off
+        // Wound strings have fewer bright harmonics; plain strings are brighter
+        val numHarmonics = if (wound) 10 else 14
+        val harmonicDecay = if (wound) 0.55 else 0.65
         for (i in ring.indices) {
             var sample = 0.0
             val phase = 2.0 * Math.PI * i / period
             for (h in 1..numHarmonics) {
+                // Stronger fundamental, steeper drop for natural guitar timbre
                 val amplitude = Math.pow(harmonicDecay, (h - 1).toDouble())
-                val evenSuppression = if (wound && h % 2 == 0) 0.6 else 1.0
-                sample += amplitude * evenSuppression * Math.sin(h * phase)
+                val evenSuppression = if (wound && h % 2 == 0) 0.4 else 1.0
+                // Slight inharmonicity for realism (strings are slightly stiff)
+                val inharmonicity = 1.0 + 0.0001 * h * h
+                sample += amplitude * evenSuppression * Math.sin(h * inharmonicity * phase)
             }
-            val noiseAmount = if (isLegato) 0.05f else if (isPalmMute) 0.15f else 0.12f
+            // Less noise for cleaner guitar tone
+            val noiseAmount = if (isLegato) 0.03f else if (isPalmMute) 0.12f else 0.06f
             sample += (random.nextFloat() * 2f - 1f) * noiseAmount
             ring[i] = sample.toFloat()
         }
@@ -358,6 +364,7 @@ object RiffSynth {
             for (i in ring.indices) ring[i] *= ringScale
         }
 
+        // Low-pass smoothing passes: more passes = warmer/darker tone
         val brightnessPassCount = when {
             isPalmMute -> when (string) { 1, 2 -> 6; 3, 4 -> 5; else -> 4 }
             soundPreset.contains("distorsion") || soundPreset.contains("fuzz") -> when (string) {
@@ -366,8 +373,8 @@ object RiffSynth {
             soundPreset.contains("crunch") -> when (string) {
                 1, 2 -> 2; 3, 4 -> 1; else -> 1
             }
-            soundPreset.contains("acoustic") -> when (string) {
-                1, 2 -> 1; else -> 0
+            soundPreset.contains("acoustic") || soundPreset.contains("clean") -> when (string) {
+                1, 2 -> 1; 3 -> 1; else -> 0
             }
             else -> when (string) { 1, 2 -> 2; 3, 4 -> 1; else -> 0 }
         }
@@ -377,9 +384,11 @@ object RiffSynth {
             }
         }
 
+        // Longer sustain for clean/acoustic — guitar strings ring longer without distortion
+        val cleanBoost = if (soundPreset.contains("clean") || soundPreset.contains("acoustic")) 1.0004f else 1f
         val baseDecay = when (string) {
-            1 -> 0.9992f; 2 -> 0.9990f; 3 -> 0.9987f
-            4 -> 0.9984f; 5 -> 0.9980f; else -> 0.9976f
+            1 -> 0.9994f * cleanBoost; 2 -> 0.9992f * cleanBoost; 3 -> 0.9990f * cleanBoost
+            4 -> 0.9987f * cleanBoost; 5 -> 0.9984f * cleanBoost; else -> 0.9980f * cleanBoost
         }
         val decay = when {
             isPalmMute -> baseDecay * 0.9965f
@@ -388,18 +397,21 @@ object RiffSynth {
             else -> baseDecay
         }
 
+        // Blend factor: higher = warmer tone (more low-pass in feedback loop)
         val blend = when {
             isPalmMute -> when (string) { 1, 2 -> 0.48f; 3, 4 -> 0.50f; else -> 0.52f }
-            wound -> when (string) { 4 -> 0.47f; 5 -> 0.50f; else -> 0.52f }
-            else -> when (string) { 1 -> 0.38f; 2 -> 0.40f; else -> 0.43f }
+            wound -> when (string) { 4 -> 0.49f; 5 -> 0.51f; else -> 0.53f }
+            else -> when (string) { 1 -> 0.42f; 2 -> 0.44f; else -> 0.46f }
         }
 
-        val pickTransientSamples = if (isLegato) 0 else (SAMPLE_RATE * 0.003).toInt()
+        // Pick attack transient — shorter and subtler for clean guitar
+        val pickTransientSamples = if (isLegato) 0 else (SAMPLE_RATE * 0.004).toInt()
         val pickTransientAmplitude = when {
-            isPalmMute -> 0.3f
-            soundPreset.contains("acoustic") -> 0.5f
+            isPalmMute -> 0.25f
+            soundPreset.contains("acoustic") -> 0.35f
+            soundPreset.contains("clean") -> 0.28f
             soundPreset.contains("distorsion") || soundPreset.contains("fuzz") -> 0.25f
-            else -> 0.4f
+            else -> 0.35f
         }
 
         val attackSamples = when {
@@ -493,9 +505,10 @@ object RiffSynth {
             }
         }
 
+        // Body resonance — more for acoustic/clean to simulate guitar body
         val bodyMix = when {
-            soundPreset.contains("acoustic") -> 0.28f
-            soundPreset.contains("clean") -> 0.18f
+            soundPreset.contains("acoustic") -> 0.32f
+            soundPreset.contains("clean") -> 0.25f
             soundPreset.contains("surf") -> 0.22f
             else -> 0.08f
         }

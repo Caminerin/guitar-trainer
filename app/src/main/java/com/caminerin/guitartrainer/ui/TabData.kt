@@ -1035,11 +1035,21 @@ object TabRepository {
                     return@withContext parseSongJson(cacheFile.readText())
                 }
                 val conn = url.openConnection() as HttpURLConnection
-                conn.connectTimeout = CONNECT_TIMEOUT
-                conn.readTimeout = READ_TIMEOUT
+                conn.connectTimeout = 8_000
+                conn.readTimeout = 10_000
                 conn.setRequestProperty("User-Agent", "GuitarTrainer/1.0")
+                val responseCode = conn.responseCode
+                if (responseCode != 200) {
+                    conn.disconnect()
+                    android.util.Log.w("TabData", "HTTP $responseCode for $url")
+                    return@withContext null
+                }
                 val jsonStr = conn.inputStream.bufferedReader().readText()
                 conn.disconnect()
+                if (jsonStr.isBlank() || !jsonStr.trimStart().startsWith("{")) {
+                    android.util.Log.w("TabData", "Invalid JSON response for ${entry.path}")
+                    return@withContext null
+                }
                 cacheFile.parentFile?.mkdirs()
                 cacheFile.writeText(jsonStr)
                 return@withContext parseSongJson(jsonStr)
