@@ -534,12 +534,24 @@ private fun GrooveUnifiedBar(
         // Tab: Trainer
         TabButton("Trainer", selectedTab == GrooveTab.TRAINER) { onTabChange(GrooveTab.TRAINER) }
 
-        // BPM slider (~1/3 width) with value label
-        Column(
+        // BPM zone: [−] [100 BPM] [slider] [+]  (~1/3 width)
+        Row(
             modifier = Modifier.weight(1f),
-            horizontalAlignment = Alignment.CenterHorizontally
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Text("$bpm BPM", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Box(
+                Modifier.size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onBpmChange((bpm - 1).coerceAtLeast(40)) },
+                contentAlignment = Alignment.Center
+            ) { Text("−", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+
+            Text(
+                "$bpm",
+                color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 2.dp)
+            )
+
             Slider(
                 value = bpm.toFloat(), onValueChange = { onBpmChange(it.toInt()) }, valueRange = 40f..240f,
                 colors = SliderDefaults.colors(
@@ -547,8 +559,14 @@ private fun GrooveUnifiedBar(
                     activeTrackColor = GradientColors.accent.copy(alpha = 0.7f),
                     inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
-                modifier = Modifier.fillMaxWidth().height(20.dp)
+                modifier = Modifier.weight(1f).height(20.dp)
             )
+
+            Box(
+                Modifier.size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onBpmChange((bpm + 1).coerceAtMost(240)) },
+                contentAlignment = Alignment.Center
+            ) { Text("+", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
         }
 
         // Play
