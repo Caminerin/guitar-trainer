@@ -59,7 +59,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.caminerin.guitartrainer.audio.DrumEngine
 import com.caminerin.guitartrainer.audio.GrooveCategory
 import com.caminerin.guitartrainer.audio.GrooveCategoryData
 import com.caminerin.guitartrainer.audio.GrooveEngine
@@ -95,6 +94,7 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
     var snareVol by remember { mutableFloatStateOf(1f) }
     var hihatVol by remember { mutableFloatStateOf(1f) }
     var rideVol by remember { mutableFloatStateOf(1f) }
+    var crashVol by remember { mutableFloatStateOf(1f) }
 
     var silenceEveryBars by remember { mutableIntStateOf(0) }
     var tempoTarget by remember { mutableIntStateOf(0) }
@@ -109,7 +109,6 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
     var expandedPanel by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
-        DrumEngine.stop()
         GrooveEngine.init(context)
         categories = GrooveEngine.getCategories()
     }
@@ -132,10 +131,12 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
         }
     }
 
-    fun stopPlaying() {
+    suspend fun stopPlayingAndWait() {
         GrooveEngine.stop()
-        playJob?.cancel()
+        val job = playJob
         playJob = null
+        job?.cancel()
+        job?.join()
         isPlaying = false
         currentBeat = 0; currentBar = 0
     }
@@ -150,27 +151,29 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             complexityLevel = complexityLevel, feel = feel, swing = swing,
             fillEveryBars = fillEveryBars, silenceEveryBars = silenceEveryBars,
             silenceDurationBars = 1, countIn = countIn,
-            volumes = mapOf("kick" to kickVol, "snare" to snareVol, "hihat" to hihatVol, "ride" to rideVol, "crash" to rideVol),
+            volumes = mapOf("kick" to kickVol, "snare" to snareVol, "hihat" to hihatVol, "ride" to rideVol, "crash" to crashVol),
             tempoProgression = if (tempoTarget > bpm) GrooveEngine.TempoProgression(tempoTarget, tempoIncrement, 8) else null
         )
-        // Stop any existing playback first
-        GrooveEngine.stop()
-        playJob?.cancel()
-        playJob = null
-        isPlaying = true
-        playJob = scope.launch {
-            // Brief yield to let cancelled coroutine finish AudioTrack write
-            kotlinx.coroutines.delay(50)
-            try {
-                GrooveEngine.playGroove(context, config,
-                    onBeat = { bar, beat ->
-                        scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { currentBar = bar; currentBeat = beat }
-                    },
-                    onBpmChange = { newBpm ->
-                        scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { bpm = newBpm }
-                    })
-            } catch (_: Exception) { }
-            isPlaying = false; currentBeat = 0; currentBar = 0
+        scope.launch {
+            stopPlayingAndWait()
+            isPlaying = true
+            playJob = launch {
+                try {
+                    GrooveEngine.playGroove(context, config,
+                        onBeat = { bar, beat ->
+                            scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { currentBar = bar; currentBeat = beat }
+                        },
+                        onBpmChange = { newBpm ->
+                            scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { bpm = newBpm }
+                        })
+                } catch (e: Exception) {
+                    android.util.Log.e("GrooveTrainer", "playGroove error", e)
+                } finally {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) {
+                        isPlaying = false; currentBeat = 0; currentBar = 0
+                    }
+                }
+            }
         }
     }
 
@@ -208,12 +211,13 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
         if (fillEveryBars > 0) "Fill c/$fillEveryBars" else null,
         if (countIn) "Count-in" else null
     ).joinToString(" · ")
-    val mixerSummary = if (kickVol >= 0.99f && snareVol >= 0.99f && hihatVol >= 0.99f && rideVol >= 0.99f) "100%"
+    val mixerSummary = if (kickVol >= 0.99f && snareVol >= 0.99f && hihatVol >= 0.99f && rideVol >= 0.99f && crashVol >= 0.99f) "100%"
     else listOfNotNull(
         if (kickVol < 0.99f) "K:${(kickVol * 100).toInt()}%" else null,
         if (snareVol < 0.99f) "S:${(snareVol * 100).toInt()}%" else null,
         if (hihatVol < 0.99f) "HH:${(hihatVol * 100).toInt()}%" else null,
-        if (rideVol < 0.99f) "R:${(rideVol * 100).toInt()}%" else null
+        if (rideVol < 0.99f) "R:${(rideVol * 100).toInt()}%" else null,
+        if (crashVol < 0.99f) "C:${(crashVol * 100).toInt()}%" else null
     ).joinToString(" · ")
 
     // ==================== LAYOUT ====================
@@ -270,14 +274,13 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                                 selectedIdx = selectedCategoryIdx,
                                 onSelect = { idx ->
                                     val wasPlaying = isPlaying
-                                    if (wasPlaying) stopPlaying()
-                                    selectedCategoryIdx = idx; selectedPatternIdx = 0
                                     expandedPanel = null
-                                    if (wasPlaying) {
-                                        scope.launch {
-                                            kotlinx.coroutines.delay(300)
-                                            startPlaying()
-                                        }
+                                    scope.launch {
+                                        if (wasPlaying) stopPlayingAndWait()
+                                        selectedCategoryIdx = idx; selectedPatternIdx = 0
+                                        val catId = categories[idx].id
+                                        categoryData = GrooveEngine.loadCategoryPatterns(context, catId)
+                                        if (wasPlaying) startPlaying()
                                     }
                                 }
                             )
@@ -295,14 +298,11 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                                 selectedIdx = selectedPatternIdx,
                                 onSelect = { idx ->
                                     val wasPlaying = isPlaying
-                                    if (wasPlaying) stopPlaying()
-                                    selectedPatternIdx = idx
                                     expandedPanel = null
-                                    if (wasPlaying) {
-                                        scope.launch {
-                                            kotlinx.coroutines.delay(100)
-                                            startPlaying()
-                                        }
+                                    scope.launch {
+                                        if (wasPlaying) stopPlayingAndWait()
+                                        selectedPatternIdx = idx
+                                        if (wasPlaying) startPlaying()
                                     }
                                 }
                             )
@@ -325,15 +325,8 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(if (selected) GradientColors.accent else MaterialTheme.colorScheme.surfaceVariant)
                                         .clickable {
-                            val wasPlaying = isPlaying
-                            if (wasPlaying) stopPlaying()
                             complexityLevel = level; expandedPanel = null
-                            if (wasPlaying) {
-                                scope.launch {
-                                    kotlinx.coroutines.delay(100)
-                                    startPlaying()
-                                }
-                            }
+                            if (isPlaying) GrooveEngine.updateLiveComplexity(level)
                         }
                                         .padding(vertical = 6.dp, horizontal = 10.dp),
                                     contentAlignment = Alignment.Center
@@ -357,9 +350,9 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                             modifier = Modifier.weight(1f)
                         ) {
                             AjustesContent(
-                                feel = feel, onFeelChange = { feel = it },
-                                swing = swing, onSwingChange = { swing = it },
-                                fillEveryBars = fillEveryBars, onFillChange = { fillEveryBars = it },
+                                feel = feel, onFeelChange = { feel = it; if (isPlaying) GrooveEngine.updateLiveFeel(it) },
+                                swing = swing, onSwingChange = { swing = it; if (isPlaying) GrooveEngine.updateLiveSwing(it) },
+                                fillEveryBars = fillEveryBars, onFillChange = { fillEveryBars = it; if (isPlaying) GrooveEngine.updateLiveFillEvery(it) },
                                 countIn = countIn, onCountInChange = { countIn = it },
                                 hasFills = categoryData?.fills?.isNotEmpty() == true
                             )
@@ -371,10 +364,16 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                             onToggle = { togglePanel("mixer") },
                             modifier = Modifier.weight(1f)
                         ) {
-                            MixerSlider("Kick", kickVol) { kickVol = it }
-                            MixerSlider("Snare", snareVol) { snareVol = it }
-                            MixerSlider("Hi-Hat", hihatVol) { hihatVol = it }
-                            MixerSlider("Ride", rideVol) { rideVol = it }
+                            fun pushVolumes() {
+                                if (isPlaying) GrooveEngine.updateLiveVolumes(
+                                    mapOf("kick" to kickVol, "snare" to snareVol, "hihat" to hihatVol, "ride" to rideVol, "crash" to crashVol)
+                                )
+                            }
+                            MixerSlider("Kick", kickVol) { kickVol = it; pushVolumes() }
+                            MixerSlider("Snare", snareVol) { snareVol = it; pushVolumes() }
+                            MixerSlider("Hi-Hat", hihatVol) { hihatVol = it; pushVolumes() }
+                            MixerSlider("Ride", rideVol) { rideVol = it; pushVolumes() }
+                            MixerSlider("Crash", crashVol) { crashVol = it; pushVolumes() }
                         }
                     }
                 }
@@ -394,9 +393,10 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             selectedTab = selectedTab, onTabChange = { selectedTab = it },
             bpm = bpm, onBpmChange = { bpm = it },
             isPlaying = isPlaying,
-            onPlayStop = { if (isPlaying) stopPlaying() else startPlaying() },
+            onPlayStop = { if (isPlaying) scope.launch { stopPlayingAndWait() } else startPlaying() },
             onTapTempo = { handleTapTempo() },
-            tapFlash = tapFlash
+            tapFlash = tapFlash,
+            onFillRequest = { if (isPlaying) GrooveEngine.requestFillNextBar() }
         )
     }
 }
@@ -562,7 +562,8 @@ private fun GrooveUnifiedBar(
     selectedTab: GrooveTab, onTabChange: (GrooveTab) -> Unit,
     bpm: Int, onBpmChange: (Int) -> Unit,
     isPlaying: Boolean, onPlayStop: () -> Unit,
-    onTapTempo: () -> Unit, tapFlash: Boolean
+    onTapTempo: () -> Unit, tapFlash: Boolean,
+    onFillRequest: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth()
@@ -631,6 +632,19 @@ private fun GrooveUnifiedBar(
                     .clickable { onBpmChange((bpm + 5).coerceAtMost(240)) },
                 contentAlignment = Alignment.Center
             ) { Text("+5", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold) }
+        }
+
+        // Fill! button (only visible when playing)
+        if (isPlaying) {
+            Box(
+                Modifier.clip(RoundedCornerShape(8.dp))
+                    .background(GradientColors.accent.copy(alpha = 0.8f))
+                    .clickable { onFillRequest() }
+                    .padding(horizontal = 6.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Fill!", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black, maxLines = 1)
+            }
         }
 
         // Play
