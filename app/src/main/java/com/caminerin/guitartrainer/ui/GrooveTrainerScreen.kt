@@ -59,9 +59,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.caminerin.guitartrainer.audio.DrumEngine
 import com.caminerin.guitartrainer.audio.GrooveCategory
 import com.caminerin.guitartrainer.audio.GrooveCategoryData
 import com.caminerin.guitartrainer.audio.GrooveEngine
+import com.caminerin.guitartrainer.audio.MetronomeEngine
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -117,8 +119,10 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
     var showSettings by remember { mutableStateOf(false) }
     var showMixer by remember { mutableStateOf(false) }
 
-    // Load categories
+    // Stop other audio engines and load categories
     LaunchedEffect(Unit) {
+        DrumEngine.stop()
+        MetronomeEngine.stop()
         GrooveEngine.init(context)
         categories = GrooveEngine.getCategories()
     }
@@ -307,10 +311,16 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                 GrooveTab.QUICK_PLAY -> QuickPlayContent(
                     categories = categories,
                     selectedCategoryIdx = selectedCategoryIdx,
-                    onCategoryChange = { selectedCategoryIdx = it; selectedPatternIdx = 0 },
+                    onCategoryChange = {
+                        selectedCategoryIdx = it; selectedPatternIdx = 0
+                        if (isPlaying) { stopPlaying(); scope.launch { kotlinx.coroutines.delay(100); startPlaying() } }
+                    },
                     categoryData = categoryData,
                     selectedPatternIdx = selectedPatternIdx,
-                    onPatternChange = { selectedPatternIdx = it },
+                    onPatternChange = {
+                        selectedPatternIdx = it
+                        if (isPlaying) { stopPlaying(); scope.launch { kotlinx.coroutines.delay(100); startPlaying() } }
+                    },
                     complexityLevel = complexityLevel,
                     onComplexityChange = { complexityLevel = it },
                     feel = feel,
@@ -421,79 +431,94 @@ private fun GrooveBottomBar(
     onTapTempo: () -> Unit,
     tapFlash: Boolean
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(AppColors.navBar)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 12.dp, vertical = 6.dp)
     ) {
-        // BPM control
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { onBpmChange((bpm - 1).coerceAtLeast(40)) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text("−", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$bpm", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text("BPM", fontSize = 8.sp, color = Color.White.copy(alpha = 0.5f))
-            }
-            Spacer(modifier = Modifier.width(6.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { onBpmChange((bpm + 1).coerceAtMost(240)) }
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
-            ) {
-                Text("+", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-
-        // Play/Stop button
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(if (isPlaying) AppColors.error else AppColors.success)
-                .clickable { onPlayStop() },
-            contentAlignment = Alignment.Center
+        // Row 1: BPM display + Play + Tap
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
-                contentDescription = if (isPlaying) "Parar" else "Tocar",
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
+            // BPM ±1 controls
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { onBpmChange((bpm - 1).coerceAtLeast(40)) }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("−", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("$bpm", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text("BPM", fontSize = 8.sp, color = Color.White.copy(alpha = 0.5f))
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .clickable { onBpmChange((bpm + 1).coerceAtMost(240)) }
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("+", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Play/Stop button
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(if (isPlaying) AppColors.error else AppColors.success)
+                    .clickable { onPlayStop() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    if (isPlaying) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Parar" else "Tocar",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            // Tap tempo
+            val tapBg by animateColorAsState(
+                targetValue = if (tapFlash) GradientColors.accent else MaterialTheme.colorScheme.surfaceVariant,
+                animationSpec = tween(100),
+                label = "tap"
             )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(tapBg)
+                    .clickable { onTapTempo() }
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    "TAP",
+                    color = if (tapFlash) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
 
-        // Tap tempo
-        val tapBg by animateColorAsState(
-            targetValue = if (tapFlash) GradientColors.accent else MaterialTheme.colorScheme.surfaceVariant,
-            animationSpec = tween(100),
-            label = "tap"
+        // Row 2: BPM slider
+        Slider(
+            value = bpm.toFloat(),
+            onValueChange = { onBpmChange(it.toInt()) },
+            valueRange = 40f..240f,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(24.dp)
         )
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(tapBg)
-                .clickable { onTapTempo() }
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            Text(
-                "TAP",
-                color = if (tapFlash) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
     }
 }
 
@@ -647,37 +672,46 @@ private fun QuickPlayContent(
         Spacer(modifier = Modifier.height(6.dp))
 
         // Fill + Count-in in a single row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // Fill options
-            val fillOptions = listOf(0 to "Fill Off", 4 to "c/4", 8 to "c/8", 12 to "c/12")
-            fillOptions.forEach { (bars, label) ->
-                val selected = fillEveryBars == bars
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (selected) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.surfaceVariant
+        val hasFills = categoryData != null && categoryData.fills.isNotEmpty()
+        if (hasFills) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                val fillOptions = listOf(0 to "Fill Off", 4 to "c/4", 8 to "c/8", 12 to "c/12")
+                fillOptions.forEach { (bars, label) ->
+                    val selected = fillEveryBars == bars
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (selected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            .clickable { onFillChange(bars) }
+                            .padding(vertical = 7.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            label,
+                            color = if (selected) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 11.sp,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        .clickable { onFillChange(bars) }
-                        .padding(vertical = 7.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        label,
-                        color = if (selected) MaterialTheme.colorScheme.onPrimary
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 11.sp,
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    }
                 }
             }
+        } else {
+            Text(
+                "Sin fills disponibles para este estilo",
+                color = AppColors.textMuted,
+                fontSize = 11.sp,
+                modifier = Modifier.padding(vertical = 4.dp)
+            )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
