@@ -1227,51 +1227,177 @@ fun TabViewer(
                             }
                         )
                     } else {
+                        // Technique colors
+                        val amberTech = 0xFFD4960A.toInt()
+                        val bendClr = 0xFFE6AA32.toInt()
+                        val harmClr = 0xFF64C8FF.toInt()
+                        val ghostClr = 0xFFA08C73.toInt()
+                        val deadClr = 0xFFC86464.toInt()
+                        val pmClr = 0xFFB48C50.toInt()
+
+                        // Collect palm_mute notes for P.M. label
+                        val hasPalmMute = beat.notes.any { "palm_mute" in it.effects }
+                        if (hasPalmMute) {
+                            val pmY = topOffset - 22f
+                            drawContext.canvas.nativeCanvas.drawText(
+                                "P.M.", bx - 12f, pmY,
+                                android.graphics.Paint().apply {
+                                    color = pmClr; textSize = 22f; isAntiAlias = true
+                                    isFakeBoldText = true
+                                }
+                            )
+                            // Dashed line below P.M.
+                            var dashX = bx - 12f
+                            while (dashX < bx + beatW * 0.6f) {
+                                drawLine(Color(0xFFB48C50), Offset(dashX, pmY + 4f), Offset(dashX + 8f, pmY + 4f), 1.5f)
+                                dashX += 14f
+                            }
+                        }
+
                         for (note in beat.notes) {
                             val si = note.string - 1
                             if (si < 0 || si >= numStrings) continue
                             val y = topOffset + si * stringSpacing
 
-                            val noteColor = when {
-                                "bend" in note.effects -> Color(0xFF4CAF50)
-                                "hammer" in note.effects -> Color(0xFF00BCD4)
-                                "slide" in note.effects -> Color(0xFFFFC107)
-                                "palm_mute" in note.effects -> Color(0xFFFF5722)
-                                "vibrato" in note.effects -> Color(0xFF9C27B0)
-                                "harmonic" in note.effects -> Color(0xFFE67E00)
-                                "let_ring" in note.effects -> Color(0xFF3F51B5)
-                                else -> Color.White
+                            val isGhost = "ghost" in note.effects
+                            val isDead = "dead" in note.effects
+                            val isHarmonic = "harmonic" in note.effects
+                            val hasBend = "bend" in note.effects
+                            val hasHammer = "hammer" in note.effects || "hammer_on" in note.effects
+                            val hasPull = "pulloff" in note.effects || "pull_off" in note.effects || "pull" in note.effects
+                            val hasSlide = "slide" in note.effects || "slide_up" in note.effects || "slide_down" in note.effects
+                            val hasVibrato = "vibrato" in note.effects
+                            val hasTapping = "tapping" in note.effects
+
+                            // Note text and color
+                            val noteText = when {
+                                isDead -> "X"
+                                isGhost -> "(${note.fret})"
+                                else -> "${note.fret}"
+                            }
+                            val noteClr = when {
+                                isDead -> deadClr
+                                isGhost -> ghostClr
+                                isHarmonic -> harmClr
+                                else -> 0xFFFFFFFF.toInt()
                             }
 
+                            // Draw fret number (or X / (n))
                             drawContext.canvas.nativeCanvas.drawText(
-                                "${note.fret}",
-                                bx, y + 8f,
+                                noteText, bx, y + 8f,
                                 android.graphics.Paint().apply {
-                                    color = noteColor.toArgb()
-                                    textSize = noteFontSize
+                                    color = noteClr; textSize = noteFontSize
                                     textAlign = android.graphics.Paint.Align.CENTER
-                                    isAntiAlias = true
-                                    isFakeBoldText = true
+                                    isAntiAlias = true; isFakeBoldText = true
                                 }
                             )
 
-                            val effectText = when {
-                                "bend" in note.effects -> "b"
-                                "hammer" in note.effects -> "h"
-                                "slide" in note.effects -> "/"
-                                "palm_mute" in note.effects -> "."
-                                "vibrato" in note.effects -> "~"
-                                "harmonic" in note.effects -> "◇"
-                                else -> null
-                            }
-                            if (effectText != null) {
-                                drawContext.canvas.nativeCanvas.drawText(
-                                    effectText,
-                                    bx + 16f, y - 4f,
+                            // Harmonic: diamond to the left of the note
+                            if (isHarmonic) {
+                                val dx = bx - 22f
+                                val dy = y
+                                val path = android.graphics.Path().apply {
+                                    moveTo(dx, dy - 10f); lineTo(dx + 8f, dy)
+                                    lineTo(dx, dy + 10f); lineTo(dx - 8f, dy); close()
+                                }
+                                drawContext.canvas.nativeCanvas.drawPath(path,
                                     android.graphics.Paint().apply {
-                                        color = noteColor.toArgb()
-                                        textSize = 20f
+                                        color = harmClr; style = android.graphics.Paint.Style.STROKE
+                                        strokeWidth = 2.5f; isAntiAlias = true
+                                    }
+                                )
+                            }
+
+                            // Bend arrow: curved line going up from note, arrow tip at top, label
+                            if (hasBend) {
+                                val arrowBottom = y - 18f
+                                val arrowTop = y - 58f
+                                val arrowX = bx + 6f
+                                // Curved line
+                                for (step in 0..40) {
+                                    val frac = step / 40f
+                                    val ay = arrowBottom - (arrowBottom - arrowTop) * frac
+                                    val axOff = 4f * kotlin.math.sin(Math.PI.toFloat() * frac * 0.4f)
+                                    drawCircle(Color(0xFFE6AA32), 1.5f, Offset(arrowX + axOff, ay))
+                                }
+                                // Arrow head
+                                val tipY = arrowTop - 4f
+                                val path = android.graphics.Path().apply {
+                                    moveTo(arrowX, tipY - 7f)
+                                    lineTo(arrowX - 6f, tipY + 4f)
+                                    lineTo(arrowX + 6f, tipY + 4f)
+                                    close()
+                                }
+                                drawContext.canvas.nativeCanvas.drawPath(path,
+                                    android.graphics.Paint().apply {
+                                        color = bendClr; style = android.graphics.Paint.Style.FILL
                                         isAntiAlias = true
+                                    }
+                                )
+                                // "full" or "½" label
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    "full", arrowX + 10f, tipY - 2f,
+                                    android.graphics.Paint().apply {
+                                        color = bendClr; textSize = 18f; isAntiAlias = true
+                                        isFakeBoldText = true
+                                    }
+                                )
+                            }
+
+                            // Hammer-on / Pull-off: arc above with H or P label
+                            if (hasHammer || hasPull) {
+                                val label = if (hasHammer) "H" else "P"
+                                val arcStartX = bx - 8f
+                                val arcEndX = bx + beatW * 0.7f
+                                val arcY = y - 16f
+                                val arcHeight = 18f
+                                // Draw arc
+                                for (step in 0..50) {
+                                    val frac = step / 50f
+                                    val ax = arcStartX + (arcEndX - arcStartX) * frac
+                                    val ay = arcY - arcHeight * kotlin.math.sin(Math.PI.toFloat() * frac)
+                                    drawCircle(Color(0xFFD4960A), 1.2f, Offset(ax, ay))
+                                }
+                                // Label above arc peak
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    label,
+                                    (arcStartX + arcEndX) / 2f, arcY - arcHeight - 6f,
+                                    android.graphics.Paint().apply {
+                                        color = amberTech; textSize = 22f
+                                        textAlign = android.graphics.Paint.Align.CENTER
+                                        isAntiAlias = true; isFakeBoldText = true
+                                    }
+                                )
+                            }
+
+                            // Slide: diagonal line after the note
+                            if (hasSlide) {
+                                val slideIsUp = "slide_down" !in note.effects
+                                val sx = bx + 14f
+                                val ex = bx + beatW * 0.65f
+                                val sy = if (slideIsUp) y + 4f else y - 10f
+                                val ey = if (slideIsUp) y - 10f else y + 4f
+                                drawLine(Color(0xFFD4960A), Offset(sx, sy), Offset(ex, ey), 2.5f)
+                            }
+
+                            // Vibrato: wavy line after the note
+                            if (hasVibrato) {
+                                val vx = bx + 16f
+                                val vy = y - 12f
+                                for (px in 0..35) {
+                                    val yOff = 3.5f * kotlin.math.sin(px * 0.5f)
+                                    drawCircle(Color(0xFFD4960A), 1.2f, Offset(vx + px, vy + yOff))
+                                }
+                            }
+
+                            // Tapping: T above the note
+                            if (hasTapping) {
+                                drawContext.canvas.nativeCanvas.drawText(
+                                    "T", bx, y - 22f,
+                                    android.graphics.Paint().apply {
+                                        color = amberTech; textSize = 24f
+                                        textAlign = android.graphics.Paint.Align.CENTER
+                                        isAntiAlias = true; isFakeBoldText = true
                                     }
                                 )
                             }
