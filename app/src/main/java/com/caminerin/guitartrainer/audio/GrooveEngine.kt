@@ -355,7 +355,6 @@ object GrooveEngine {
         onBeat: ((bar: Int, beat: Int) -> Unit)? = null,
         onBpmChange: ((Int) -> Unit)? = null
     ) {
-        stop()
         init(context)
         isPlaying = true
         lastHiHatOpenEnd = 0
@@ -570,15 +569,6 @@ object GrooveEngine {
     fun stop() {
         isPlaying = false
         driftTendency = 0f
-        try {
-            val track = audioTrack
-            if (track != null && track.playState == AudioTrack.PLAYSTATE_PLAYING) {
-                val fadeLen = (SAMPLE_RATE * 0.02).toInt() // 20ms fade
-                val fadeBuffer = ShortArray(fadeLen * 2) // stereo
-                track.write(fadeBuffer, 0, fadeBuffer.size)
-                track.flush()
-            }
-        } catch (_: Exception) { }
     }
 
     fun release() {
