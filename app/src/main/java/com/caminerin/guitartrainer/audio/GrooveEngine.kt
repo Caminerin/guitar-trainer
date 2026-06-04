@@ -33,13 +33,27 @@ object GrooveEngine {
     private val categories = mutableListOf<GrooveCategory>()
     private var indexLoaded = false
 
+    // Humanization state: per-bar drift tendency
+    private var driftTendency = 0f // accumulates slight timing bias like a real drummer
+
+    // Stereo panning map: -1.0 = full left, 0.0 = center, 1.0 = full right
+    private val PAN_MAP = mapOf(
+        DrumHit.KICK_HARD to 0.0f, DrumHit.KICK_SOFT to 0.0f,
+        DrumHit.SNARE_HARD to 0.08f, DrumHit.SNARE_SOFT to 0.08f,
+        DrumHit.SNARE_CROSSSTICK to 0.1f, DrumHit.SNARE_RIMSHOT to 0.08f,
+        DrumHit.HH_CLOSED to -0.7f, DrumHit.HH_OPEN to -0.7f,
+        DrumHit.HH_HALF to -0.7f, DrumHit.HH_PEDAL to -0.5f,
+        DrumHit.RIDE_NORMAL to 0.6f, DrumHit.RIDE_BELL to 0.55f,
+        DrumHit.CRASH to -0.4f
+    )
+
     fun init(context: Context) {
         if (initialized) return
         loadSamples(context)
         if (!indexLoaded) loadPatternIndex(context)
 
         val minBuf = AudioTrack.getMinBufferSize(
-            SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            SAMPLE_RATE, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT
         )
         audioTrack = AudioTrack.Builder()
             .setAudioAttributes(
@@ -51,11 +65,11 @@ object GrooveEngine {
             .setAudioFormat(
                 AudioFormat.Builder()
                     .setSampleRate(SAMPLE_RATE)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
                     .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
                     .build()
             )
-            .setBufferSizeInBytes(minBuf.coerceAtLeast(SAMPLE_RATE * 2))
+            .setBufferSizeInBytes(minBuf.coerceAtLeast(SAMPLE_RATE * 4))
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
         audioTrack?.play()
@@ -223,21 +237,92 @@ object GrooveEngine {
 
     enum class Feel { TIGHT, NATURAL, LOOSE }
 
-    private fun humanizeVelocity(velocity: Float, feel: Feel): Float {
+    private fun humanizeVelocity(velocity: Float, feel: Feel, beat: Int, barCount: Int): Float {
         val range = when (feel) {
             Feel.TIGHT -> 0.02f
             Feel.NATURAL -> 0.08f
             Feel.LOOSE -> 0.15f
         }
-        return (velocity + (Random.nextFloat() - 0.5f) * range).coerceIn(0.1f, 1.0f)
+        // Per-beat accent: beat 1 slightly stronger, odd beats slightly weaker
+        val beatAccent = when (beat % 4) {
+            0 -> 0.04f   // downbeat: slightly louder
+            2 -> 0.01f   // backbeat: tiny boost
+            else -> -0.03f // off-beats: slightly softer
+        }
+        // Per-bar micro-variation: each bar sounds slightly different
+        val barVariation = ((barCount * 7 + beat * 13) % 17).toFloat() / 17f * 0.04f - 0.02f
+        return (velocity + (Random.nextFloat() - 0.5f) * range + beatAccent + barVariation).coerceIn(0.1f, 1.0f)
     }
 
-    private fun humanizeTiming(feel: Feel): Float {
-        // Returns timing offset in fraction of a step
-        return when (feel) {
+    private fun humanizeTiming(feel: Feel, step: Float): Float {
+        // Drift tendency: drummer gradually pushes/pulls, then corrects (like a real human)
+        driftTendency += (Random.nextFloat() - 0.52f) * 0.01f // slight pull-back bias
+        driftTendency = driftTendency.coerceIn(-0.04f, 0.04f)
+        // On downbeats, correct drift (drummer re-syncs)
+        if (step.toInt() == 0) driftTendency *= 0.3f
+        val randomComponent = when (feel) {
             Feel.TIGHT -> 0f
-            Feel.NATURAL -> (Random.nextFloat() - 0.5f) * 0.06f
-            Feel.LOOSE -> (Random.nextFloat() - 0.5f) * 0.12f
+            Feel.NATURAL -> (Random.nextFloat() - 0.5f) * 0.05f
+            Feel.LOOSE -> (Random.nextFloat() - 0.5f) * 0.10f
+        }
+        return randomComponent + driftTendency
+    }
+
+    /**
+     * Micro-pitch variation: resample at a slightly different rate to avoid
+     * the "machine gun" effect of identical samples. Variation is ±2%.
+     */
+    private fun pitchShiftSample(sample: ShortArray, variation: Float): ShortArray {
+        val rate = 1.0f + variation // e.g., 0.98 to 1.02
+        val newLen = (sample.size / rate).toInt()
+        if (newLen <= 0) return sample
+        val result = ShortArray(newLen)
+        for (i in result.indices) {
+            val srcPos = i * rate
+            val srcIdx = srcPos.toInt()
+            val frac = srcPos - srcIdx
+            if (srcIdx + 1 < sample.size) {
+                result[i] = (sample[srcIdx] * (1f - frac) + sample[srcIdx + 1] * frac).toInt().toShort()
+            } else if (srcIdx < sample.size) {
+                result[i] = sample[srcIdx]
+            }
+        }
+        return result
+    }
+
+    /**
+     * Brightness filter: softer hits sound darker (low-pass).
+     * Simple 1-pole filter: y[n] = alpha * x[n] + (1-alpha) * y[n-1]
+     */
+    private fun applyBrightnessFilter(sample: ShortArray, velocity: Float): ShortArray {
+        if (velocity > 0.7f) return sample // hard hits: no filter
+        val alpha = 0.4f + velocity * 0.6f // 0.4 at vel=0, 1.0 at vel=1
+        val result = ShortArray(sample.size)
+        var prev = 0f
+        for (i in sample.indices) {
+            prev = alpha * sample[i].toFloat() + (1f - alpha) * prev
+            result[i] = prev.toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+        }
+        return result
+    }
+
+    /**
+     * Simple early reflections: mix a delayed, attenuated copy to add room feel.
+     */
+    private fun addRoomReflection(buffer: ShortArray, stereoBuffer: ShortArray) {
+        val delaySamples = (SAMPLE_RATE * 0.012).toInt() // 12ms early reflection
+        val amount = 0.08f // subtle
+        for (i in buffer.indices) {
+            val srcIdx = i - delaySamples
+            if (srcIdx >= 0) {
+                val reflection = (buffer[srcIdx] * amount).toInt()
+                val lIdx = i * 2
+                val rIdx = i * 2 + 1
+                if (rIdx < stereoBuffer.size) {
+                    stereoBuffer[lIdx] = (stereoBuffer[lIdx] + reflection).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                    stereoBuffer[rIdx] = (stereoBuffer[rIdx] + reflection).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                }
+            }
         }
     }
 
@@ -313,44 +398,79 @@ object GrooveEngine {
                 val buffer = barBuffer
                 java.util.Arrays.fill(buffer, 0, barSamples, 0)
 
+                // Mono mix buffer for room reflection source
+                val monoBuffer = ShortArray(barSamples)
+                // Stereo interleaved buffer: L,R,L,R,...
+                val stereoBuffer = ShortArray(barSamples * 2)
+
                 if (patternToUse != null) {
                     lastHiHatOpenEnd = 0
-                    // Use cached events if same pattern+level, else compute
                     val cacheKey = System.identityHashCode(patternToUse).toLong() * 10 + config.complexityLevel
                     val sortedEvents = filteredEventsCache.getOrPut(cacheKey) {
                         filterByComplexity(patternToUse.events, config.complexityLevel).sortedBy { it.step }
                     }
                     for (event in sortedEvents) {
-                        // Probability check
                         if (event.probability < 1f && Random.nextFloat() > event.probability) continue
 
+                        // Hi-hat variation: subtle chance to swap closed↔half for realism
+                        val actualHit = if (config.feel != Feel.TIGHT && event.hit == DrumHit.HH_CLOSED && Random.nextFloat() < 0.08f) {
+                            DrumHit.HH_HALF
+                        } else if (config.feel == Feel.LOOSE && event.hit == DrumHit.HH_HALF && Random.nextFloat() < 0.05f) {
+                            DrumHit.HH_CLOSED
+                        } else event.hit
+
                         var step = event.step
-                        // Apply swing to off-beat 8th notes
                         if (config.swing > 0f && step.toInt() % 2 == 1) {
                             step += config.swing * 0.5f
                         }
-                        // Humanize timing
-                        step += humanizeTiming(config.feel)
+                        step += humanizeTiming(config.feel, event.step)
 
                         val sampleOffset = ((step / stepsPerBar) * barSamples).toInt()
                             .coerceIn(0, barSamples - 1)
+                        val beatForAccent = (event.step.toInt() / (stepsPerBar / 4)).coerceIn(0, 3)
 
-                        val velocity = humanizeVelocity(event.velocity, config.feel) *
-                            getVolumeForHit(event.hit, config.volumes)
+                        val velocity = humanizeVelocity(event.velocity, config.feel, beatForAccent, barCount) *
+                            getVolumeForHit(actualHit, config.volumes)
 
-                        val sample = samples[event.hit] ?: continue
-                        mixWithChoke(buffer, event.hit, sample, sampleOffset, velocity)
+                        val rawSample = samples[actualHit] ?: continue
+                        // Micro-pitch variation: ±2% per hit
+                        val pitchVar = (Random.nextFloat() - 0.5f) * 0.04f
+                        val pitched = pitchShiftSample(rawSample, pitchVar)
+                        // Brightness filter: soft hits sound darker
+                        val processed = applyBrightnessFilter(pitched, velocity)
+                        // Mix into mono buffer (for choke logic)
+                        mixWithChoke(monoBuffer, actualHit, processed, sampleOffset, velocity)
+
+                        // Pan to stereo
+                        val pan = PAN_MAP[actualHit] ?: 0f
+                        val leftGain = ((1f - pan) / 2f).coerceIn(0f, 1f)
+                        val rightGain = ((1f + pan) / 2f).coerceIn(0f, 1f)
+                        for (i in processed.indices) {
+                            val idx = sampleOffset + i
+                            if (idx >= barSamples) break
+                            val sval = (processed[i].toInt() * velocity).toInt()
+                            val lIdx = idx * 2
+                            val rIdx = idx * 2 + 1
+                            if (rIdx < stereoBuffer.size) {
+                                stereoBuffer[lIdx] = (stereoBuffer[lIdx] + (sval * leftGain).toInt())
+                                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                                stereoBuffer[rIdx] = (stereoBuffer[rIdx] + (sval * rightGain).toInt())
+                                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                            }
+                        }
                     }
+                    // Add room reflection
+                    addRoomReflection(monoBuffer, stereoBuffer)
                 }
 
-                // Beat callbacks
+                // Beat callbacks + write stereo audio
                 for (beat in 0 until beatsPerBar) {
                     if (!coroutineContext.isActive || !isPlaying) break
                     try { onBeat?.invoke(barCount, beat) } catch (_: Exception) { }
                     val beatSamples = barSamples / beatsPerBar
-                    val startIdx = beat * beatSamples
-                    val endIdx = ((beat + 1) * beatSamples).coerceAtMost(barSamples)
-                    val beatBuffer = buffer.copyOfRange(startIdx, endIdx)
+                    val startIdx = beat * beatSamples * 2 // stereo: 2 shorts per sample
+                    val endIdx = (((beat + 1) * beatSamples) * 2).coerceAtMost(stereoBuffer.size)
+                    val beatBuffer = stereoBuffer.copyOfRange(startIdx, endIdx)
                     try { audioTrack?.write(beatBuffer, 0, beatBuffer.size) } catch (_: Exception) { break }
                 }
 
@@ -374,9 +494,14 @@ object GrooveEngine {
         val beatSamples = (SAMPLE_RATE * 60.0 / bpm).toInt()
         val click = samples[DrumHit.HH_CLOSED] ?: return
         for (i in 0 until 4) {
-            val buffer = ShortArray(beatSamples)
-            mixInto(buffer, click, 0, 0.8f)
-            audioTrack?.write(buffer, 0, buffer.size)
+            val stereo = ShortArray(beatSamples * 2)
+            for (j in click.indices) {
+                if (j >= beatSamples) break
+                val sval = (click[j].toInt() * 0.8f).toInt()
+                stereo[j * 2] = sval.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                stereo[j * 2 + 1] = sval.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+            audioTrack?.write(stereo, 0, stereo.size)
         }
     }
 
@@ -444,11 +569,12 @@ object GrooveEngine {
 
     fun stop() {
         isPlaying = false
+        driftTendency = 0f
         try {
             val track = audioTrack
             if (track != null && track.playState == AudioTrack.PLAYSTATE_PLAYING) {
                 val fadeLen = (SAMPLE_RATE * 0.02).toInt() // 20ms fade
-                val fadeBuffer = ShortArray(fadeLen)
+                val fadeBuffer = ShortArray(fadeLen * 2) // stereo
                 track.write(fadeBuffer, 0, fadeBuffer.size)
                 track.flush()
             }
