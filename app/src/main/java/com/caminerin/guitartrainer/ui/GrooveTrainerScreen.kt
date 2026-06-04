@@ -525,8 +525,8 @@ private fun GrooveUnifiedBar(
     Row(
         modifier = Modifier.fillMaxWidth()
             .background(Brush.verticalGradient(listOf(GradientColors.grooveStart, AppColors.navBar)))
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Tab: Tocar
@@ -534,24 +534,36 @@ private fun GrooveUnifiedBar(
         // Tab: Trainer
         TabButton("Trainer", selectedTab == GrooveTab.TRAINER) { onTabChange(GrooveTab.TRAINER) }
 
-        // BPM zone: [−] [100 BPM] [slider] [+]  (~1/3 width)
+        // BPM zone: [−5] [−] [100] [slider] [+] [+5]  (~1/3 width)
         Row(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
+            // −5
             Box(
-                Modifier.size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                Modifier.size(22.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    .clickable { onBpmChange((bpm - 5).coerceAtLeast(40)) },
+                contentAlignment = Alignment.Center
+            ) { Text("-5", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold) }
+
+            Spacer(Modifier.width(2.dp))
+
+            // −1
+            Box(
+                Modifier.size(22.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { onBpmChange((bpm - 1).coerceAtLeast(40)) },
                 contentAlignment = Alignment.Center
-            ) { Text("−", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("−", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
 
+            // BPM number
             Text(
                 "$bpm",
-                color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black,
+                color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black,
                 modifier = Modifier.padding(horizontal = 2.dp)
             )
 
+            // Slider (half size via weight)
             Slider(
                 value = bpm.toFloat(), onValueChange = { onBpmChange(it.toInt()) }, valueRange = 40f..240f,
                 colors = SliderDefaults.colors(
@@ -559,14 +571,24 @@ private fun GrooveUnifiedBar(
                     activeTrackColor = GradientColors.accent.copy(alpha = 0.7f),
                     inactiveTrackColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
-                modifier = Modifier.weight(1f).height(20.dp)
+                modifier = Modifier.weight(0.5f).height(20.dp)
             )
 
+            // +1
             Box(
-                Modifier.size(26.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
+                Modifier.size(22.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { onBpmChange((bpm + 1).coerceAtMost(240)) },
                 contentAlignment = Alignment.Center
-            ) { Text("+", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("+", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+
+            Spacer(Modifier.width(2.dp))
+
+            // +5
+            Box(
+                Modifier.size(22.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                    .clickable { onBpmChange((bpm + 5).coerceAtMost(240)) },
+                contentAlignment = Alignment.Center
+            ) { Text("+5", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Bold) }
         }
 
         // Play
