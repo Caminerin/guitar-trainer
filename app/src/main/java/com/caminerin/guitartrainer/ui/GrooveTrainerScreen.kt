@@ -63,7 +63,6 @@ import com.caminerin.guitartrainer.audio.DrumEngine
 import com.caminerin.guitartrainer.audio.GrooveCategory
 import com.caminerin.guitartrainer.audio.GrooveCategoryData
 import com.caminerin.guitartrainer.audio.GrooveEngine
-import com.caminerin.guitartrainer.audio.MetronomeEngine
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -122,7 +121,6 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
     // Stop other audio engines and load categories
     LaunchedEffect(Unit) {
         DrumEngine.stop()
-        MetronomeEngine.stop()
         GrooveEngine.init(context)
         categories = GrooveEngine.getCategories()
     }
