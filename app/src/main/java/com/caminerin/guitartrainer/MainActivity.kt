@@ -19,8 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -43,8 +41,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Force landscape globally
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        // Allow sensor-based orientation; individual screens request landscape as needed
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR
 
         // Immersive full-screen mode
         WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -81,16 +79,6 @@ private fun GuitarTrainerApp() {
         val noteEvent by audioProcessor.currentNoteEvent.collectAsState()
         val scaleEvaluation by audioProcessor.currentScaleEvaluation.collectAsState()
         val isListening by audioProcessor.isListening.collectAsState()
-
-        LaunchedEffect(Unit) {
-            audioProcessor.startListening()
-        }
-
-        DisposableEffect(Unit) {
-            onDispose {
-                audioProcessor.stopListening()
-            }
-        }
 
         MainScreen(
             pitchResult = pitchResult,

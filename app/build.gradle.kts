@@ -9,10 +9,10 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("debug.keystore")
-            storePassword = "guitartrainer"
-            keyAlias = "guitartrainer"
-            keyPassword = "guitartrainer"
+            storeFile = file(System.getenv("GT_STORE_FILE") ?: "debug.keystore")
+            storePassword = System.getenv("GT_STORE_PASSWORD") ?: "android"
+            keyAlias = System.getenv("GT_KEY_ALIAS") ?: "androiddebugkey"
+            keyPassword = System.getenv("GT_KEY_PASSWORD") ?: "android"
         }
     }
 

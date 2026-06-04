@@ -99,6 +99,7 @@ fun TabPracticeScreen(
     onBack: () -> Unit,
     showBackButton: Boolean = true
 ) {
+    ForceLandscape()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var loading by remember { mutableStateOf(true) }

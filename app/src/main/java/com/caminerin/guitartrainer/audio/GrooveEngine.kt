@@ -25,6 +25,7 @@ import kotlin.random.Random
 object GrooveEngine {
     private const val TAG = "GrooveEngine"
     private const val SAMPLE_RATE = 22050
+    private const val MASTER_HEADROOM = 0.55f
     private var audioTrack: AudioTrack? = null
     private val sampleBanks = mutableMapOf<DrumHit, List<ShortArray>>()
     private val rrIndex = mutableMapOf<DrumHit, Int>()
@@ -243,22 +244,43 @@ object GrooveEngine {
             1 -> events.filter { it.hit in LEVEL1_HITS }
             2 -> events.filter { it.hit in LEVEL2_HITS }
             3 -> events
-            4 -> addGhostNotes(events)
-            5 -> addGhostNotes(events, dense = true)
+            4 -> events // full pattern including any ghost notes from JSON
+            5 -> events // full pattern — ghost notes come from curated patterns, not generated
             else -> events
         }
     }
 
-    private fun addGhostNotes(events: List<GrooveEvent>, dense: Boolean = false): List<GrooveEvent> {
-        val result = events.toMutableList()
-        val existingSteps = events.filter { it.hit == DrumHit.SNARE_HARD || it.hit == DrumHit.SNARE_SOFT }.map { it.step }.toSet()
-        val steps = if (dense) listOf(1f, 3f, 5f, 7f, 9f, 11f, 13f, 15f) else listOf(3f, 7f, 11f, 15f)
-        for (step in steps) {
-            if (step !in existingSteps && Random.nextFloat() < if (dense) 0.4f else 0.25f) {
-                result.add(GrooveEvent(DrumHit.SNARE_SOFT, step, velocity = 0.2f + Random.nextFloat() * 0.15f))
+    /**
+     * Sanitize events: prevent pileups by allowing only one cymbal per step
+     * and capping total simultaneous hits. A real drummer has limited limbs.
+     */
+    private fun sanitizeEvents(events: List<GrooveEvent>): List<GrooveEvent> {
+        return events.groupBy { it.step.toInt() }
+            .flatMap { (_, hitsAtStep) ->
+                val result = mutableListOf<GrooveEvent>()
+                val kick = hitsAtStep.find { it.hit == DrumHit.KICK_HARD || it.hit == DrumHit.KICK_SOFT }
+                val snare = hitsAtStep.find {
+                    it.hit == DrumHit.SNARE_HARD || it.hit == DrumHit.SNARE_SOFT ||
+                    it.hit == DrumHit.SNARE_RIMSHOT || it.hit == DrumHit.SNARE_CROSSSTICK
+                }
+                // Only one cymbal: crash > ride > hat
+                val crash = hitsAtStep.find { it.hit == DrumHit.CRASH }
+                val ride = hitsAtStep.find { it.hit == DrumHit.RIDE_NORMAL || it.hit == DrumHit.RIDE_BELL }
+                val hat = hitsAtStep.find {
+                    it.hit == DrumHit.HH_CLOSED || it.hit == DrumHit.HH_OPEN ||
+                    it.hit == DrumHit.HH_HALF || it.hit == DrumHit.HH_PEDAL
+                }
+
+                kick?.let { result.add(it) }
+                snare?.let { result.add(it) }
+                when {
+                    crash != null -> result.add(crash)
+                    ride != null -> result.add(ride)
+                    hat != null -> result.add(hat)
+                }
+                result
             }
-        }
-        return result.sortedBy { it.step }
+            .sortedBy { it.step }
     }
 
     // ==================== HUMANIZATION ====================
@@ -337,21 +359,40 @@ object GrooveEngine {
     /**
      * Simple early reflections: mix a delayed, attenuated copy to add room feel.
      */
-    private fun addRoomReflection(buffer: ShortArray, stereoBuffer: ShortArray) {
+    private fun addRoomReflectionFloat(stereoBuffer: FloatArray, barSamples: Int) {
         val delaySamples = (SAMPLE_RATE * 0.012).toInt() // 12ms early reflection
-        val amount = 0.08f // subtle
-        for (i in buffer.indices) {
-            val srcIdx = i - delaySamples
-            if (srcIdx >= 0) {
-                val reflection = (buffer[srcIdx] * amount).toInt()
-                val lIdx = i * 2
-                val rIdx = i * 2 + 1
-                if (rIdx < stereoBuffer.size) {
-                    stereoBuffer[lIdx] = (stereoBuffer[lIdx] + reflection).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-                    stereoBuffer[rIdx] = (stereoBuffer[rIdx] + reflection).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-                }
+        val amount = 0.06f
+        val size = (barSamples * 2).coerceAtMost(stereoBuffer.size)
+        for (i in (delaySamples * 2) until size) {
+            stereoBuffer[i] += stereoBuffer[i - delaySamples * 2] * amount
+        }
+    }
+
+    private fun chokeHiHatInStereo(stereoBuffer: FloatArray, offset: Int, end: Int, barSamples: Int) {
+        val fadeLen = (SAMPLE_RATE * 0.008).toInt() // 8ms fade-out
+        for (i in 0 until fadeLen) {
+            val idx = offset + i
+            if (idx >= end || idx >= barSamples) break
+            val gain = 1f - (i.toFloat() / fadeLen)
+            val lIdx = idx * 2
+            val rIdx = lIdx + 1
+            if (rIdx < stereoBuffer.size) {
+                stereoBuffer[lIdx] *= gain
+                stereoBuffer[rIdx] *= gain
             }
         }
+        for (idx in (offset + fadeLen) until end.coerceAtMost(barSamples)) {
+            val lIdx = idx * 2
+            val rIdx = lIdx + 1
+            if (rIdx < stereoBuffer.size) {
+                stereoBuffer[lIdx] = 0f
+                stereoBuffer[rIdx] = 0f
+            }
+        }
+    }
+
+    private fun softLimit(x: Float): Float {
+        return kotlin.math.tanh(x * 1.4f) / kotlin.math.tanh(1.4f)
     }
 
     // ==================== PLAYBACK ====================
@@ -437,19 +478,18 @@ object GrooveEngine {
 
                 val barDurationMs = (60_000.0 / currentBpm) * beatsPerBar
                 val barSamples = (SAMPLE_RATE * barDurationMs / 1000.0).toInt()
-                if (barSamples > barBuffer.size) barBuffer = ShortArray(barSamples)
-                val buffer = barBuffer
-                java.util.Arrays.fill(buffer, 0, barSamples, 0)
-
-                val monoBuffer = ShortArray(barSamples)
                 val stereoBuffer = ShortArray(barSamples * 2)
 
                 if (patternToUse != null) {
                     lastHiHatOpenEnd = 0
                     val cacheKey = System.identityHashCode(patternToUse).toLong() * 10 + curComplexity
                     val sortedEvents = filteredEventsCache.getOrPut(cacheKey) {
-                        filterByComplexity(patternToUse.events, curComplexity).sortedBy { it.step }
+                        sanitizeEvents(filterByComplexity(patternToUse.events, curComplexity))
                     }
+
+                    // Mix in float for headroom (no clipping during mixing)
+                    val floatStereo = FloatArray(barSamples * 2)
+
                     for (event in sortedEvents) {
                         if (event.probability < 1f && Random.nextFloat() > event.probability) continue
 
@@ -460,8 +500,9 @@ object GrooveEngine {
                         } else event.hit
 
                         var step = event.step
-                        if (curSwing > 0f && step.toInt() % 2 == 1) {
-                            step += curSwing * 0.5f
+                        // Swing only on off-eighth notes (steps 2,6,10,14 in a 16-step bar)
+                        if (curSwing > 0f && step.toInt() % 4 == 2) {
+                            step += curSwing * 0.6f
                         }
                         step += humanizeTiming(curFeel, event.step)
 
@@ -472,35 +513,49 @@ object GrooveEngine {
                         val velocity = humanizeVelocity(event.velocity, curFeel, beatForAccent, barCount) *
                             getVolumeForHit(actualHit, curVolumes)
 
+                        // Hi-hat choke on stereo: closed/pedal cuts open hat
+                        if ((actualHit == DrumHit.HH_CLOSED || actualHit == DrumHit.HH_PEDAL) &&
+                            lastHiHatOpenEnd > sampleOffset) {
+                            chokeHiHatInStereo(floatStereo, sampleOffset, lastHiHatOpenEnd, barSamples)
+                            lastHiHatOpenEnd = 0
+                        }
+
                         val rawSample = nextSample(actualHit) ?: continue
-                        // Micro-pitch variation: ±2% per hit
                         val pitchVar = (Random.nextFloat() - 0.5f) * 0.04f
                         val pitched = pitchShiftSample(rawSample, pitchVar)
-                        // Brightness filter: soft hits sound darker
                         val processed = applyBrightnessFilter(pitched, velocity)
-                        // Mix into mono buffer (for choke logic)
-                        mixWithChoke(monoBuffer, actualHit, processed, sampleOffset, velocity)
 
-                        // Pan to stereo
+                        // Track open HH end position
+                        if (actualHit == DrumHit.HH_OPEN) {
+                            lastHiHatOpenEnd = sampleOffset + processed.size
+                        }
+
+                        // Pan to float stereo with headroom
                         val pan = PAN_MAP[actualHit] ?: 0f
                         val leftGain = ((1f - pan) / 2f).coerceIn(0f, 1f)
                         val rightGain = ((1f + pan) / 2f).coerceIn(0f, 1f)
+                        val gain = velocity * MASTER_HEADROOM
                         for (i in processed.indices) {
                             val idx = sampleOffset + i
                             if (idx >= barSamples) break
-                            val sval = (processed[i].toInt() * velocity).toInt()
+                            val sample = processed[i] / 32768f * gain
                             val lIdx = idx * 2
                             val rIdx = idx * 2 + 1
-                            if (rIdx < stereoBuffer.size) {
-                                stereoBuffer[lIdx] = (stereoBuffer[lIdx] + (sval * leftGain).toInt())
-                                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-                                stereoBuffer[rIdx] = (stereoBuffer[rIdx] + (sval * rightGain).toInt())
-                                    .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                            if (rIdx < floatStereo.size) {
+                                floatStereo[lIdx] += sample * leftGain
+                                floatStereo[rIdx] += sample * rightGain
                             }
                         }
                     }
-                    // Add room reflection
-                    addRoomReflection(monoBuffer, stereoBuffer)
+
+                    // Add subtle room reflection in float domain
+                    addRoomReflectionFloat(floatStereo, barSamples)
+
+                    // Convert float to PCM16 with soft limiter
+                    for (i in stereoBuffer.indices.takeWhile { it < barSamples * 2 }) {
+                        stereoBuffer[i] = (softLimit(floatStereo[i]) * 32767f).toInt()
+                            .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+                    }
                 }
 
                 // Beat callbacks + write stereo audio
@@ -571,56 +626,8 @@ object GrooveEngine {
     }
     fun updateLiveFillEvery(bars: Int) { liveFillEveryBars = bars }
 
-    /**
-     * Mix sample into buffer with hi-hat choke support.
-     * When a closed hi-hat plays, it cuts any ringing open hi-hat.
-     */
     private var lastHiHatOpenEnd = 0
-    private var barBuffer = ShortArray(SAMPLE_RATE * 3) // reusable bar buffer (~3s max)
     private val filteredEventsCache = mutableMapOf<Long, List<GrooveEvent>>()
-
-    private fun mixInto(buffer: ShortArray, sample: ShortArray, offset: Int, velocity: Float) {
-        for (i in sample.indices) {
-            val idx = offset + i
-            if (idx >= buffer.size) break
-            val mixed = buffer[idx].toInt() + (sample[i].toInt() * velocity).toInt()
-            buffer[idx] = mixed.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-        }
-    }
-
-    private fun mixWithChoke(
-        buffer: ShortArray,
-        hit: DrumHit,
-        sample: ShortArray,
-        offset: Int,
-        velocity: Float
-    ) {
-        // Hi-hat choke: closed HH cuts open HH resonance
-        if (hit == DrumHit.HH_CLOSED || hit == DrumHit.HH_PEDAL) {
-            // Fade out any open HH ringing in the buffer from offset
-            if (lastHiHatOpenEnd > offset) {
-                val fadeLen = (SAMPLE_RATE * 0.005).toInt() // 5ms fade
-                for (i in 0 until fadeLen) {
-                    val idx = offset + i
-                    if (idx >= buffer.size || idx >= lastHiHatOpenEnd) break
-                    val fade = 1f - (i.toFloat() / fadeLen)
-                    buffer[idx] = (buffer[idx] * fade).toInt().toShort()
-                }
-                // Zero out the rest
-                for (idx in (offset + fadeLen) until lastHiHatOpenEnd.coerceAtMost(buffer.size)) {
-                    buffer[idx] = 0
-                }
-                lastHiHatOpenEnd = 0
-            }
-        }
-
-        // Track open HH end position
-        if (hit == DrumHit.HH_OPEN) {
-            lastHiHatOpenEnd = offset + sample.size
-        }
-
-        mixInto(buffer, sample, offset, velocity)
-    }
 
     fun stop() {
         isPlaying = false
