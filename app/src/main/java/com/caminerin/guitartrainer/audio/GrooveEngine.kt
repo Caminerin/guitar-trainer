@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
@@ -135,7 +136,9 @@ object GrooveEngine {
                 ))
             }
             indexLoaded = true
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.w("GrooveEngine", "Failed to load pattern index", e)
+        }
     }
 
     fun getCategories(): List<GrooveCategory> = categories.toList()
@@ -190,11 +193,14 @@ object GrooveEngine {
 
     // ==================== COMPLEXITY FILTERING ====================
 
+    private val LEVEL1_HITS = setOf(DrumHit.KICK_HARD, DrumHit.KICK_SOFT, DrumHit.SNARE_HARD, DrumHit.SNARE_SOFT)
+    private val LEVEL2_HITS = setOf(DrumHit.KICK_HARD, DrumHit.KICK_SOFT, DrumHit.SNARE_HARD, DrumHit.SNARE_SOFT, DrumHit.SNARE_CROSSSTICK, DrumHit.SNARE_RIMSHOT, DrumHit.HH_CLOSED, DrumHit.HH_HALF, DrumHit.HH_PEDAL)
+
     fun filterByComplexity(events: List<GrooveEvent>, level: Int): List<GrooveEvent> {
         return when (level) {
-            1 -> events.filter { it.hit in setOf(DrumHit.KICK_HARD, DrumHit.KICK_SOFT, DrumHit.SNARE_HARD, DrumHit.SNARE_SOFT) }
-            2 -> events.filter { it.hit in setOf(DrumHit.KICK_HARD, DrumHit.KICK_SOFT, DrumHit.SNARE_HARD, DrumHit.SNARE_SOFT, DrumHit.SNARE_CROSSSTICK, DrumHit.SNARE_RIMSHOT, DrumHit.HH_CLOSED, DrumHit.HH_HALF, DrumHit.HH_PEDAL) }
-            3 -> events // Full pattern as-is
+            1 -> events.filter { it.hit in LEVEL1_HITS }
+            2 -> events.filter { it.hit in LEVEL2_HITS }
+            3 -> events
             4 -> addGhostNotes(events)
             5 -> addGhostNotes(events, dense = true)
             else -> events
@@ -267,6 +273,7 @@ object GrooveEngine {
         init(context)
         isPlaying = true
         lastHiHatOpenEnd = 0
+        filteredEventsCache.clear()
         withContext(Dispatchers.Default) {
             var currentBpm = config.bpm
             var barCount = 0
@@ -301,13 +308,17 @@ object GrooveEngine {
                 // Render one bar
                 val barDurationMs = (60_000.0 / currentBpm) * beatsPerBar
                 val barSamples = (SAMPLE_RATE * barDurationMs / 1000.0).toInt()
-                val buffer = ShortArray(barSamples)
+                if (barSamples > barBuffer.size) barBuffer = ShortArray(barSamples)
+                val buffer = barBuffer
+                java.util.Arrays.fill(buffer, 0, barSamples, 0)
 
                 if (patternToUse != null) {
-                    lastHiHatOpenEnd = 0 // reset choke tracking per bar
-                    val events = filterByComplexity(patternToUse.events, config.complexityLevel)
-                    // Sort by step to ensure hi-hat choke works in order
-                    val sortedEvents = events.sortedBy { it.step }
+                    lastHiHatOpenEnd = 0
+                    // Use cached events if same pattern+level, else compute
+                    val cacheKey = System.identityHashCode(patternToUse).toLong() * 10 + config.complexityLevel
+                    val sortedEvents = filteredEventsCache.getOrPut(cacheKey) {
+                        filterByComplexity(patternToUse.events, config.complexityLevel).sortedBy { it.step }
+                    }
                     for (event in sortedEvents) {
                         // Probability check
                         if (event.probability < 1f && Random.nextFloat() > event.probability) continue
@@ -337,7 +348,7 @@ object GrooveEngine {
                     onBeat?.invoke(barCount, beat)
                     val beatSamples = barSamples / beatsPerBar
                     val startIdx = beat * beatSamples
-                    val endIdx = ((beat + 1) * beatSamples).coerceAtMost(buffer.size)
+                    val endIdx = ((beat + 1) * beatSamples).coerceAtMost(barSamples)
                     val beatBuffer = buffer.copyOfRange(startIdx, endIdx)
                     audioTrack?.write(beatBuffer, 0, beatBuffer.size)
                 }
@@ -383,7 +394,9 @@ object GrooveEngine {
      * Mix sample into buffer with hi-hat choke support.
      * When a closed hi-hat plays, it cuts any ringing open hi-hat.
      */
-    private var lastHiHatOpenEnd = 0 // track where the open HH is still ringing
+    private var lastHiHatOpenEnd = 0
+    private var barBuffer = ShortArray(SAMPLE_RATE * 3) // reusable bar buffer (~3s max)
+    private val filteredEventsCache = mutableMapOf<Long, List<GrooveEvent>>()
 
     private fun mixInto(buffer: ShortArray, sample: ShortArray, offset: Int, velocity: Float) {
         for (i in sample.indices) {
@@ -430,14 +443,15 @@ object GrooveEngine {
 
     fun stop() {
         isPlaying = false
-        // Fade out to prevent click (write a short silent fade)
         try {
-            val fadeLen = (SAMPLE_RATE * 0.02).toInt() // 20ms fade
-            val fadeBuffer = ShortArray(fadeLen)
-            // The buffer is already zeros, which provides a quick fade-to-silence
-            audioTrack?.write(fadeBuffer, 0, fadeBuffer.size)
+            val track = audioTrack
+            if (track != null && track.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                val fadeLen = (SAMPLE_RATE * 0.02).toInt() // 20ms fade
+                val fadeBuffer = ShortArray(fadeLen)
+                track.write(fadeBuffer, 0, fadeBuffer.size)
+                track.flush()
+            }
         } catch (_: Exception) { }
-        audioTrack?.flush()
     }
 
     fun release() {
