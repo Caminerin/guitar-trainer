@@ -1,0 +1,148 @@
+{
+  "id": "charleston",
+  "displayName": "Charleston",
+  "patterns": [
+    {
+      "name": "Charleston 1",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_PEDAL",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_PEDAL",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 15.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "fills": [
+    {
+      "name": "Charleston Break 1",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "patternCount": 1,
+  "fillCount": 1
+}

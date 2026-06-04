@@ -1,0 +1,484 @@
+{
+  "id": "ska",
+  "displayName": "Ska",
+  "patterns": [
+    {
+      "name": "Ska 1",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 10.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_OPEN",
+          "step": 14.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Ska 2",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "HH_CLOSED",
+          "step": 0.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 4.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 8.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 10.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 12.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 14.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Ska 3",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "HH_CLOSED",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 2.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 6.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 10.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "fills": [
+    {
+      "name": "Ska Break 1",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "SNARE_HARD",
+          "step": 0.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 8.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 10.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 13.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 14.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 15.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Ska Break 2",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "HH_CLOSED",
+          "step": 0.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 8.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 10.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 13.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 14.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 15.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Ska Break 3",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "HH_CLOSED",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_SOFT",
+          "step": 10.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 12.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "patternCount": 3,
+  "fillCount": 3
+}

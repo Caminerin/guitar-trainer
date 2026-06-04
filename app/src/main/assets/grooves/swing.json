@@ -1,0 +1,733 @@
+{
+  "id": "swing",
+  "displayName": "Swing",
+  "patterns": [
+    {
+      "name": "Swing 1",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Swing 2",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 11.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Swing 3",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Swing 4",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Swing 5",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Swing 6",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "fills": [
+    {
+      "name": "Swing Break 1",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "SNARE_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 1.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 10.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Swing Break 2",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "SNARE_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 1.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 4.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_SOFT",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_SOFT",
+          "step": 7.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Swing Break 3",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 10.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "patternCount": 6,
+  "fillCount": 3
+}

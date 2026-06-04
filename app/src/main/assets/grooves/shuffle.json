@@ -1,0 +1,907 @@
+{
+  "id": "shuffle",
+  "displayName": "Shuffle",
+  "patterns": [
+    {
+      "name": "Shuffle 1",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Shuffle 2",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Shuffle 3",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Shuffle 4",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Shuffle 5",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Shuffle 6",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 3.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 9.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "fills": [
+    {
+      "name": "Shuffle Break 1",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 0.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 1.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 5.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 5.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_SOFT",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Shuffle Break 2",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 1.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 2.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 5.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 7.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_SOFT",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_SOFT",
+          "step": 10.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Shuffle Break 3",
+      "size": 144,
+      "stepsPerBar": 12,
+      "isFill": true,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 1.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 2.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 3.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 5.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 6.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 7.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 9.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 10.0,
+          "velocity": 0.8,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 11.0,
+          "velocity": 0.9,
+          "probability": 1.0
+        }
+      ]
+    }
+  ],
+  "patternCount": 6,
+  "fillCount": 3
+}
