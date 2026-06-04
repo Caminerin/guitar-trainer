@@ -130,6 +130,14 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
         }
     }
 
+    fun stopPlaying() {
+        isPlaying = false
+        GrooveEngine.stop()
+        playJob?.cancel()
+        playJob = null
+        currentBeat = 0; currentBar = 0
+    }
+
     fun startPlaying() {
         val data = categoryData ?: return
         if (data.patterns.isEmpty()) return
@@ -156,14 +164,6 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             } catch (_: Exception) { }
             if (isPlaying) { isPlaying = false; currentBeat = 0; currentBar = 0 }
         }
-    }
-
-    fun stopPlaying() {
-        isPlaying = false
-        GrooveEngine.stop()
-        playJob?.cancel()
-        playJob = null
-        currentBeat = 0; currentBar = 0
     }
 
     fun handleTapTempo() {
