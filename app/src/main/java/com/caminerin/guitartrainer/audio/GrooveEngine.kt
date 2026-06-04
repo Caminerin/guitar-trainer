@@ -23,7 +23,8 @@ import kotlin.random.Random
 object GrooveEngine {
     private const val SAMPLE_RATE = 22050
     private var audioTrack: AudioTrack? = null
-    private val samples = mutableMapOf<DrumHit, ShortArray>()
+    private val sampleBanks = mutableMapOf<DrumHit, List<ShortArray>>()
+    private val rrIndex = mutableMapOf<DrumHit, Int>()
     private var initialized = false
 
     @Volatile var isPlaying = false
@@ -34,7 +35,15 @@ object GrooveEngine {
     private var indexLoaded = false
 
     // Humanization state: per-bar drift tendency
-    private var driftTendency = 0f // accumulates slight timing bias like a real drummer
+    private var driftTendency = 0f
+
+    // Live-updatable parameters (changed from UI without restarting playback)
+    @Volatile var liveVolumes: Map<String, Float> = emptyMap()
+    @Volatile var liveFeel: Feel = Feel.NATURAL
+    @Volatile var liveSwing: Float = 0f
+    @Volatile var liveComplexity: Int = 3
+    @Volatile var liveFillEveryBars: Int = 0
+    @Volatile var fillNextBar = false
 
     // Stereo panning map: -1.0 = full left, 0.0 = center, 1.0 = full right
     private val PAN_MAP = mapOf(
@@ -77,27 +86,41 @@ object GrooveEngine {
     }
 
     private fun loadSamples(context: Context) {
-        val fileMap = mapOf(
-            DrumHit.KICK_HARD to "drums/kick_hard_1.wav",
-            DrumHit.KICK_SOFT to "drums/kick_soft_1.wav",
-            DrumHit.SNARE_HARD to "drums/snare_hard_1.wav",
-            DrumHit.SNARE_SOFT to "drums/snare_soft_1.wav",
-            DrumHit.SNARE_CROSSSTICK to "drums/snare_crossstick_1.wav",
-            DrumHit.SNARE_RIMSHOT to "drums/snare_rimshot_1.wav",
-            DrumHit.HH_CLOSED to "drums/hh_closed_1.wav",
-            DrumHit.HH_OPEN to "drums/hh_open_1.wav",
-            DrumHit.HH_HALF to "drums/hh_half_1.wav",
-            DrumHit.HH_PEDAL to "drums/hh_pedal_1.wav",
-            DrumHit.RIDE_NORMAL to "drums/ride_normal_1.wav",
-            DrumHit.RIDE_BELL to "drums/ride_bell_1.wav",
-            DrumHit.CRASH to "drums/crash_1.wav"
+        val hitBaseMap = mapOf(
+            DrumHit.KICK_HARD to "kick_hard",
+            DrumHit.KICK_SOFT to "kick_soft",
+            DrumHit.SNARE_HARD to "snare_hard",
+            DrumHit.SNARE_SOFT to "snare_soft",
+            DrumHit.SNARE_CROSSSTICK to "snare_crossstick",
+            DrumHit.SNARE_RIMSHOT to "snare_rimshot",
+            DrumHit.HH_CLOSED to "hh_closed",
+            DrumHit.HH_OPEN to "hh_open",
+            DrumHit.HH_HALF to "hh_half",
+            DrumHit.HH_PEDAL to "hh_pedal",
+            DrumHit.RIDE_NORMAL to "ride_normal",
+            DrumHit.RIDE_BELL to "ride_bell",
+            DrumHit.CRASH to "crash"
         )
-        for ((hit, file) in fileMap) {
-            try {
-                val pcm = readWavPcm(context.assets.open(file))
-                if (pcm != null) samples[hit] = pcm
-            } catch (_: Exception) { }
+        for ((hit, base) in hitBaseMap) {
+            val variants = mutableListOf<ShortArray>()
+            for (rr in 1..4) {
+                try {
+                    val pcm = readWavPcm(context.assets.open("drums/${base}_$rr.wav"))
+                    if (pcm != null) variants.add(pcm)
+                } catch (_: Exception) { }
+            }
+            if (variants.isNotEmpty()) {
+                sampleBanks[hit] = variants
+                rrIndex[hit] = 0
+            }
         }
+    }
+
+    private fun nextSample(hit: DrumHit): ShortArray? {
+        val bank = sampleBanks[hit] ?: return null
+        val idx = (rrIndex[hit] ?: 0) % bank.size
+        rrIndex[hit] = idx + 1
+        return bank[idx]
     }
 
     private fun readWavPcm(input: InputStream): ShortArray? {
@@ -359,6 +382,13 @@ object GrooveEngine {
         isPlaying = true
         lastHiHatOpenEnd = 0
         filteredEventsCache.clear()
+        // Seed live params from initial config
+        liveVolumes = config.volumes
+        liveFeel = config.feel
+        liveSwing = config.swing
+        liveComplexity = config.complexityLevel
+        liveFillEveryBars = config.fillEveryBars
+        fillNextBar = false
         withContext(Dispatchers.Default) {
             var currentBpm = config.bpm
             var barCount = 0
@@ -366,72 +396,78 @@ object GrooveEngine {
             val stepsPerBar = config.pattern.stepsPerBar
             val beatsPerBar = 4
 
-            // Count-in: play 4 clicks
             if (config.countIn) {
                 playCountIn(currentBpm)
             }
 
             while (coroutineContext.isActive && isPlaying) {
-                // Determine if this bar is silence
+                // Read live parameters each bar (no restart needed)
+                val curFeel = liveFeel
+                val curSwing = liveSwing
+                val curComplexity = liveComplexity
+                val curVolumes = liveVolumes
+                val curFillEvery = liveFillEveryBars
+
                 val isSilence = config.silenceEveryBars > 0 &&
                     barCount > 0 &&
                     (barCount % (config.silenceEveryBars + config.silenceDurationBars)) >= config.silenceEveryBars
 
-                // Determine if this bar is a fill (rotate through available fills)
-                val isFill = !isSilence && config.fills.isNotEmpty() && config.fillEveryBars > 0 &&
-                    barCount > 0 && (barCount + 1) % config.fillEveryBars == 0
+                // Fill: auto or manual "next bar" request
+                val manualFill = fillNextBar
+                if (manualFill) fillNextBar = false
+                val isFill = !isSilence && config.fills.isNotEmpty() && (
+                    manualFill ||
+                    (curFillEvery > 0 && barCount > 0 && (barCount + 1) % curFillEvery == 0)
+                )
 
                 val patternToUse = when {
                     isSilence -> null
                     isFill -> {
-                        val fillIdx = (barCount / config.fillEveryBars) % config.fills.size
+                        val divisor = if (curFillEvery > 0) curFillEvery else 4
+                        val fillIdx = (barCount / divisor) % config.fills.size
                         config.fills[fillIdx]
                     }
                     else -> config.pattern
                 }
 
-                // Render one bar
                 val barDurationMs = (60_000.0 / currentBpm) * beatsPerBar
                 val barSamples = (SAMPLE_RATE * barDurationMs / 1000.0).toInt()
                 if (barSamples > barBuffer.size) barBuffer = ShortArray(barSamples)
                 val buffer = barBuffer
                 java.util.Arrays.fill(buffer, 0, barSamples, 0)
 
-                // Mono mix buffer for room reflection source
                 val monoBuffer = ShortArray(barSamples)
-                // Stereo interleaved buffer: L,R,L,R,...
                 val stereoBuffer = ShortArray(barSamples * 2)
 
                 if (patternToUse != null) {
                     lastHiHatOpenEnd = 0
-                    val cacheKey = System.identityHashCode(patternToUse).toLong() * 10 + config.complexityLevel
+                    val cacheKey = System.identityHashCode(patternToUse).toLong() * 10 + curComplexity
                     val sortedEvents = filteredEventsCache.getOrPut(cacheKey) {
-                        filterByComplexity(patternToUse.events, config.complexityLevel).sortedBy { it.step }
+                        filterByComplexity(patternToUse.events, curComplexity).sortedBy { it.step }
                     }
                     for (event in sortedEvents) {
                         if (event.probability < 1f && Random.nextFloat() > event.probability) continue
 
-                        // Hi-hat variation: subtle chance to swap closed↔half for realism
-                        val actualHit = if (config.feel != Feel.TIGHT && event.hit == DrumHit.HH_CLOSED && Random.nextFloat() < 0.08f) {
+                        val actualHit = if (curFeel != Feel.TIGHT && event.hit == DrumHit.HH_CLOSED && Random.nextFloat() < 0.08f) {
                             DrumHit.HH_HALF
-                        } else if (config.feel == Feel.LOOSE && event.hit == DrumHit.HH_HALF && Random.nextFloat() < 0.05f) {
+                        } else if (curFeel == Feel.LOOSE && event.hit == DrumHit.HH_HALF && Random.nextFloat() < 0.05f) {
                             DrumHit.HH_CLOSED
                         } else event.hit
 
                         var step = event.step
-                        if (config.swing > 0f && step.toInt() % 2 == 1) {
-                            step += config.swing * 0.5f
+                        if (curSwing > 0f && step.toInt() % 2 == 1) {
+                            step += curSwing * 0.5f
                         }
-                        step += humanizeTiming(config.feel, event.step)
+                        step += humanizeTiming(curFeel, event.step)
 
                         val sampleOffset = ((step / stepsPerBar) * barSamples).toInt()
                             .coerceIn(0, barSamples - 1)
                         val beatForAccent = (event.step.toInt() / (stepsPerBar / 4)).coerceIn(0, 3)
 
-                        val velocity = humanizeVelocity(event.velocity, config.feel, beatForAccent, barCount) *
-                            getVolumeForHit(actualHit, config.volumes)
+                        val velocity = humanizeVelocity(event.velocity, curFeel, beatForAccent, barCount) *
+                            getVolumeForHit(actualHit, curVolumes)
 
-                        val rawSample = samples[actualHit] ?: continue
+                        val rawSample = nextSample(actualHit) ?: continue
                         // Micro-pitch variation: ±2% per hit
                         val pitchVar = (Random.nextFloat() - 0.5f) * 0.04f
                         val pitched = pitchShiftSample(rawSample, pitchVar)
@@ -491,7 +527,7 @@ object GrooveEngine {
 
     private fun playCountIn(bpm: Int) {
         val beatSamples = (SAMPLE_RATE * 60.0 / bpm).toInt()
-        val click = samples[DrumHit.HH_CLOSED] ?: return
+        val click = sampleBanks[DrumHit.HH_CLOSED]?.firstOrNull() ?: return
         for (i in 0 until 4) {
             val stereo = ShortArray(beatSamples * 2)
             for (j in click.indices) {
@@ -510,10 +546,21 @@ object GrooveEngine {
             DrumHit.SNARE_HARD, DrumHit.SNARE_SOFT, DrumHit.SNARE_CROSSSTICK, DrumHit.SNARE_RIMSHOT -> "snare"
             DrumHit.HH_CLOSED, DrumHit.HH_OPEN, DrumHit.HH_HALF, DrumHit.HH_PEDAL -> "hihat"
             DrumHit.RIDE_NORMAL, DrumHit.RIDE_BELL -> "ride"
-            DrumHit.CRASH -> "crash"
+            DrumHit.CRASH -> "crash" // separate from ride
         }
         return volumes[group] ?: 1.0f
     }
+
+    fun updateLiveVolumes(volumes: Map<String, Float>) { liveVolumes = volumes }
+    fun updateLiveFeel(feel: Feel) { liveFeel = feel }
+    fun updateLiveSwing(swing: Float) { liveSwing = swing }
+    fun updateLiveComplexity(level: Int) {
+        if (level != liveComplexity) {
+            filteredEventsCache.clear()
+            liveComplexity = level
+        }
+    }
+    fun updateLiveFillEvery(bars: Int) { liveFillEveryBars = bars }
 
     /**
      * Mix sample into buffer with hi-hat choke support.
@@ -571,6 +618,10 @@ object GrooveEngine {
         driftTendency = 0f
     }
 
+    fun requestFillNextBar() {
+        fillNextBar = true
+    }
+
     fun release() {
         stop()
         try {
@@ -578,7 +629,8 @@ object GrooveEngine {
             audioTrack?.release()
         } catch (_: Exception) { }
         audioTrack = null
-        samples.clear()
+        sampleBanks.clear()
+        rrIndex.clear()
         initialized = false
     }
 }
