@@ -116,7 +116,9 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
 
     LaunchedEffect(selectedCategoryIdx, categories) {
         if (categories.isNotEmpty()) {
-            val catId = categories[selectedCategoryIdx].id
+            val safeIdx = selectedCategoryIdx.coerceIn(0, categories.size - 1)
+            if (safeIdx != selectedCategoryIdx) selectedCategoryIdx = safeIdx
+            val catId = categories[safeIdx].id
             categoryData = GrooveEngine.loadCategoryPatterns(context, catId)
             selectedPatternIdx = 0
         }
@@ -131,17 +133,18 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
     }
 
     fun stopPlaying() {
-        isPlaying = false
         GrooveEngine.stop()
         playJob?.cancel()
         playJob = null
+        isPlaying = false
         currentBeat = 0; currentBar = 0
     }
 
     fun startPlaying() {
         val data = categoryData ?: return
         if (data.patterns.isEmpty()) return
-        val pattern = data.patterns[selectedPatternIdx.coerceIn(0, data.patterns.size - 1)]
+        val safePatIdx = selectedPatternIdx.coerceIn(0, data.patterns.size - 1)
+        val pattern = data.patterns[safePatIdx]
         val config = GrooveEngine.PlayConfig(
             bpm = bpm, pattern = pattern, fills = data.fills,
             complexityLevel = complexityLevel, feel = feel, swing = swing,
@@ -150,9 +153,14 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             volumes = mapOf("kick" to kickVol, "snare" to snareVol, "hihat" to hihatVol, "ride" to rideVol, "crash" to rideVol),
             tempoProgression = if (tempoTarget > bpm) GrooveEngine.TempoProgression(tempoTarget, tempoIncrement, 8) else null
         )
-        stopPlaying()
+        // Stop any existing playback first
+        GrooveEngine.stop()
+        playJob?.cancel()
+        playJob = null
         isPlaying = true
         playJob = scope.launch {
+            // Brief yield to let cancelled coroutine finish AudioTrack write
+            kotlinx.coroutines.delay(50)
             try {
                 GrooveEngine.playGroove(context, config,
                     onBeat = { bar, beat ->
@@ -162,7 +170,7 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                         scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { bpm = newBpm }
                     })
             } catch (_: Exception) { }
-            if (isPlaying) { isPlaying = false; currentBeat = 0; currentBar = 0 }
+            isPlaying = false; currentBeat = 0; currentBar = 0
         }
     }
 
@@ -267,8 +275,7 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                                     expandedPanel = null
                                     if (wasPlaying) {
                                         scope.launch {
-                                            // Wait for categoryData to reload via LaunchedEffect
-                                            kotlinx.coroutines.delay(200)
+                                            kotlinx.coroutines.delay(300)
                                             startPlaying()
                                         }
                                     }
@@ -291,7 +298,12 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                                     if (wasPlaying) stopPlaying()
                                     selectedPatternIdx = idx
                                     expandedPanel = null
-                                    if (wasPlaying) startPlaying()
+                                    if (wasPlaying) {
+                                        scope.launch {
+                                            kotlinx.coroutines.delay(100)
+                                            startPlaying()
+                                        }
+                                    }
                                 }
                             )
                         }
@@ -312,7 +324,17 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                                         .padding(vertical = 2.dp)
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(if (selected) GradientColors.accent else MaterialTheme.colorScheme.surfaceVariant)
-                                        .clickable { complexityLevel = level; expandedPanel = null }
+                                        .clickable {
+                            val wasPlaying = isPlaying
+                            if (wasPlaying) stopPlaying()
+                            complexityLevel = level; expandedPanel = null
+                            if (wasPlaying) {
+                                scope.launch {
+                                    kotlinx.coroutines.delay(100)
+                                    startPlaying()
+                                }
+                            }
+                        }
                                         .padding(vertical = 6.dp, horizontal = 10.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
