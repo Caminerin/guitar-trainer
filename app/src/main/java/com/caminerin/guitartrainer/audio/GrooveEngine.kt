@@ -270,6 +270,7 @@ object GrooveEngine {
         onBeat: ((bar: Int, beat: Int) -> Unit)? = null,
         onBpmChange: ((Int) -> Unit)? = null
     ) {
+        stop()
         init(context)
         isPlaying = true
         lastHiHatOpenEnd = 0
@@ -345,12 +346,12 @@ object GrooveEngine {
                 // Beat callbacks
                 for (beat in 0 until beatsPerBar) {
                     if (!coroutineContext.isActive || !isPlaying) break
-                    onBeat?.invoke(barCount, beat)
+                    try { onBeat?.invoke(barCount, beat) } catch (_: Exception) { }
                     val beatSamples = barSamples / beatsPerBar
                     val startIdx = beat * beatSamples
                     val endIdx = ((beat + 1) * beatSamples).coerceAtMost(barSamples)
                     val beatBuffer = buffer.copyOfRange(startIdx, endIdx)
-                    audioTrack?.write(beatBuffer, 0, beatBuffer.size)
+                    try { audioTrack?.write(beatBuffer, 0, beatBuffer.size) } catch (_: Exception) { break }
                 }
 
                 barCount++
@@ -456,12 +457,13 @@ object GrooveEngine {
 
     fun release() {
         stop()
-        audioTrack?.stop()
-        audioTrack?.release()
+        try {
+            audioTrack?.stop()
+            audioTrack?.release()
+        } catch (_: Exception) { }
         audioTrack = null
         samples.clear()
         initialized = false
-        indexLoaded = false
     }
 }
 

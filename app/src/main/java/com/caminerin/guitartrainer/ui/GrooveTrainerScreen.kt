@@ -142,18 +142,28 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             volumes = mapOf("kick" to kickVol, "snare" to snareVol, "hihat" to hihatVol, "ride" to rideVol, "crash" to rideVol),
             tempoProgression = if (tempoTarget > bpm) GrooveEngine.TempoProgression(tempoTarget, tempoIncrement, 8) else null
         )
-        playJob?.cancel()
-        playJob = scope.launch {
-            GrooveEngine.playGroove(context, config,
-                onBeat = { bar, beat -> currentBar = bar; currentBeat = beat },
-                onBpmChange = { newBpm -> bpm = newBpm })
-        }
+        stopPlaying()
         isPlaying = true
+        playJob = scope.launch {
+            try {
+                GrooveEngine.playGroove(context, config,
+                    onBeat = { bar, beat ->
+                        scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { currentBar = bar; currentBeat = beat }
+                    },
+                    onBpmChange = { newBpm ->
+                        scope.launch(kotlinx.coroutines.Dispatchers.Main.immediate) { bpm = newBpm }
+                    })
+            } catch (_: Exception) { }
+            if (isPlaying) { isPlaying = false; currentBeat = 0; currentBar = 0 }
+        }
     }
 
     fun stopPlaying() {
-        GrooveEngine.stop(); playJob?.cancel()
-        isPlaying = false; currentBeat = 0; currentBar = 0
+        isPlaying = false
+        GrooveEngine.stop()
+        playJob?.cancel()
+        playJob = null
+        currentBeat = 0; currentBar = 0
     }
 
     fun handleTapTempo() {
@@ -250,10 +260,18 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                             ScrollableChipRow(
                                 items = categories.map { it.displayName },
                                 selectedIdx = selectedCategoryIdx,
-                                onSelect = {
-                                    selectedCategoryIdx = it; selectedPatternIdx = 0
+                                onSelect = { idx ->
+                                    val wasPlaying = isPlaying
+                                    if (wasPlaying) stopPlaying()
+                                    selectedCategoryIdx = idx; selectedPatternIdx = 0
                                     expandedPanel = null
-                                    if (isPlaying) { stopPlaying(); scope.launch { kotlinx.coroutines.delay(100); startPlaying() } }
+                                    if (wasPlaying) {
+                                        scope.launch {
+                                            // Wait for categoryData to reload via LaunchedEffect
+                                            kotlinx.coroutines.delay(200)
+                                            startPlaying()
+                                        }
+                                    }
                                 }
                             )
                         }
@@ -268,10 +286,12 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                             ScrollableChipRow(
                                 items = patterns.map { it.name },
                                 selectedIdx = selectedPatternIdx,
-                                onSelect = {
-                                    selectedPatternIdx = it
+                                onSelect = { idx ->
+                                    val wasPlaying = isPlaying
+                                    if (wasPlaying) stopPlaying()
+                                    selectedPatternIdx = idx
                                     expandedPanel = null
-                                    if (isPlaying) { stopPlaying(); scope.launch { kotlinx.coroutines.delay(100); startPlaying() } }
+                                    if (wasPlaying) startPlaying()
                                 }
                             )
                         }
