@@ -32,6 +32,7 @@ import com.caminerin.guitartrainer.audio.AudioProcessor
 import com.caminerin.guitartrainer.audio.ScaleEvaluation
 import com.caminerin.guitartrainer.audio.NoteEvent
 import com.caminerin.guitartrainer.audio.NoteRecognizer
+import com.caminerin.guitartrainer.ads.AdManager
 import com.caminerin.guitartrainer.ui.MainScreen
 import com.caminerin.guitartrainer.ui.theme.GuitarTrainerTheme
 import com.google.android.gms.ads.MobileAds
@@ -44,8 +45,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Inicializa el SDK de anuncios (AdMob) en segundo plano.
-        MobileAds.initialize(this) {}
+        // Inicializa el SDK de anuncios (AdMob) y carga los anuncios.
+        MobileAds.initialize(this) {
+            AdManager.init(this)
+            // App-open ad: se muestra al abrir la app (con X para cerrar).
+            AdManager.showAppOpenIfReady(this)
+        }
 
         // Force landscape globally
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE

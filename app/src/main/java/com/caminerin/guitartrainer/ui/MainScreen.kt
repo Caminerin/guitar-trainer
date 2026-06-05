@@ -38,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -61,6 +62,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.caminerin.guitartrainer.ads.AdManager
 import com.caminerin.guitartrainer.audio.AudioProcessor
 import com.caminerin.guitartrainer.audio.NoteEvent
 import com.caminerin.guitartrainer.audio.NoteRecognizer
@@ -116,11 +118,26 @@ fun MainScreen(
     scaleEvaluation: ScaleEvaluation? = null
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
     LaunchedEffect(Unit) {
         NoteFormatPreference.load(context)
         AccidentalPreference.load(context)
         AppPreferences.load(context)
         DegreeColorPrefs.load(context)
+    }
+
+    // ----- Estado de anuncios -----
+    var adFree by remember { mutableStateOf(AdManager.isAdFree()) }
+    var bannerDismissed by rememberSaveable { mutableStateOf(false) }
+    var rewardProgress by remember { mutableIntStateOf(AdManager.rewardCount) }
+
+    // Callback para que AdManager avise cuando cambia el estado ad-free
+    DisposableEffect(Unit) {
+        AdManager.onAdFreeChanged = {
+            adFree = AdManager.isAdFree()
+            rewardProgress = AdManager.rewardCount
+        }
+        onDispose { AdManager.onAdFreeChanged = null }
     }
 
     // Check if tuner splash should show (first time today)
@@ -134,6 +151,23 @@ fun MainScreen(
     var librarySubScreen by rememberSaveable { mutableIntStateOf(-1) }
     var toolsSubScreen by rememberSaveable { mutableIntStateOf(-1) }
     var chordsSubScreen by rememberSaveable { mutableIntStateOf(-1) } // -1=selection, 0=progresiones, 1=reto
+
+    // Intersticial: contar salidas de ejercicio al hub
+    var prevPractice by remember { mutableIntStateOf(practiceSubScreen) }
+    var prevLibrary by remember { mutableIntStateOf(librarySubScreen) }
+    var prevTools by remember { mutableIntStateOf(toolsSubScreen) }
+    LaunchedEffect(practiceSubScreen) {
+        if (prevPractice >= 0 && practiceSubScreen < 0) activity?.let { AdManager.onExerciseCompleted(it) }
+        prevPractice = practiceSubScreen
+    }
+    LaunchedEffect(librarySubScreen) {
+        if (prevLibrary >= 0 && librarySubScreen < 0) activity?.let { AdManager.onExerciseCompleted(it) }
+        prevLibrary = librarySubScreen
+    }
+    LaunchedEffect(toolsSubScreen) {
+        if (prevTools >= 0 && toolsSubScreen < 0) activity?.let { AdManager.onExerciseCompleted(it) }
+        prevTools = toolsSubScreen
+    }
 
     val destinations = NavDestination.entries
 
@@ -209,10 +243,68 @@ fun MainScreen(
                 }
             }
 
-            // Nota: AdMob ya está inicializado y el composable AdmobBanner está listo,
-            // pero NO se muestra un banner fijo aquí: la app es horizontal a pantalla
-            // completa y un banner robaría alto, recortando las tarjetas de los hubs.
-            // La monetización se hará con intersticiales en transiciones (fin de quiz/reto).
+            // ----- Zona de anuncios: solo en hubs, solo si no es ad-free -----
+            val atHub = librarySubScreen < 0 && practiceSubScreen < 0 &&
+                    chordsSubScreen < 0 && toolsSubScreen < 0
+            if (atHub && !adFree) {
+                // Chip recompensado: "Ver anuncio (X/3 para 24h sin anuncios)"
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF0A0908))
+                        .clickable {
+                            activity?.let { act ->
+                                AdManager.showRewarded(act) {
+                                    adFree = AdManager.isAdFree()
+                                    rewardProgress = AdManager.rewardCount
+                                }
+                            }
+                        }
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        Icons.Default.CardGiftcard,
+                        contentDescription = null,
+                        tint = GradientColors.accent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Sin anuncios 24h \u2192 ver ${rewardProgress}/3 anuncios",
+                        fontSize = 11.sp,
+                        color = GradientColors.accent
+                    )
+                }
+
+                // Banner cerrable con X
+                if (!bannerDismissed) {
+                    DismissibleAdBanner(
+                        onDismiss = { bannerDismissed = true },
+                        modifier = Modifier.background(Color(0xFF0A0908))
+                    )
+                }
+            } else if (atHub && adFree) {
+                // Indicador de tiempo restante sin anuncios
+                val remainMs = AdManager.adFreeRemainingMs()
+                val h = remainMs / 3_600_000
+                val m = (remainMs % 3_600_000) / 60_000
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF0A0908))
+                        .padding(horizontal = 12.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        "\uD83C\uDF81 Sin anuncios: ${h}h ${m}m restantes",
+                        fontSize = 11.sp,
+                        color = Color(0xFF4CAF50)
+                    )
+                }
+            }
 
             // Bottom Navigation Bar
             Row(
@@ -376,6 +468,7 @@ private fun LibraryHub(onItemClick: (Int) -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 10.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Text(
             "Biblioteca",
@@ -392,7 +485,7 @@ private fun LibraryHub(onItemClick: (Int) -> Unit) {
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth().weight(1f)
+            modifier = Modifier.fillMaxWidth().height(120.dp)
         ) {
             GridCard(
                 emoji = "🎸",
@@ -462,10 +555,12 @@ private fun PracticeSection(
 
 @Composable
 private fun PracticeHub(onItemClick: (Int) -> Unit) {
+    val cardHeight = 110.dp
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 10.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Text(
             "Practicar",
@@ -482,11 +577,11 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
 
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier.fillMaxWidth().height(cardHeight)
             ) {
                 GridCard(
                     emoji = "🎸",
@@ -509,7 +604,7 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier.fillMaxWidth().height(cardHeight)
             ) {
                 GridCard(
                     emoji = "🎵",
@@ -532,7 +627,7 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
             }
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier.fillMaxWidth().height(cardHeight)
             ) {
                 GridCard(
                     emoji = "🥁",

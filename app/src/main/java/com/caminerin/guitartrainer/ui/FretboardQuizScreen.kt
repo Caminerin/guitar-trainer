@@ -255,6 +255,9 @@ fun FretboardQuizScreen(
                         tappedCorrect = tappedCorrect.toSet(),
                         tappedWrong = tappedWrong.toSet(),
                         answered = answered,
+                        // En 2.2 (modo BUTTON) la casilla marcada ES la pregunta:
+                        // no mostrar su nombre hasta que se responda.
+                        labelHighlight = question.mode != FretboardMode.BUTTON || answered,
                         fretWidthPx = with(density) { fretWidthDp.toPx() },
                         openStringWidthPx = with(density) { openStringWidth.toPx() },
                         hitTargets = hitTargets
@@ -331,17 +334,23 @@ fun FretboardQuizScreen(
             }
         }
 
-        // Siguiente button
-        if (answered) {
-            Button(
-                onClick = { advanceQuestion() },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = exercise.categoryColor)
-            ) {
-                Text("Siguiente", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-            }
+        // Siguiente: siempre visible, desactivado hasta responder.
+        Button(
+            onClick = { advanceQuestion() },
+            enabled = answered,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = exercise.categoryColor,
+                disabledContainerColor = Color.White.copy(0.12f),
+                disabledContentColor = Color.White.copy(0.4f)
+            )
+        ) {
+            Text(
+                if (currentQuestion + 1 >= questionCount) "Ver resultado" else "Siguiente",
+                fontWeight = FontWeight.Bold, fontSize = 16.sp
+            )
         }
     }
 }
@@ -469,6 +478,7 @@ private fun DrawScope.drawFretboardQuiz(
     tappedCorrect: Set<Pair<Int, Int>>,
     tappedWrong: Set<Pair<Int, Int>>,
     answered: Boolean,
+    labelHighlight: Boolean = true,
     fretWidthPx: Float,
     openStringWidthPx: Float,
     hitTargets: MutableList<FretHitTarget>
@@ -565,9 +575,15 @@ private fun DrawScope.drawFretboardQuiz(
                     drawCircle(Color(0x55000000), noteRadius + 2f, Offset(cx + 1f, y + 1.5f))
                     drawCircle(SHARED_ACCENT, noteRadius, Offset(cx, y))
                     drawCircle(Color(0x44000000), noteRadius, Offset(cx, y), style = Stroke(2f))
-                    notePaint.color = android.graphics.Color.WHITE
-                    val label = getNoteName(noteIdx)
-                    drawContext.canvas.nativeCanvas.drawText(label, cx, y + notePaint.textSize * 0.35f, notePaint)
+                    if (labelHighlight) {
+                        notePaint.color = android.graphics.Color.WHITE
+                        val label = getNoteName(noteIdx)
+                        drawContext.canvas.nativeCanvas.drawText(label, cx, y + notePaint.textSize * 0.35f, notePaint)
+                    } else {
+                        // Marcador sin nombre (signo de interrogación)
+                        notePaint.color = android.graphics.Color.WHITE
+                        drawContext.canvas.nativeCanvas.drawText("?", cx, y + notePaint.textSize * 0.35f, notePaint)
+                    }
                 }
                 isCorrectTap -> {
                     drawCircle(Color(0x55000000), noteRadius + 2f, Offset(cx + 1f, y + 1.5f))

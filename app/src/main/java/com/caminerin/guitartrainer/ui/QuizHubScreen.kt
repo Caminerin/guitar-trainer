@@ -188,7 +188,7 @@ fun QuizHubScreen(
 
         // Categories
         val categories = listOf(
-            Triple("Oído", CAT_EAR, true),
+            Triple("Oído", CAT_EAR, false),
             Triple("Mástil", CAT_FRET, false),
             Triple("Teoría", CAT_THEORY, false)
         )
@@ -387,6 +387,7 @@ private fun QuizConfigDialog(
 // ═══════════════════════════════════════════════════════
 // Generic Quiz Screen — handles all 17 exercises (except 2.3)
 // ═══════════════════════════════════════════════════════
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GenericQuizScreen(
     exercise: QuizExercise,
@@ -442,14 +443,14 @@ private fun GenericQuizScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(HUB_BAR)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { RiffSynth.stop(); onBack() }, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = { RiffSynth.stop(); onBack() }, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
             }
             Text("${exercise.number} ${exercise.title}", color = exercise.categoryColor,
-                fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text("${currentQuestion + 1}/$questionCount", color = Color.White.copy(0.5f), fontSize = 12.sp)
         }
 
@@ -461,119 +462,136 @@ private fun GenericQuizScreen(
             trackColor = Color.White.copy(0.1f),
         )
 
-        // Question area (scrollable so options never get hidden behind the Next bar)
-        Column(
+        // Main content: two panes, fills remaining space, NEVER scrolls.
+        // Left = pregunta + Play. Right = opciones de respuesta.
+        Row(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            // Question text
-            Text(
-                questionData.question,
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
-
-            // Play button (ear-training exercises with audio)
-            if (questionData.audio != null) {
-                Button(
-                    onClick = {
-                        questionData.audio?.let { a ->
-                            scope.launch(Dispatchers.Default) { playQuizAudio(context, a) }
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = exercise.categoryColor),
-                    modifier = Modifier.padding(bottom = 20.dp)
-                ) {
-                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(22.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Reproducir", fontWeight = FontWeight.Bold)
+            // Left pane: question + play
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    questionData.question,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                if (questionData.audio != null) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            questionData.audio?.let { a ->
+                                scope.launch(Dispatchers.Default) { playQuizAudio(context, a) }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = exercise.categoryColor)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(22.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Reproducir", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
-            // Answer options
-            questionData.options.forEach { option ->
-                val isSelected = selectedAnswer == option
-                val isCorrect = option == questionData.correctAnswer
-                val bgColor by animateColorAsState(
-                    targetValue = when {
-                        selectedAnswer == null -> HUB_CARD
-                        isSelected && isCorrect -> HUB_GREEN.copy(0.3f)
-                        isSelected && !isCorrect -> HUB_RED.copy(0.3f)
-                        !isSelected && isCorrect && selectedAnswer != null -> HUB_GREEN.copy(0.15f)
-                        else -> HUB_CARD
-                    },
-                    label = "optionBg"
-                )
-                val borderColor by animateColorAsState(
-                    targetValue = when {
-                        selectedAnswer == null -> Color.Transparent
-                        isSelected && isCorrect -> HUB_GREEN
-                        isSelected && !isCorrect -> HUB_RED
-                        !isSelected && isCorrect && selectedAnswer != null -> HUB_GREEN.copy(0.5f)
-                        else -> Color.Transparent
-                    },
-                    label = "optionBorder"
-                )
+            Spacer(modifier = Modifier.width(16.dp))
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(bgColor)
-                        .border(2.dp, borderColor, RoundedCornerShape(12.dp))
-                        .clickable(enabled = selectedAnswer == null) {
-                            selectedAnswer = option
-                            val elapsed = System.currentTimeMillis() - questionStartTime
-                            answerTimes = answerTimes + elapsed
-                            if (option == questionData.correctAnswer) {
-                                correctCount++
-                            }
-                        }
-                        .padding(16.dp),
-                    contentAlignment = Alignment.CenterStart
-                ) {
-                    Text(
-                        option,
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            // Right pane: answer options (wrap so many options still fit)
+            FlowRow(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically)
+            ) {
+                questionData.options.forEach { option ->
+                    val isSelected = selectedAnswer == option
+                    val isCorrect = option == questionData.correctAnswer
+                    val bgColor by animateColorAsState(
+                        targetValue = when {
+                            selectedAnswer == null -> HUB_CARD
+                            isSelected && isCorrect -> HUB_GREEN.copy(0.3f)
+                            isSelected && !isCorrect -> HUB_RED.copy(0.3f)
+                            !isSelected && isCorrect && selectedAnswer != null -> HUB_GREEN.copy(0.15f)
+                            else -> HUB_CARD
+                        },
+                        label = "optionBg"
                     )
+                    val borderColor by animateColorAsState(
+                        targetValue = when {
+                            selectedAnswer == null -> Color.Transparent
+                            isSelected && isCorrect -> HUB_GREEN
+                            isSelected && !isCorrect -> HUB_RED
+                            !isSelected && isCorrect && selectedAnswer != null -> HUB_GREEN.copy(0.5f)
+                            else -> Color.Transparent
+                        },
+                        label = "optionBorder"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(bgColor)
+                            .border(2.dp, borderColor, RoundedCornerShape(12.dp))
+                            .clickable(enabled = selectedAnswer == null) {
+                                selectedAnswer = option
+                                val elapsed = System.currentTimeMillis() - questionStartTime
+                                answerTimes = answerTimes + elapsed
+                                if (option == questionData.correctAnswer) {
+                                    correctCount++
+                                }
+                            }
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            option,
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            textAlign = TextAlign.Center,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
                 }
             }
         }
 
-        // Next button (after answering)
-        if (selectedAnswer != null) {
-            Button(
-                onClick = {
-                    if (currentQuestion + 1 >= questionCount) {
-                        RiffSynth.stop()
-                        showResult = true
-                    } else {
-                        currentQuestion++
-                        selectedAnswer = null
-                        questionData = generateQuestion(exercise, difficulty)
-                        questionStartTime = System.currentTimeMillis()
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = exercise.categoryColor)
-            ) {
-                Text(
-                    if (currentQuestion + 1 >= questionCount) "Ver resultado" else "Siguiente",
-                    fontWeight = FontWeight.Bold
-                )
-            }
+        // Next button: ALWAYS visible, disabled until an answer is chosen.
+        Button(
+            onClick = {
+                if (currentQuestion + 1 >= questionCount) {
+                    RiffSynth.stop()
+                    showResult = true
+                } else {
+                    currentQuestion++
+                    selectedAnswer = null
+                    questionData = generateQuestion(exercise, difficulty)
+                    questionStartTime = System.currentTimeMillis()
+                }
+            },
+            enabled = selectedAnswer != null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = exercise.categoryColor,
+                disabledContainerColor = Color.White.copy(0.12f),
+                disabledContentColor = Color.White.copy(0.4f)
+            )
+        ) {
+            Text(
+                if (currentQuestion + 1 >= questionCount) "Ver resultado" else "Siguiente",
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
