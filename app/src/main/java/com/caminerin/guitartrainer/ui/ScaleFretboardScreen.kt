@@ -60,6 +60,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
     var noteDisplay by rememberSaveable { mutableStateOf(NoteDisplay.BOTH) }
     var positionsEnabled by rememberSaveable { mutableStateOf(false) }
     var currentPosition by rememberSaveable { mutableIntStateOf(0) }
+    var currentLocation by rememberSaveable { mutableIntStateOf(0) }
     var zoom by remember { mutableFloatStateOf(1.5f) }
 
     var showScaleSelector by remember { mutableStateOf(false) }
@@ -80,8 +81,9 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
     val positions = if (scale.hasCaged) computeCagedPositions(selectedKey) else scale.positions
     val density = LocalDensity.current
     val fretWidthDp = (60f * zoom).dp
-    val posStart = if (positionsEnabled && positions.isNotEmpty()) positions[currentPosition].startFret else 0
-    val posEnd = if (positionsEnabled && positions.isNotEmpty()) positions[currentPosition].endFret else FRETBOARD_TOTAL_FRETS
+    val locationOffset = currentLocation * 12
+    val posStart = if (positionsEnabled && positions.isNotEmpty()) positions[currentPosition].startFret + locationOffset else 0
+    val posEnd = if (positionsEnabled && positions.isNotEmpty()) positions[currentPosition].endFret + locationOffset else FRETBOARD_TOTAL_FRETS
 
     Column(
         modifier = Modifier
@@ -119,7 +121,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
             // Posiciones toggle
             ToolbarChip(
                 text = "Pos",
-                onClick = { positionsEnabled = !positionsEnabled },
+                onClick = { positionsEnabled = !positionsEnabled; if (!positionsEnabled) currentLocation = 0 },
                 backgroundColor = if (positionsEnabled) SHARED_ACCENT else TOOLBAR_CHIP_BG
             )
 
@@ -128,15 +130,24 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
                 CagedPositionBar(
                     positions = positions,
                     currentIndex = currentPosition,
-                    onSelect = { currentPosition = it },
-                    enabled = positionsEnabled
+                    onSelect = { idx ->
+                        if (idx == currentPosition) {
+                            currentLocation = 1 - currentLocation
+                        } else {
+                            currentPosition = idx
+                            currentLocation = 0
+                        }
+                    },
+                    enabled = positionsEnabled,
+                    currentLocation = currentLocation
                 )
             }
         }
 
         // ===== FRETBOARD =====
         val openStringWidth = 48.dp
-        val totalWidthDp = openStringWidth + (FRETBOARD_TOTAL_FRETS * 60 * zoom + 30).dp
+        val maxFret = if (positionsEnabled && positions.isNotEmpty()) maxOf(FRETBOARD_TOTAL_FRETS, posEnd) else FRETBOARD_TOTAL_FRETS
+        val totalWidthDp = openStringWidth + (maxFret * 60 * zoom + 30).dp
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -211,6 +222,7 @@ fun ScaleFretboardScreen(onBack: () -> Unit, showBackButton: Boolean = true, onO
                 if (idx >= 0) {
                     selectedScaleIndex = idx
                     currentPosition = 0
+                    currentLocation = 0
                     AppPreferences.saveScale(idx, context)
                 }
                 showScaleSelector = false
