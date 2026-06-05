@@ -123,6 +123,14 @@ fun QuizHubScreen(
                     showBackButton = true
                 )
             }
+            "2.1", "2.2", "2.4", "2.6" -> {
+                FretboardQuizScreen(
+                    exercise = selectedExercise!!,
+                    questionCount = questionCount,
+                    difficulty = difficulty,
+                    onBack = { selectedExercise = null }
+                )
+            }
             else -> {
                 GenericQuizScreen(
                     exercise = selectedExercise!!,
@@ -571,7 +579,7 @@ private fun GenericQuizScreen(
 }
 
 @Composable
-private fun QuizResultScreen(
+internal fun QuizResultScreen(
     correct: Int,
     total: Int,
     avgTime: Long,
