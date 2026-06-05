@@ -555,33 +555,27 @@ private fun PracticeSection(
 
 @Composable
 private fun PracticeHub(onItemClick: (Int) -> Unit) {
-    val cardHeight = 110.dp
+    // Rejilla 3x2 que se ajusta al alto disponible: TODOS los botones caben sin scroll.
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Text(
             "Practicar",
-            fontSize = 22.sp,
+            fontSize = 18.sp,
             fontWeight = FontWeight.ExtraBold,
             color = GradientColors.accent
         )
-        Text(
-            "Elige tu actividad",
-            fontSize = 11.sp,
-            color = Color(0xFF8B7D6B)
-        )
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(8.dp))
 
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.fillMaxWidth().weight(1f)
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth().height(cardHeight)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f)
             ) {
                 GridCard(
                     emoji = "🎸",
@@ -601,11 +595,6 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(1) }
                 )
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth().height(cardHeight)
-            ) {
                 GridCard(
                     emoji = "🎵",
                     label = "Tabs",
@@ -615,6 +604,11 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(2) }
                 )
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f)
+            ) {
                 GridCard(
                     emoji = "🧠",
                     label = "Quiz",
@@ -624,11 +618,6 @@ private fun PracticeHub(onItemClick: (Int) -> Unit) {
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = { onItemClick(3) }
                 )
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth().height(cardHeight)
-            ) {
                 GridCard(
                     emoji = "🥁",
                     label = "Caja de Ritmos",
@@ -1002,20 +991,22 @@ private fun GridCard(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.fillMaxHeight()
         ) {
-            Text(emoji, fontSize = 26.sp)
-            Spacer(modifier = Modifier.height(4.dp))
+            Text(emoji, fontSize = 22.sp)
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 label,
                 color = Color.White,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                maxLines = 1
             )
             Text(
                 subtitle,
                 color = Color.White.copy(alpha = 0.7f),
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 1
             )
         }
     }

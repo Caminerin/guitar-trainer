@@ -392,7 +392,8 @@ private fun generateWhatNote(difficulty: QuizDifficulty): FretboardQuestion {
         QuizDifficulty.EASY -> 5; QuizDifficulty.MEDIUM -> 9; QuizDifficulty.HARD -> 12
     }
     val s = Random.nextInt(6)
-    val f = Random.nextInt(0, maxFret + 1)
+    // Sin traste 0 (cuerda al aire): preguntamos solo notas pisadas (traste 1..maxFret)
+    val f = Random.nextInt(1, maxFret + 1)
     val noteIdx = (STANDARD_TUNING_MIDI[s] + f) % 12
     val correctName = getNoteName(noteIdx)
     val optCount = when (difficulty) {
