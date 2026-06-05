@@ -27,7 +27,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.caminerin.guitartrainer.audio.PitchDetector
+import com.caminerin.guitartrainer.audio.RiffSynth
+import android.content.Context
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.random.Random
 
 // ═══════════════════════════════════════════════════════
@@ -389,6 +393,17 @@ private fun GenericQuizScreen(
     var showResult by remember { mutableStateOf(false) }
     var answerTimes by remember { mutableStateOf(listOf<Long>()) }
     var questionStartTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // Auto-play the audio for ear-training questions when a new one appears
+    LaunchedEffect(questionData) {
+        questionData.audio?.let { a -> scope.launch(Dispatchers.Default) { playQuizAudio(context, a) } }
+    }
+    // Stop any sound when leaving the exercise
+    DisposableEffect(Unit) {
+        onDispose { RiffSynth.stop() }
+    }
 
     if (showResult) {
         QuizResultScreen(
@@ -422,7 +437,7 @@ private fun GenericQuizScreen(
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
+            IconButton(onClick = { RiffSynth.stop(); onBack() }, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Default.ArrowBack, "Volver", tint = Color.White, modifier = Modifier.size(20.dp))
             }
             Text("${exercise.number} ${exercise.title}", color = exercise.categoryColor,
@@ -438,14 +453,14 @@ private fun GenericQuizScreen(
             trackColor = Color.White.copy(0.1f),
         )
 
-        // Question area
+        // Question area (scrollable so options never get hidden behind the Next bar)
         Column(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Question text
             Text(
@@ -454,8 +469,25 @@ private fun GenericQuizScreen(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 24.dp)
+                modifier = Modifier.padding(bottom = 16.dp)
             )
+
+            // Play button (ear-training exercises with audio)
+            if (questionData.audio != null) {
+                Button(
+                    onClick = {
+                        questionData.audio?.let { a ->
+                            scope.launch(Dispatchers.Default) { playQuizAudio(context, a) }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = exercise.categoryColor),
+                    modifier = Modifier.padding(bottom = 20.dp)
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Reproducir", fontWeight = FontWeight.Bold)
+                }
+            }
 
             // Answer options
             questionData.options.forEach { option ->
@@ -515,6 +547,7 @@ private fun GenericQuizScreen(
             Button(
                 onClick = {
                     if (currentQuestion + 1 >= questionCount) {
+                        RiffSynth.stop()
                         showResult = true
                     } else {
                         currentQuestion++
@@ -601,8 +634,46 @@ private fun QuizResultScreen(
 data class QuestionData(
     val question: String,
     val options: List<String>,
-    val correctAnswer: String
+    val correctAnswer: String,
+    val audio: QuizAudio? = null
 )
+
+/** Audio payload for ear-training questions. Uses MIDI note numbers (60 = C4). */
+sealed class QuizAudio {
+    /** Notes played one after another. */
+    data class Melody(val midis: List<Int>) : QuizAudio()
+    /** Notes played simultaneously (chord / harmonic interval). */
+    data class Harmony(val midis: List<Int>) : QuizAudio()
+}
+
+// Open-string MIDI for standard tuning, indexed by string number 1..6 (1 = high E).
+private val GUITAR_OPEN_MIDI = intArrayOf(64, 59, 55, 50, 45, 40)
+
+/** Map a MIDI note to a playable (string, fret) on the guitar (fret 0..12). */
+private fun midiToStringFret(midi: Int): Pair<Int, Int> {
+    for (s in 6 downTo 1) {
+        val fret = midi - GUITAR_OPEN_MIDI[s - 1]
+        if (fret in 0..12) return s to fret
+    }
+    return if (midi >= GUITAR_OPEN_MIDI[0]) 1 to (midi - GUITAR_OPEN_MIDI[0]).coerceIn(0, 12)
+    else 6 to (midi - GUITAR_OPEN_MIDI[5]).coerceIn(0, 12)
+}
+
+/** Render and play a quiz audio payload via the guitar synth. Call off the main thread. */
+private fun playQuizAudio(context: Context, audio: QuizAudio) {
+    RiffSynth.init(context)
+    val events = when (audio) {
+        is QuizAudio.Melody -> audio.midis.mapIndexed { i, m ->
+            val (s, f) = midiToStringFret(m)
+            RiffSynth.NoteEvent(string = s, fret = f, startMs = i * 700L, durationMs = 650)
+        }
+        is QuizAudio.Harmony -> audio.midis.mapIndexed { i, m ->
+            val (s, f) = midiToStringFret(m)
+            RiffSynth.NoteEvent(string = s, fret = f, startMs = i * 22L, durationMs = 1500)
+        }
+    }
+    RiffSynth.playSequence(events, "clean")
+}
 
 private fun generateQuestion(exercise: QuizExercise, difficulty: QuizDifficulty): QuestionData {
     return when (exercise.id) {
@@ -628,37 +699,43 @@ private fun generateQuestion(exercise: QuizExercise, difficulty: QuizDifficulty)
 }
 
 // ─── Ear Training questions ───
+// These play real audio; the answer must be identified by ear, so the note
+// names are NOT revealed in the question text.
 
 private fun generateUpOrDown(): QuestionData {
     val up = Random.nextBoolean()
-    val noteA = AMERICAN_NOTE_NAMES[Random.nextInt(12)]
-    val offset = Random.nextInt(1, 8)
-    val noteB = AMERICAN_NOTE_NAMES[(AMERICAN_NOTE_NAMES.indexOf(noteA) + if (up) offset else -offset + 12) % 12]
+    val rootMidi = 52 + Random.nextInt(12)
+    val offset = Random.nextInt(2, 10)
+    val secondMidi = if (up) rootMidi + offset else rootMidi - offset
     return QuestionData(
-        question = "🎵 $noteA → $noteB\n¿Sube o baja?",
+        question = "🎧 Escucha las 2 notas.\n¿Sube o baja?",
         options = listOf("Sube (ascendente)", "Baja (descendente)").shuffled(),
-        correctAnswer = if (up) "Sube (ascendente)" else "Baja (descendente)"
+        correctAnswer = if (up) "Sube (ascendente)" else "Baja (descendente)",
+        audio = QuizAudio.Melody(listOf(rootMidi, secondMidi))
     )
 }
 
 private fun generateOpenStringQuestion(): QuestionData {
     val strings = listOf("Mi agudo (1ª)", "Si (2ª)", "Sol (3ª)", "Re (4ª)", "La (5ª)", "Mi grave (6ª)")
-    val correct = strings[Random.nextInt(strings.size)]
+    val openMidi = listOf(64, 59, 55, 50, 45, 40)
+    val idx = Random.nextInt(strings.size)
     return QuestionData(
-        question = "🎸 Se ha tocado una cuerda al aire.\n¿Cuál es?",
+        question = "🎸 Escucha la cuerda al aire.\n¿Cuál es?",
         options = strings.shuffled(),
-        correctAnswer = correct
+        correctAnswer = strings[idx],
+        audio = QuizAudio.Melody(listOf(openMidi[idx]))
     )
 }
 
 private fun generateMajorMinorQuestion(): QuestionData {
     val isMajor = Random.nextBoolean()
-    val root = AMERICAN_NOTE_NAMES[Random.nextInt(12)]
-    val chordName = "$root${if (isMajor) "" else "m"}"
+    val rootMidi = 48 + Random.nextInt(12)
+    val third = if (isMajor) 4 else 3
     return QuestionData(
-        question = "🎵 Acorde: $chordName\n¿Mayor o menor?",
+        question = "🎵 Escucha el acorde.\n¿Mayor o menor?",
         options = listOf("Mayor", "Menor"),
-        correctAnswer = if (isMajor) "Mayor" else "Menor"
+        correctAnswer = if (isMajor) "Mayor" else "Menor",
+        audio = QuizAudio.Harmony(listOf(rootMidi, rootMidi + third, rootMidi + 7))
     )
 }
 
@@ -666,12 +743,10 @@ private fun generateMelodicIntervalQuestion(difficulty: QuizDifficulty): Questio
     val maxInterval = when (difficulty) {
         QuizDifficulty.EASY -> 5
         QuizDifficulty.MEDIUM -> 8
-        QuizDifficulty.HARD -> 12
+        QuizDifficulty.HARD -> 11
     }
-    val interval = Random.nextInt(1, maxInterval)
-    val rootIdx = Random.nextInt(12)
-    val root = AMERICAN_NOTE_NAMES[rootIdx]
-    val target = AMERICAN_NOTE_NAMES[(rootIdx + interval) % 12]
+    val interval = Random.nextInt(1, minOf(maxInterval, INTERVAL_NAMES.size - 1) + 1)
+    val rootMidi = 50 + Random.nextInt(12)
     val correct = INTERVAL_NAMES[interval]
 
     val options = mutableSetOf(correct)
@@ -680,31 +755,62 @@ private fun generateMelodicIntervalQuestion(difficulty: QuizDifficulty): Questio
     }
 
     return QuestionData(
-        question = "🎵 $root → $target\n¿Qué intervalo es?",
+        question = "🎵 Escucha las 2 notas (melódico).\n¿Qué intervalo es?",
         options = options.toList().shuffled(),
-        correctAnswer = correct
+        correctAnswer = correct,
+        audio = QuizAudio.Melody(listOf(rootMidi, rootMidi + interval))
     )
 }
 
 private fun generateHarmonicIntervalQuestion(difficulty: QuizDifficulty): QuestionData {
-    return generateMelodicIntervalQuestion(difficulty).copy(
-        question = generateMelodicIntervalQuestion(difficulty).question.replace("→", "+"
-        ).replace("melódico", "armónico")
+    val maxInterval = when (difficulty) {
+        QuizDifficulty.EASY -> 5
+        QuizDifficulty.MEDIUM -> 8
+        QuizDifficulty.HARD -> 11
+    }
+    val interval = Random.nextInt(1, minOf(maxInterval, INTERVAL_NAMES.size - 1) + 1)
+    val rootMidi = 48 + Random.nextInt(12)
+    val correct = INTERVAL_NAMES[interval]
+
+    val options = mutableSetOf(correct)
+    while (options.size < 4) {
+        options.add(INTERVAL_NAMES[Random.nextInt(1, INTERVAL_NAMES.size)])
+    }
+
+    return QuestionData(
+        question = "🎵 Escucha las 2 notas (a la vez).\n¿Qué intervalo es?",
+        options = options.toList().shuffled(),
+        correctAnswer = correct,
+        audio = QuizAudio.Harmony(listOf(rootMidi, rootMidi + interval))
     )
 }
 
 private fun generateChordTypeQuestion(difficulty: QuizDifficulty): QuestionData {
     val types = when (difficulty) {
-        QuizDifficulty.EASY -> listOf("Mayor", "Menor")
-        QuizDifficulty.MEDIUM -> listOf("Mayor", "Menor", "7ª dominante")
-        QuizDifficulty.HARD -> listOf("Mayor", "Menor", "7ª dominante", "Disminuido", "Aumentado")
+        QuizDifficulty.EASY -> listOf(
+            "Mayor" to listOf(0, 4, 7),
+            "Menor" to listOf(0, 3, 7)
+        )
+        QuizDifficulty.MEDIUM -> listOf(
+            "Mayor" to listOf(0, 4, 7),
+            "Menor" to listOf(0, 3, 7),
+            "7ª dominante" to listOf(0, 4, 7, 10)
+        )
+        QuizDifficulty.HARD -> listOf(
+            "Mayor" to listOf(0, 4, 7),
+            "Menor" to listOf(0, 3, 7),
+            "7ª dominante" to listOf(0, 4, 7, 10),
+            "Disminuido" to listOf(0, 3, 6),
+            "Aumentado" to listOf(0, 4, 8)
+        )
     }
-    val correct = types[Random.nextInt(types.size)]
-    val root = AMERICAN_NOTE_NAMES[Random.nextInt(12)]
+    val (correct, intervals) = types[Random.nextInt(types.size)]
+    val rootMidi = 48 + Random.nextInt(12)
     return QuestionData(
-        question = "🎵 Acorde desde $root\n¿Qué tipo es?",
-        options = types.shuffled(),
-        correctAnswer = correct
+        question = "🎵 Escucha el acorde.\n¿Qué tipo es?",
+        options = types.map { it.first }.shuffled(),
+        correctAnswer = correct,
+        audio = QuizAudio.Harmony(intervals.map { rootMidi + it })
     )
 }
 
