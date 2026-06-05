@@ -209,6 +209,11 @@ fun MainScreen(
                 }
             }
 
+            // Nota: AdMob ya está inicializado y el composable AdmobBanner está listo,
+            // pero NO se muestra un banner fijo aquí: la app es horizontal a pantalla
+            // completa y un banner robaría alto, recortando las tarjetas de los hubs.
+            // La monetización se hará con intersticiales en transiciones (fin de quiz/reto).
+
             // Bottom Navigation Bar
             Row(
                 modifier = Modifier

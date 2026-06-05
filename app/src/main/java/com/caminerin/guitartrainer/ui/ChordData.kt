@@ -275,3 +275,22 @@ object ChordRepository {
         }
     }
 }
+
+/**
+ * Persists the user's preferred (favorite) chord voicing per chord identity
+ * (root + qualityLabel). Stored in SharedPreferences so the choice survives
+ * across sessions. Used by the progression trainer voicing picker.
+ */
+object ChordVoicingFavorites {
+    private const val PREFS = "guitar_prefs"
+    private fun key(root: String, qualityLabel: String) = "fav_voicing_${root}_${qualityLabel}"
+
+    fun getFavoriteId(context: Context, root: String, qualityLabel: String): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(key(root, qualityLabel), null)
+
+    fun setFavoriteId(context: Context, root: String, qualityLabel: String, id: String) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(key(root, qualityLabel), id).apply()
+    }
+}

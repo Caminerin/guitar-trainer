@@ -917,7 +917,8 @@ fun CagedPositionBar(
     currentIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    currentLocation: Int = 0
 ) {
     Row(
         modifier = modifier,
@@ -927,7 +928,8 @@ fun CagedPositionBar(
         positions.forEachIndexed { i, pos ->
             val isCurrent = i == currentIndex && enabled
             val isLetter = pos.name.length == 1 && pos.name[0].isLetter()
-            val label = if (isLetter) "P${i + 1}(${pos.name})" else "P${pos.name}"
+            val locationSuffix = if (isCurrent && currentLocation == 1) "\u00B72" else ""
+            val label = if (isLetter) "P${i + 1}(${pos.name})$locationSuffix" else "P${pos.name}$locationSuffix"
             ToolbarChip(
                 text = label,
                 onClick = { if (enabled) onSelect(i) },
