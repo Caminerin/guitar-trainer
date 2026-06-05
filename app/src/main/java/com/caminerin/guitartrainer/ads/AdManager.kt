@@ -42,6 +42,11 @@ object AdManager {
     private var exerciseCount = 0
     private var lastInterstitialTime = 0L
     private var appOpenShown = false
+    private var appStartTime = 0L
+    // Si el App Open aún no estaba cargado al abrir, lo mostramos en cuanto cargue
+    // (dentro de una ventana corta de arranque).
+    private var pendingAppOpenActivity: Activity? = null
+    private const val APP_OPEN_WINDOW_MS = 12_000L
 
     // ----- Ads cargados -----
     private var appOpenAd: AppOpenAd? = null
@@ -60,6 +65,7 @@ object AdManager {
         lastInterstitialTime = System.currentTimeMillis()
         exerciseCount = 0
         appOpenShown = false
+        appStartTime = System.currentTimeMillis()
         loadAppOpen(context)
         loadInterstitial(context)
         loadRewarded(context)
@@ -74,17 +80,32 @@ object AdManager {
 
     fun showAppOpenIfReady(activity: Activity) {
         if (isAdFree() || appOpenShown) return
-        val ad = appOpenAd ?: return
-        appOpenShown = true
-        ad.fullScreenContentCallback = dismissCallback { loadAppOpen(activity) }
-        ad.show(activity)
+        val ad = appOpenAd
+        if (ad != null) {
+            appOpenShown = true
+            pendingAppOpenActivity = null
+            ad.fullScreenContentCallback = dismissCallback { loadAppOpen(activity) }
+            ad.show(activity)
+        } else {
+            // Aún no ha cargado: lo mostraremos en cuanto cargue (ventana de arranque).
+            pendingAppOpenActivity = activity
+        }
     }
 
     private fun loadAppOpen(context: Context) {
         AppOpenAd.load(
             context, APP_OPEN_AD_ID, AdRequest.Builder().build(),
             object : AppOpenAd.AppOpenAdLoadCallback() {
-                override fun onAdLoaded(ad: AppOpenAd) { appOpenAd = ad }
+                override fun onAdLoaded(ad: AppOpenAd) {
+                    appOpenAd = ad
+                    // Si estábamos esperando para mostrarlo al abrir, hazlo ya.
+                    val act = pendingAppOpenActivity
+                    val withinWindow =
+                        System.currentTimeMillis() - appStartTime < APP_OPEN_WINDOW_MS
+                    if (act != null && !appOpenShown && !isAdFree() && withinWindow) {
+                        showAppOpenIfReady(act)
+                    }
+                }
                 override fun onAdFailedToLoad(err: LoadAdError) { appOpenAd = null }
             }
         )
