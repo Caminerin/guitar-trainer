@@ -209,17 +209,10 @@ fun MainScreen(
                 }
             }
 
-            // Banner de anuncios: solo en los hubs (no dentro de un ejercicio),
-            // para no tapar el mástil ni el contenido interactivo.
-            val atHub = librarySubScreen < 0 && practiceSubScreen < 0 &&
-                    chordsSubScreen < 0 && toolsSubScreen < 0
-            if (atHub) {
-                AdmobBanner(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFF0A0908))
-                )
-            }
+            // Nota: AdMob ya está inicializado y el composable AdmobBanner está listo,
+            // pero NO se muestra un banner fijo aquí: la app es horizontal a pantalla
+            // completa y un banner robaría alto, recortando las tarjetas de los hubs.
+            // La monetización se hará con intersticiales en transiciones (fin de quiz/reto).
 
             // Bottom Navigation Bar
             Row(
