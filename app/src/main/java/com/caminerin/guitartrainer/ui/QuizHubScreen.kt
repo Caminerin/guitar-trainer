@@ -687,11 +687,14 @@ private fun midiToStringFret(midi: Int): Pair<Int, Int> {
 
 /** Render and play a quiz audio payload via the guitar synth. Call off the main thread. */
 private fun playQuizAudio(context: Context, audio: QuizAudio) {
+    // Parar cualquier stream anterior para evitar race-condition con onDispose
+    RiffSynth.stop()
+    Thread.sleep(80)
     RiffSynth.init(context)
     val events = when (audio) {
         is QuizAudio.Melody -> audio.midis.mapIndexed { i, m ->
             val (s, f) = midiToStringFret(m)
-            RiffSynth.NoteEvent(string = s, fret = f, startMs = i * 700L, durationMs = 650)
+            RiffSynth.NoteEvent(string = s, fret = f, startMs = i * 800L, durationMs = 750)
         }
         is QuizAudio.Harmony -> audio.midis.mapIndexed { i, m ->
             val (s, f) = midiToStringFret(m)
