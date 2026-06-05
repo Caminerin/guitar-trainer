@@ -51,13 +51,10 @@ object RiffSynth {
 
     /**
      * Register the context for lazy sample loading.
-     * Samples are loaded on-demand when first needed, not eagerly.
-     * Currently playSequence() uses Karplus-Strong synthesis exclusively,
-     * so samples are not loaded unless explicitly requested.
+     * Samples are loaded on-demand when first needed by playSequence().
      */
     fun init(context: Context) {
         initContext = context.applicationContext
-        // Samples are loaded lazily — no eager loading to save memory and startup time
     }
 
     /** Load a specific sample on demand (if needed in the future). */
@@ -118,10 +115,11 @@ object RiffSynth {
             val offsetSamples = (SAMPLE_RATE * note.startMs / 1000).toInt()
             val durSamples = (SAMPLE_RATE * note.durationMs / 1000).toInt()
 
-            // Always use Karplus-Strong synthesis for correct pitch
-            // (WAV samples have mismatched string/frequency assignments)
-            val freq = noteFrequency(note.string, note.fret)
-            synthesizeNote(buffer, freq, note.string, offsetSamples, durSamples, soundPreset, note.technique)
+            // Prefer real guitar samples; fall back to Karplus-Strong synthesis
+            if (!renderSampleNoteIfAvailable(output = buffer, note = note, offset = offsetSamples, duration = durSamples, soundPreset = soundPreset)) {
+                val freq = noteFrequency(note.string, note.fret)
+                synthesizeNote(buffer, freq, note.string, offsetSamples, durSamples, soundPreset, note.technique)
+            }
         }
 
         applyMasterProcessing(buffer, soundPreset)
@@ -153,13 +151,13 @@ object RiffSynth {
      * Render a note using real guitar samples with DSP-based technique effects.
      * For frets > 12, pitch-shifts the fret 12 sample by adjusting the read rate.
      */
-    private fun renderSampleNote(
+    private fun renderSampleNoteIfAvailable(
         output: FloatArray,
         note: NoteEvent,
         offset: Int,
         duration: Int,
         soundPreset: String
-    ) {
+    ): Boolean {
         val technique = note.technique
         val isPalmMute = technique == "palm_mute"
         val isTremolo = technique == "tremolo"
@@ -177,9 +175,9 @@ object RiffSynth {
         val velLayer = if (isLegato) "soft" else "hard"
         val sampleFret = note.fret.coerceAtMost(12)
         val key = "s${note.string}_f${String.format("%02d", sampleFret)}_$velLayer"
-        val sampleData = sampleCache[key]
-            ?: sampleCache["s${note.string}_f${String.format("%02d", sampleFret)}_hard"]
-            ?: return // no sample available, skip
+        val sampleData = loadSampleIfNeeded(key)
+            ?: loadSampleIfNeeded("s${note.string}_f${String.format("%02d", sampleFret)}_hard")
+            ?: return false
 
         // Playback rate: 1.0 for frets 0-12, pitch-shift up for frets > 12
         val baseRate = if (note.fret > 12) {
@@ -285,6 +283,7 @@ object RiffSynth {
                 output[outIdx] += processed
             }
         }
+        return true
     }
 
     fun stop() {
@@ -313,7 +312,7 @@ object RiffSynth {
         return openFreq * Math.pow(2.0, fret / 12.0)
     }
 
-    // --- Karplus-Strong fallback for when samples aren't loaded ---
+    // --- Karplus-Strong synthesis (fallback when no sample is available) ---
 
     private fun synthesizeNote(
         output: FloatArray, freq: Double, string: Int,
