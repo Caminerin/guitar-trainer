@@ -34,6 +34,7 @@ import com.caminerin.guitartrainer.audio.NoteEvent
 import com.caminerin.guitartrainer.audio.NoteRecognizer
 import com.caminerin.guitartrainer.ui.MainScreen
 import com.caminerin.guitartrainer.ui.theme.GuitarTrainerTheme
+import com.google.android.gms.ads.MobileAds
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
@@ -42,6 +43,9 @@ import com.google.accompanist.permissions.shouldShowRationale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Inicializa el SDK de anuncios (AdMob) en segundo plano.
+        MobileAds.initialize(this) {}
 
         // Force landscape globally
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE

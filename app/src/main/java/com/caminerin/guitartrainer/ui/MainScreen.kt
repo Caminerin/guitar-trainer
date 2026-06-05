@@ -209,6 +209,18 @@ fun MainScreen(
                 }
             }
 
+            // Banner de anuncios: solo en los hubs (no dentro de un ejercicio),
+            // para no tapar el mástil ni el contenido interactivo.
+            val atHub = librarySubScreen < 0 && practiceSubScreen < 0 &&
+                    chordsSubScreen < 0 && toolsSubScreen < 0
+            if (atHub) {
+                AdmobBanner(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF0A0908))
+                )
+            }
+
             // Bottom Navigation Bar
             Row(
                 modifier = Modifier
