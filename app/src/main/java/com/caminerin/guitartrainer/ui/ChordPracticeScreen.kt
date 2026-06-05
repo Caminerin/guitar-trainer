@@ -705,11 +705,36 @@ private fun ProgressionPlayerScreen(
 
     // Current chord shape for diagram
     val allChords = ChordRepository.getChords()
-    val currentChordShape = remember(currentChordIndex, rootIndex, progression) {
-        val idx = if (currentChordIndex in progression.steps.indices) currentChordIndex else 0
+
+    // Voicing picker + favorites state
+    var pickerStepIndex by remember { mutableStateOf<Int?>(null) }
+    var favoritesVersion by remember { mutableIntStateOf(0) }
+
+    // All voicings (fingerings) of the chord named `name`, best-first.
+    fun voicingsForName(name: String): List<ChordShape> =
+        allChords.filter { matchesChordName(it, name) }
+            .sortedWith(compareBy(
+                { it.maxFret },
+                { -(it.frets.count { fret -> fret != null }) },
+                { it.priority }
+            ))
+
+    // Resolve the shape to draw for a step: user favorite first, else default open voicing.
+    fun resolveShapeForStep(idx: Int): ChordShape? {
+        if (idx !in progression.steps.indices) return null
         val name = chordNameFor(rootIndex, progression.steps[idx])
-        val chordId = findOpenChordIdByName(name, allChords)
-        chordId?.let { id -> allChords.firstOrNull { it.id == id } }
+        val voicings = voicingsForName(name)
+        if (voicings.isEmpty()) return null
+        val identity = voicings.first()
+        val favId = ChordVoicingFavorites.getFavoriteId(context, identity.root, identity.qualityLabel)
+        favId?.let { id -> voicings.firstOrNull { it.id == id } }?.let { return it }
+        val defId = findOpenChordIdByName(name, allChords)
+        return voicings.firstOrNull { it.id == defId } ?: voicings.first()
+    }
+
+    val currentChordShape = remember(currentChordIndex, rootIndex, progression, favoritesVersion) {
+        val idx = if (currentChordIndex in progression.steps.indices) currentChordIndex else 0
+        resolveShapeForStep(idx)
     }
 
     val displayChordName = if (currentChordIndex in chordNames.indices)
@@ -781,6 +806,7 @@ private fun ProgressionPlayerScreen(
         isPlaying = false
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(modifier = Modifier.fillMaxSize()) {
         // ── Top bar: back + info + root selector ──
         Row(
@@ -996,7 +1022,7 @@ private fun ProgressionPlayerScreen(
                                         shape = RoundedCornerShape(8.dp)
                                     )
                                     .clickable {
-                                        // Jump to this chord
+                                        pickerStepIndex = idx
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -1146,6 +1172,136 @@ private fun ProgressionPlayerScreen(
                         tint = Color.White,
                         modifier = Modifier.size(30.dp)
                     )
+                }
+            }
+        }
+    }
+
+        // ── Voicing picker overlay ──
+        val openIdx = pickerStepIndex
+        if (openIdx != null && openIdx in progression.steps.indices) {
+            val name = chordNameFor(rootIndex, progression.steps[openIdx])
+            val voicings = voicingsForName(name)
+            val identity = voicings.firstOrNull()
+            val selectedId = identity?.let {
+                ChordVoicingFavorites.getFavoriteId(context, it.root, it.qualityLabel)
+            } ?: findOpenChordIdByName(name, allChords)
+            VoicingPickerOverlay(
+                chordName = name,
+                voicings = voicings,
+                selectedId = selectedId,
+                onSelect = { shape ->
+                    ChordVoicingFavorites.setFavoriteId(context, shape.root, shape.qualityLabel, shape.id)
+                    favoritesVersion++
+                    pickerStepIndex = null
+                },
+                onDismiss = { pickerStepIndex = null }
+            )
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════
+// Voicing picker overlay — choose a fingering of the SAME chord
+// ═══════════════════════════════════════════════════════
+@Composable
+private fun VoicingPickerOverlay(
+    chordName: String,
+    voicings: List<ChordShape>,
+    selectedId: String?,
+    onSelect: (ChordShape) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .zIndex(10f)
+            .background(Color.Black.copy(alpha = 0.7f))
+            .clickable(onClick = onDismiss),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.9f)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF201C16))
+                .clickable(enabled = false) {}
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        "Cambiar digitación",
+                        color = Color.White.copy(alpha = 0.6f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        chordName,
+                        color = ACCENT,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            if (voicings.isEmpty()) {
+                Text(
+                    "No hay digitaciones disponibles para este acorde.",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 14.sp
+                )
+            } else {
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    for (shape in voicings) {
+                        val isSelected = shape.id == selectedId
+                        Column(
+                            modifier = Modifier
+                                .width(96.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isSelected) ACCENT.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.05f)
+                                )
+                                .border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) ACCENT else Color.White.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { onSelect(shape) }
+                                .padding(6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Canvas(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(96.dp)
+                            ) {
+                                drawCompactChord(shape)
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                shape.shortLabel,
+                                color = if (isSelected) ACCENT else Color.White.copy(alpha = 0.8f),
+                                fontSize = 10.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2
+                            )
+                        }
+                    }
                 }
             }
         }
