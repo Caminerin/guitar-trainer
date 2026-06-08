@@ -677,10 +677,20 @@ private val GUITAR_OPEN_MIDI = intArrayOf(64, 59, 55, 50, 45, 40)
 
 /** Map a MIDI note to a playable (string, fret) on the guitar (fret 0..12). */
 private fun midiToStringFret(midi: Int): Pair<Int, Int> {
+    // Elegir la posición más natural: el traste MÁS BAJO posible (posición
+    // abierta, timbre lleno como una guitarra real), en la cuerda más grave que
+    // lo permita. Así evitamos acabar siempre en el traste 12, cuyo sample suena
+    // fino/artificial (lo que parecía "sonido generado por Hz").
+    var bestString = -1
+    var bestFret = Int.MAX_VALUE
     for (s in 6 downTo 1) {
         val fret = midi - GUITAR_OPEN_MIDI[s - 1]
-        if (fret in 0..12) return s to fret
+        if (fret in 0..12 && fret < bestFret) {
+            bestFret = fret
+            bestString = s
+        }
     }
+    if (bestString != -1) return bestString to bestFret
     return if (midi >= GUITAR_OPEN_MIDI[0]) 1 to (midi - GUITAR_OPEN_MIDI[0]).coerceIn(0, 12)
     else 6 to (midi - GUITAR_OPEN_MIDI[5]).coerceIn(0, 12)
 }
