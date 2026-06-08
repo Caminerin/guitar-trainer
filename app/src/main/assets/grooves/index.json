@@ -1,55 +1,13 @@
 {
   "version": 1,
-  "totalPatterns": 291,
-  "totalEvents": 3998,
+  "totalPatterns": 165,
+  "totalEvents": 2337,
   "categories": [
-    {
-      "id": "afro-cuban",
-      "displayName": "Afro-Cubano",
-      "patternCount": 9,
-      "fillCount": 6
-    },
     {
       "id": "blues",
       "displayName": "Blues",
       "patternCount": 6,
       "fillCount": 3
-    },
-    {
-      "id": "boogie",
-      "displayName": "Boogie",
-      "patternCount": 5,
-      "fillCount": 3
-    },
-    {
-      "id": "bossa-nova",
-      "displayName": "Bossa Nova",
-      "patternCount": 6,
-      "fillCount": 3
-    },
-    {
-      "id": "cha-cha",
-      "displayName": "Cha-Cha",
-      "patternCount": 4,
-      "fillCount": 3
-    },
-    {
-      "id": "charleston",
-      "displayName": "Charleston",
-      "patternCount": 2,
-      "fillCount": 1
-    },
-    {
-      "id": "disco",
-      "displayName": "Disco",
-      "patternCount": 14,
-      "fillCount": 9
-    },
-    {
-      "id": "ending",
-      "displayName": "Finales",
-      "patternCount": 3,
-      "fillCount": 0
     },
     {
       "id": "funk",
@@ -58,22 +16,10 @@
       "fillCount": 15
     },
     {
-      "id": "jazz",
-      "displayName": "Jazz",
-      "patternCount": 6,
-      "fillCount": 3
-    },
-    {
-      "id": "march",
-      "displayName": "Marcha",
-      "patternCount": 3,
-      "fillCount": 2
-    },
-    {
-      "id": "paso-doble",
-      "displayName": "Pasodoble",
-      "patternCount": 3,
-      "fillCount": 2
+      "id": "disco",
+      "displayName": "Disco",
+      "patternCount": 14,
+      "fillCount": 9
     },
     {
       "id": "pop",
@@ -100,51 +46,9 @@
       "fillCount": 12
     },
     {
-      "id": "samba",
-      "displayName": "Samba",
-      "patternCount": 6,
-      "fillCount": 3
-    },
-    {
       "id": "shuffle",
       "displayName": "Shuffle",
       "patternCount": 6,
-      "fillCount": 3
-    },
-    {
-      "id": "ska",
-      "displayName": "Ska",
-      "patternCount": 5,
-      "fillCount": 3
-    },
-    {
-      "id": "slow",
-      "displayName": "Balada",
-      "patternCount": 12,
-      "fillCount": 6
-    },
-    {
-      "id": "swing",
-      "displayName": "Swing",
-      "patternCount": 6,
-      "fillCount": 3
-    },
-    {
-      "id": "tango",
-      "displayName": "Tango",
-      "patternCount": 2,
-      "fillCount": 1
-    },
-    {
-      "id": "twist",
-      "displayName": "Twist",
-      "patternCount": 5,
-      "fillCount": 3
-    },
-    {
-      "id": "waltz",
-      "displayName": "Vals",
-      "patternCount": 4,
       "fillCount": 3
     }
   ]
