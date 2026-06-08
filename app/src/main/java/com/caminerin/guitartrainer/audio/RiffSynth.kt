@@ -565,9 +565,13 @@ object RiffSynth {
         }
 
         val peak = output.maxOfOrNull { kotlin.math.abs(it) } ?: 1f
-        val scale = if (peak > 0.01f) 0.88f / peak else 1f
+        // Normaliza y luego sube el volumen ~1.5x con un limitador suave (tanh):
+        // suena bastante mas alto y con algo de cuerpo/calidez, sin clipping duro.
+        val norm = if (peak > 0.01f) 0.9f / peak else 1f
+        val makeupGain = 1.5f
         for (i in output.indices) {
-            output[i] = (output[i] * scale).coerceIn(-1f, 1f)
+            val x = output[i] * norm * makeupGain
+            output[i] = kotlin.math.tanh(x.toDouble()).toFloat() * 0.96f
         }
     }
 
