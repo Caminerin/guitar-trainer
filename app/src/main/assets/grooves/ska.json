@@ -226,6 +226,132 @@
           "probability": 1.0
         }
       ]
+    },
+    {
+      "name": "Ska skank",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.97,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 2.0,
+          "velocity": 0.75,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.95,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 6.0,
+          "velocity": 0.75,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 10.0,
+          "velocity": 0.75,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.95,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 14.0,
+          "velocity": 0.75,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Ska al doble",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.97,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 2.0,
+          "velocity": 0.7,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 4.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.95,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 6.0,
+          "velocity": 0.7,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 10.0,
+          "velocity": 0.7,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 12.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.95,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 14.0,
+          "velocity": 0.7,
+          "probability": 1.0
+        }
+      ]
     }
   ],
   "fills": [

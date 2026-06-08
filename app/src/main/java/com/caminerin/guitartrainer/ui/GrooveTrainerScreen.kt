@@ -120,6 +120,9 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
             val catId = categories[safeIdx].id
             categoryData = GrooveEngine.loadCategoryPatterns(context, catId)
             selectedPatternIdx = 0
+            // Per-style groove feel: blues/jazz/shuffle swing automatically, etc.
+            swing = GrooveEngine.defaultSwing(catId)
+            feel = GrooveEngine.defaultFeel(catId)
         }
     }
 
@@ -198,7 +201,7 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
     // Derived display values
     val catName = categories.getOrNull(selectedCategoryIdx)?.displayName ?: "—"
     val patName = categoryData?.patterns?.getOrNull(selectedPatternIdx)?.name ?: "—"
-    val intensityLabel = listOf("Simple", "Normal", "Groove", "Ghost", "Full").getOrElse(complexityLevel - 1) { "—" }
+    val intensityLabel = listOf("Sencillo", "Normal", "Groove", "Completo").getOrElse(complexityLevel - 1) { "—" }
     val feelLabel = when (feel) {
         GrooveEngine.Feel.TIGHT -> "Tight"; GrooveEngine.Feel.NATURAL -> "Natural"; GrooveEngine.Feel.LOOSE -> "Loose"
     }
@@ -280,6 +283,8 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                                         selectedCategoryIdx = idx; selectedPatternIdx = 0
                                         val catId = categories[idx].id
                                         categoryData = GrooveEngine.loadCategoryPatterns(context, catId)
+                                        swing = GrooveEngine.defaultSwing(catId)
+                                        feel = GrooveEngine.defaultFeel(catId)
                                         if (wasPlaying) startPlaying()
                                     }
                                 }
@@ -314,7 +319,7 @@ fun GrooveTrainerScreen(onBack: () -> Unit) {
                             onToggle = { togglePanel("intensidad") },
                             modifier = Modifier.weight(1f)
                         ) {
-                            val labels = listOf("Simple", "Normal", "Groove", "Ghost", "Full")
+                            val labels = listOf("Sencillo", "Normal", "Groove", "Completo")
                             labels.forEachIndexed { idx, label ->
                                 val level = idx + 1
                                 val selected = complexityLevel == level

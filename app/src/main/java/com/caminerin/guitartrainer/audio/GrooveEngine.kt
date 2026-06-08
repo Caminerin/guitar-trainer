@@ -15,6 +15,8 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import kotlin.coroutines.coroutineContext
+import kotlin.math.roundToInt
+import kotlin.math.tanh
 import kotlin.random.Random
 
 /**
@@ -235,51 +237,126 @@ object GrooveEngine {
 
     // ==================== COMPLEXITY FILTERING ====================
 
-    private val LEVEL1_HITS = setOf(DrumHit.KICK_HARD, DrumHit.KICK_SOFT, DrumHit.SNARE_HARD, DrumHit.SNARE_SOFT)
-    private val LEVEL2_HITS = setOf(DrumHit.KICK_HARD, DrumHit.KICK_SOFT, DrumHit.SNARE_HARD, DrumHit.SNARE_SOFT, DrumHit.SNARE_CROSSSTICK, DrumHit.SNARE_RIMSHOT, DrumHit.HH_CLOSED, DrumHit.HH_HALF, DrumHit.HH_PEDAL)
+    private val LEVEL1_HITS = setOf(DrumHit.KICK_HARD, DrumHit.KICK_SOFT, DrumHit.SNARE_HARD, DrumHit.SNARE_RIMSHOT, DrumHit.SNARE_CROSSSTICK)
 
-    fun filterByComplexity(events: List<GrooveEvent>, level: Int): List<GrooveEvent> {
+    /**
+     * Four clearly-distinct intensity tiers (the previous 5 had near-identical
+     * Normal/Groove and Groove/Ghost steps):
+     *  1 Sencillo: solo bombo + caja (el esqueleto del ritmo).
+     *  2 Normal:   + charles/ride de pulso, pero sin adornos (sin charles abierto,
+     *              sin plato, sin notas fantasma; ride-bell -> ride normal).
+     *  3 Groove:   el patrón completo tal y como está escrito.
+     *  4 Completo: patrón completo + notas fantasma de caja + charles abierto
+     *              en el "y de 4" (el groove más vivo).
+     */
+    fun filterByComplexity(events: List<GrooveEvent>, level: Int, stepsPerBar: Int = 16): List<GrooveEvent> {
         return when (level) {
             1 -> events.filter { it.hit in LEVEL1_HITS }
-            2 -> events.filter { it.hit in LEVEL2_HITS }
+            2 -> events.asSequence()
+                .filter { it.hit != DrumHit.CRASH && it.hit != DrumHit.SNARE_SOFT }
+                .map { e ->
+                    when (e.hit) {
+                        DrumHit.HH_OPEN, DrumHit.HH_HALF -> e.copy(hit = DrumHit.HH_CLOSED)
+                        DrumHit.RIDE_BELL -> e.copy(hit = DrumHit.RIDE_NORMAL)
+                        else -> e
+                    }
+                }.toList()
             3 -> events
-            4 -> addGhostNotes(events)
-            5 -> addGhostNotes(events, dense = true)
+            4 -> addOpenHatAccents(addGhostNotes(events, stepsPerBar), stepsPerBar)
             else -> events
         }
     }
 
-    private fun addGhostNotes(events: List<GrooveEvent>, dense: Boolean = false): List<GrooveEvent> {
+    /** Deterministic snare ghost notes on the free 16th "e/a" slots -> human groove. */
+    private fun addGhostNotes(events: List<GrooveEvent>, stepsPerBar: Int): List<GrooveEvent> {
         val result = events.toMutableList()
-        val existingSteps = events.filter { it.hit == DrumHit.SNARE_HARD || it.hit == DrumHit.SNARE_SOFT }.map { it.step }.toSet()
-        val steps = if (dense) listOf(1f, 3f, 5f, 7f, 9f, 11f, 13f, 15f) else listOf(3f, 7f, 11f, 15f)
-        for (step in steps) {
-            if (step !in existingSteps && Random.nextFloat() < if (dense) 0.4f else 0.25f) {
-                result.add(GrooveEvent(DrumHit.SNARE_SOFT, step, velocity = 0.2f + Random.nextFloat() * 0.15f))
+        val sixteenth = stepsPerBar / 16f
+        val occupied = events.map { (it.step / sixteenth).roundToInt() }.toMutableSet()
+        for (gi in listOf(3, 7, 11, 13)) {
+            if (gi !in occupied) {
+                result.add(GrooveEvent(DrumHit.SNARE_SOFT, gi * sixteenth, velocity = 0.22f))
+                occupied.add(gi)
             }
         }
         return result.sortedBy { it.step }
+    }
+
+    /** Open the closed hi-hat on the "and of 4" to lead back into beat 1. */
+    private fun addOpenHatAccents(events: List<GrooveEvent>, stepsPerBar: Int): List<GrooveEvent> {
+        val sixteenth = stepsPerBar / 16f
+        return events.map { e ->
+            val gi = (e.step / sixteenth).roundToInt()
+            if (e.hit == DrumHit.HH_CLOSED && gi == 14) e.copy(hit = DrumHit.HH_OPEN) else e
+        }
     }
 
     // ==================== HUMANIZATION ====================
 
     enum class Feel { TIGHT, NATURAL, LOOSE }
 
-    private fun humanizeVelocity(velocity: Float, feel: Feel, beat: Int, barCount: Int): Float {
+    /**
+     * Musical dynamics: instead of a flat velocity, loudness follows the metric
+     * position (downbeat strongest, backbeat accented, off-beats softer) and the
+     * role of each hit (ghost notes stay quiet, crashes/accents stay loud). This
+     * is what turns a mechanical pattern into a groove with feel.
+     */
+    private fun musicalVelocity(base: Float, feel: Feel, step: Float, stepsPerBar: Int, hit: DrumHit, barCount: Int): Float {
+        // Ghost notes must stay quiet regardless of position.
+        if (hit == DrumHit.SNARE_SOFT) {
+            return (base + (Random.nextFloat() - 0.5f) * 0.05f).coerceIn(0.08f, 0.4f)
+        }
+        val grid = (step / (stepsPerBar / 16f)).roundToInt().coerceIn(0, 15)
+        val onEighth = grid % 4 == 2          // the "and" of each beat
+        var factor = when {
+            grid == 0 -> 1.08f                // beat 1: strongest
+            grid == 8 -> 1.0f                 // beat 3
+            grid == 4 || grid == 12 -> 0.98f  // beats 2 & 4
+            onEighth -> 0.74f                 // off-beat 8ths: softer
+            else -> 0.58f                     // 16th subdivisions: softest
+        }
+        // Role-based accents
+        when (hit) {
+            DrumHit.SNARE_HARD, DrumHit.SNARE_RIMSHOT ->
+                if (grid == 4 || grid == 12) factor = 1.06f   // backbeat accent
+            DrumHit.KICK_HARD -> if (grid == 0) factor = maxOf(factor, 1.05f)
+            DrumHit.CRASH, DrumHit.RIDE_BELL, DrumHit.HH_OPEN -> factor = maxOf(factor, 1.0f)
+            else -> {}
+        }
         val range = when (feel) {
-            Feel.TIGHT -> 0.02f
-            Feel.NATURAL -> 0.08f
-            Feel.LOOSE -> 0.15f
+            Feel.TIGHT -> 0.03f
+            Feel.NATURAL -> 0.09f
+            Feel.LOOSE -> 0.16f
         }
-        // Per-beat accent: beat 1 slightly stronger, odd beats slightly weaker
-        val beatAccent = when (beat % 4) {
-            0 -> 0.04f   // downbeat: slightly louder
-            2 -> 0.01f   // backbeat: tiny boost
-            else -> -0.03f // off-beats: slightly softer
+        val barVariation = ((barCount * 7 + grid * 13) % 17).toFloat() / 17f * 0.05f - 0.025f
+        return (base * factor + (Random.nextFloat() - 0.5f) * range + barVariation).coerceIn(0.1f, 1.0f)
+    }
+
+    // ==================== PER-STYLE SWING & FEEL ====================
+
+    /** Default swing amount per style so blues/jazz/shuffle swing automatically. */
+    fun defaultSwing(styleId: String): Float = when (styleId) {
+        "jazz", "swing" -> 0.62f
+        "blues", "shuffle" -> 0.58f
+        "boogie" -> 0.55f
+        "funk", "r-n-b" -> 0.08f
+        else -> 0f
+    }
+
+    /** Default feel per style (looser for jazz/blues, tighter for marches). */
+    fun defaultFeel(styleId: String): Feel = when (styleId) {
+        "jazz", "swing", "blues" -> Feel.LOOSE
+        "march", "paso-doble", "tango" -> Feel.TIGHT
+        else -> Feel.NATURAL
+    }
+
+    /** Master bus: makeup gain + soft (tanh) limiter so the kit is loud and punchy. */
+    private fun applyMasterLoudness(buffer: ShortArray) {
+        val makeup = 1.4f
+        for (i in buffer.indices) {
+            val x = buffer[i] * makeup / 32768f
+            val limited = tanh(x.toDouble()).toFloat()
+            buffer[i] = (limited * 32767f * 0.97f).toInt().coerceIn(-32768, 32767).toShort()
         }
-        // Per-bar micro-variation: each bar sounds slightly different
-        val barVariation = ((barCount * 7 + beat * 13) % 17).toFloat() / 17f * 0.04f - 0.02f
-        return (velocity + (Random.nextFloat() - 0.5f) * range + beatAccent + barVariation).coerceIn(0.1f, 1.0f)
     }
 
     private fun humanizeTiming(feel: Feel, step: Float): Float {
@@ -444,11 +521,12 @@ object GrooveEngine {
                 val monoBuffer = ShortArray(barSamples)
                 val stereoBuffer = ShortArray(barSamples * 2)
 
+                val spb = patternToUse?.stepsPerBar ?: stepsPerBar
                 if (patternToUse != null) {
                     lastHiHatOpenEnd = 0
                     val cacheKey = System.identityHashCode(patternToUse).toLong() * 10 + curComplexity
                     val sortedEvents = filteredEventsCache.getOrPut(cacheKey) {
-                        filterByComplexity(patternToUse.events, curComplexity).sortedBy { it.step }
+                        filterByComplexity(patternToUse.events, curComplexity, spb).sortedBy { it.step }
                     }
                     for (event in sortedEvents) {
                         if (event.probability < 1f && Random.nextFloat() > event.probability) continue
@@ -460,16 +538,19 @@ object GrooveEngine {
                         } else event.hit
 
                         var step = event.step
-                        if (curSwing > 0f && step.toInt() % 2 == 1) {
-                            step += curSwing * 0.5f
+                        // Swing: delay the off-8th ("and") and, lightly, the 16th "e/a".
+                        if (curSwing > 0f) {
+                            val sixteenth = spb / 16f
+                            val gi = (event.step / sixteenth).roundToInt()
+                            if (gi % 4 == 2) step += curSwing * sixteenth
+                            else if (gi % 2 == 1) step += curSwing * sixteenth * 0.5f
                         }
                         step += humanizeTiming(curFeel, event.step)
 
-                        val sampleOffset = ((step / stepsPerBar) * barSamples).toInt()
+                        val sampleOffset = ((step / spb) * barSamples).toInt()
                             .coerceIn(0, barSamples - 1)
-                        val beatForAccent = (event.step.toInt() / (stepsPerBar / 4)).coerceIn(0, 3)
 
-                        val velocity = humanizeVelocity(event.velocity, curFeel, beatForAccent, barCount) *
+                        val velocity = musicalVelocity(event.velocity, curFeel, event.step, spb, actualHit, barCount) *
                             getVolumeForHit(actualHit, curVolumes)
 
                         val rawSample = nextSample(actualHit) ?: continue
@@ -501,6 +582,8 @@ object GrooveEngine {
                     }
                     // Add room reflection
                     addRoomReflection(monoBuffer, stereoBuffer)
+                    // Master bus: makeup gain + soft limiter (loud & punchy, like the guitar)
+                    applyMasterLoudness(stereoBuffer)
                 }
 
                 // Beat callbacks + write stereo audio

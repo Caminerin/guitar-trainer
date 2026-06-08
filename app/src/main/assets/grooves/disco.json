@@ -1627,6 +1627,192 @@
           "probability": 1.0
         }
       ]
+    },
+    {
+      "name": "Disco four-on-floor",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "HH_CLOSED",
+          "step": 0.0,
+          "velocity": 0.78,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.97,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_OPEN",
+          "step": 2.0,
+          "velocity": 0.85,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 4.0,
+          "velocity": 0.78,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 4.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.95,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_OPEN",
+          "step": 6.0,
+          "velocity": 0.85,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 8.0,
+          "velocity": 0.78,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_OPEN",
+          "step": 10.0,
+          "velocity": 0.85,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_CLOSED",
+          "step": 12.0,
+          "velocity": 0.78,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 12.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.95,
+          "probability": 1.0
+        },
+        {
+          "hit": "HH_OPEN",
+          "step": 14.0,
+          "velocity": 0.85,
+          "probability": 1.0
+        }
+      ]
+    },
+    {
+      "name": "Disco con ride",
+      "size": 192,
+      "stepsPerBar": 16,
+      "isFill": false,
+      "license": "CC BY-SA",
+      "events": [
+        {
+          "hit": "KICK_HARD",
+          "step": 0.0,
+          "velocity": 0.97,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 0.0,
+          "velocity": 0.7,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 2.0,
+          "velocity": 0.6,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 4.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 4.0,
+          "velocity": 0.7,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 4.0,
+          "velocity": 0.95,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 6.0,
+          "velocity": 0.6,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 8.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 8.0,
+          "velocity": 0.7,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 10.0,
+          "velocity": 0.6,
+          "probability": 1.0
+        },
+        {
+          "hit": "KICK_HARD",
+          "step": 12.0,
+          "velocity": 0.92,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 12.0,
+          "velocity": 0.7,
+          "probability": 1.0
+        },
+        {
+          "hit": "SNARE_HARD",
+          "step": 12.0,
+          "velocity": 0.95,
+          "probability": 1.0
+        },
+        {
+          "hit": "RIDE_NORMAL",
+          "step": 14.0,
+          "velocity": 0.6,
+          "probability": 1.0
+        }
+      ]
     }
   ],
   "fills": [

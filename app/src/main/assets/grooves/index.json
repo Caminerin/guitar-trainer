@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "totalPatterns": 267,
-  "totalEvents": 3713,
+  "totalPatterns": 291,
+  "totalEvents": 3998,
   "categories": [
     {
       "id": "afro-cuban",
@@ -18,7 +18,7 @@
     {
       "id": "boogie",
       "displayName": "Boogie",
-      "patternCount": 3,
+      "patternCount": 5,
       "fillCount": 3
     },
     {
@@ -30,19 +30,19 @@
     {
       "id": "cha-cha",
       "displayName": "Cha-Cha",
-      "patternCount": 3,
+      "patternCount": 4,
       "fillCount": 3
     },
     {
       "id": "charleston",
       "displayName": "Charleston",
-      "patternCount": 1,
+      "patternCount": 2,
       "fillCount": 1
     },
     {
       "id": "disco",
       "displayName": "Disco",
-      "patternCount": 12,
+      "patternCount": 14,
       "fillCount": 9
     },
     {
@@ -54,7 +54,7 @@
     {
       "id": "funk",
       "displayName": "Funk",
-      "patternCount": 15,
+      "patternCount": 17,
       "fillCount": 15
     },
     {
@@ -66,37 +66,37 @@
     {
       "id": "march",
       "displayName": "Marcha",
-      "patternCount": 2,
+      "patternCount": 3,
       "fillCount": 2
     },
     {
       "id": "paso-doble",
       "displayName": "Pasodoble",
-      "patternCount": 2,
+      "patternCount": 3,
       "fillCount": 2
     },
     {
       "id": "pop",
       "displayName": "Pop",
-      "patternCount": 12,
+      "patternCount": 14,
       "fillCount": 6
     },
     {
       "id": "r-n-b",
       "displayName": "R&B",
-      "patternCount": 12,
+      "patternCount": 14,
       "fillCount": 6
     },
     {
       "id": "reggae",
       "displayName": "Reggae",
-      "patternCount": 12,
+      "patternCount": 14,
       "fillCount": 9
     },
     {
       "id": "rock",
       "displayName": "Rock",
-      "patternCount": 15,
+      "patternCount": 17,
       "fillCount": 12
     },
     {
@@ -114,7 +114,7 @@
     {
       "id": "ska",
       "displayName": "Ska",
-      "patternCount": 3,
+      "patternCount": 5,
       "fillCount": 3
     },
     {
@@ -132,19 +132,19 @@
     {
       "id": "tango",
       "displayName": "Tango",
-      "patternCount": 1,
+      "patternCount": 2,
       "fillCount": 1
     },
     {
       "id": "twist",
       "displayName": "Twist",
-      "patternCount": 3,
+      "patternCount": 5,
       "fillCount": 3
     },
     {
       "id": "waltz",
       "displayName": "Vals",
-      "patternCount": 3,
+      "patternCount": 4,
       "fillCount": 3
     }
   ]
