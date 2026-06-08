@@ -456,9 +456,12 @@ object ChordSynth {
 
         val clampedVelocity = velocity.coerceIn(0.2f, 1.0f)
         val peak = output.maxOfOrNull { kotlin.math.abs(it) } ?: 1f
-        val scale = if (peak > 0.01f) 0.82f * clampedVelocity / peak else 1f
+        // Volumen ~1.5x con limitador suave (tanh) para igualar el resto del sonido.
+        val norm = if (peak > 0.01f) (0.9f * clampedVelocity) / peak else 1f
+        val makeupGain = 1.5f
         for (i in output.indices) {
-            output[i] = (output[i] * scale).coerceIn(-1f, 1f)
+            val x = output[i] * norm * makeupGain
+            output[i] = kotlin.math.tanh(x.toDouble()).toFloat() * 0.96f
         }
 
         return output
